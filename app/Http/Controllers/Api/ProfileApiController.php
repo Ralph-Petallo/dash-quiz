@@ -15,6 +15,15 @@ class ProfileApiController extends Controller
     // Update user profile information
     public function uploadPhoto(Request $request)
     {
+        // 🔍 DEBUG FIRST (only temporarily)
+        if (!$request->hasFile('photo')) {
+            return response()->json([
+                'debug' => 'NO FILE RECEIVED',
+                'all' => $request->all(),
+            ], 422);
+        }
+
+        //  Validate AFTER confirming file exists
         $request->validate([
             'photo' => 'required|image|mimes:jpg,jpeg,png|max:2048',
         ]);
@@ -28,22 +37,30 @@ class ProfileApiController extends Controller
             ], 401);
         }
 
-        $filename = Str::uuid() . '.' . $request->photo->getClientOriginalExtension();
+        $file = $request->file('photo');
 
-        $request->photo->storeAs('images/profiles', $filename, 'public');
+        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
 
+        // Store file properly
+        $file->storeAs('public/images/profiles', $filename);
+
+        // 🗑 Delete old photo if exists
         if ($user->profile_photo) {
-            Storage::disk('public')->delete('images/profiles/' . $user->profile_photo);
+            Storage::delete('public/images/profiles/' . $user->profile_photo);
         }
 
-        $user->profile_photo = $filename;
-        $user->save();
+        //  Update user
+        $user->update([
+            'profile_photo' => $filename,
+            'active_status' => 1,
+            'last_activity' => now()
+        ]);
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Profile photo updated successfully.',
+            'message' => 'Profile photo updated successfully',
             'new_photo' => $filename,
-            'photo_url' => asset('storage/images/profiles/' . $filename),
+            'new_photo_url' => asset('storage/images/profiles/' . $filename)
         ]);
     }
 

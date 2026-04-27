@@ -9,7 +9,7 @@
           </div>
           <label class="avatar-camera-badge">
             <i class="fas fa-camera"></i>
-            <input type="file" @change="onFileChange" accept="image/*" style="display:none">
+            <input type="file" @change="onFileChange" accept="image/*" style="display:none" />
           </label>
         </div>
 
@@ -151,7 +151,10 @@ const onFileChange = async (e) => {
   const file = e.target.files[0]
   if (!file) return
 
-  if (!file.type.startsWith('image/')) {
+  console.log("Selected file:", file)
+
+  // Validate file type
+  if (!file.type.startsWith("image/")) {
     showToast("Please select a valid image file.", "error")
     return
   }
@@ -162,21 +165,30 @@ const onFileChange = async (e) => {
 
   try {
     const formData = new FormData()
-    formData.append("photo", file)
+
+    // keep filename for better compatibility
+    formData.append("photo", file, file.name)
 
     const { data } = await axios.post("/api/profile/photo", formData)
 
-    if (data.new_photo && user.value) {
-      // Only update profile_photo — userAvatar computed reads this
+    console.log("Upload response:", data)
+
+    // Update state safely
+    if (data?.new_photo && user.value) {
       user.value.profile_photo = data.new_photo
     }
 
     preview.value = null
     showToast("Profile picture updated!", "success")
 
-  } catch {
+  } catch (error) {
+    console.log("Upload error:", error.response?.data || error)
+
     preview.value = null
-    showToast("Failed to upload photo.", "error")
+    showToast(
+      error.response?.data?.message || "Failed to upload photo.",
+      "error"
+    )
   } finally {
     loading.value = false
   }
