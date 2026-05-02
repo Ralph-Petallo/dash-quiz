@@ -1,10 +1,13 @@
 <?php
+
 namespace App\Http\Controllers\Api;
+
 use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Models\Quiz;
+use App\Models\Dasher;
 use App\Models\QuizRecord;
-use Illuminate\Support\Facades\Auth;
+
 class UserApiController extends Controller
 {
     // Get top users based on quiz scores
@@ -42,9 +45,10 @@ class UserApiController extends Controller
             'data' => $quizzes
         ]);
     }
-    public function profile(Request $request)
+    public function profile()
     {
-        $user = $request->user();
+        /** @var Dasher|null $user */
+        $user = auth('sanctum')->user();
 
         if (!$user) {
             return response()->json([
@@ -53,11 +57,15 @@ class UserApiController extends Controller
             ], 401);
         }
 
-        // update online status
-        $user->update([
-            'active_status' => 1,
-            'last_activity' => now()
-        ]);
+        try {
+            $user->active_status = 1;
+            $user->last_activity = now();
+            $user->save();
+        } catch (\Exception $e) {
+            return response()->json([
+                'error' => $e->getMessage(),
+            ], 500);
+        }
 
         return response()->json([
             'status' => 'success',
@@ -76,30 +84,43 @@ class UserApiController extends Controller
         ]);
     }
 
-
     // Get quiz history of the logged-in user
     public function records()
     {
-        // Get authenticated user's ID
-        $userId = Auth::guard('dasher')->id();
-        // Fetch quiz records for this user
-        $records = QuizRecord::where('user_id', $userId)
-            ->with(['quiz']) // load quiz information
-            ->orderByDesc('created_at') // newest records first
+        /** @var Dasher|null $user */
+        $user = auth('sanctum')->user(); // authenticated user object
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated.'
+            ], 401);
+        }
+
+        $records = QuizRecord::where('user_id', $user->id)
+            ->with('quiz')
+            ->orderByDesc('created_at')
             ->get()
             ->map(function ($record) {
                 return [
                     'quiz_id' => $record->quiz_id,
                     'score' => $record->score,
-                    // Include quiz details for frontend display
                     'quiz_title' => $record->quiz->title,
                     'quiz_description' => $record->quiz->description,
-                    // Format record date
-                    'created_at' => $record->created_at->format('Y-m-d')
+                    'created_at' => $record->created_at->format('Y-m-d'),
                 ];
             });
+
         return response()->json([
-            'results' => $records
+            'status' => 'success',
+            'results' => $records,
+            'user' => [
+                'id' => $user->id,
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => "{$user->first_name} {$user->last_name}",
+                'email' => $user->email,
+            ]
         ]);
     }
 }
