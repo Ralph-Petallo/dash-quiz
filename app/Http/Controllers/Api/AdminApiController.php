@@ -11,12 +11,13 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+
 class AdminApiController extends Controller
 {
     ###############################################
     # Logging API
     ###############################################
-    public function logActivity($action, $description)
+    public function logActivity(string $action, string $description)
     {
         $admin = Auth::guard('dasher')->user();
         // insert log
@@ -96,21 +97,25 @@ class AdminApiController extends Controller
             'email' => 'required|email',
             'password' => 'required'
         ]);
+
         if (Auth::guard('dasher')->attempt($valid)) {
-            $request->session()->regenerate();
+
+            /** @var Dasher $user */
             $user = Auth::guard('dasher')->user();
 
-            // Set both to ensure the scheduler doesn't kill the session early
-            $user->update([
+            $request->session()->regenerate();
+
+            $user->forceFill([
                 'active_status' => 1,
                 'last_activity' => now()
-            ]);
+            ])->save();
 
             return response()->json([
                 'status' => 'success',
                 'role' => $user->role
             ], 200);
         }
+
         return response()->json([
             'status' => 'error',
             'message' => 'Invalid email or password.'
@@ -127,13 +132,14 @@ class AdminApiController extends Controller
             'password' => 'required'
         ]);
 
-        if (!Auth::guard('dasher')->attempt($credentials)) {
+        $user = Dasher::where('email', $credentials['email'])->first();
+
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
+                'status' => 'error',
                 'message' => 'Invalid credentials'
             ], 401);
         }
-
-        $user = Auth::guard('dasher')->user();
 
         $token = $user->createToken('mobile')->plainTextToken;
 
@@ -148,6 +154,8 @@ class AdminApiController extends Controller
             ]
         ]);
     }
+
+
     ###############################################
     # REGISTER API
     ###############################################
@@ -160,22 +168,30 @@ class AdminApiController extends Controller
             'password' => 'required|string|confirmed|min:6',
         ], [
             // custom error messages
-            'first_name' => 'Enter your first name',
-            'last_name' => 'Enter your last name',
-            'email' => 'Email is required',
-            'email.unique' => 'Email is already been in use',
-            'password.min' => 'Password atleast length of 6',
-            'password.confirmed' => 'Please, confirm your password',
+            'first_name.required' => 'Enter your first name',
+            'last_name.required' => 'Enter your last name',
+            'email.required' => 'Email is required',
+            'email.email' => 'Email must be a valid email address',
+            'email.unique' => 'Email is already in use',
+            'password.required' => 'Password is required',
+            'password.min' => 'Password must be at least 6 characters',
+            'password.confirmed' => 'Please confirm your password',
         ]);
+
         $dasher = Dasher::create([
             'first_name' => $valid['first_name'],
             'last_name' => $valid['last_name'],
             'email' => $valid['email'],
             'password' => Hash::make($valid['password']),
+            'role' => 'dasher',
         ]);
+
+        $token = $dasher->createToken('mobile')->plainTextToken;
+
         return response()->json([
             'status' => 'success',
             'message' => 'Account created successfully',
+            'token' => $token,
             'data' => $dasher
         ], 201);
     }
@@ -335,7 +351,7 @@ class AdminApiController extends Controller
     ###############################################
     # EDIT QUIZ (API Fetch)
     ###############################################
-    public function editQuiz($id)
+    public function editQuiz(int $id)
     {
         try {
             $sql = "SELECT * FROM quizzes WHERE id = ?";
@@ -376,7 +392,7 @@ class AdminApiController extends Controller
     ###############################################
     # UPDATE QUIZ (API Submission)
     ###############################################
-    public function updateQuiz(Request $request, $id)
+    public function updateQuiz(Request $request, int $id)
     {
         $request->validate([
             'title' => 'required|string|max:255',
@@ -420,20 +436,23 @@ class AdminApiController extends Controller
                 DB::delete("DELETE FROM answers WHERE question_id = ?", [$questionId]);
 
                 foreach ($qData['options'] as $index => $optionText) {
+                    $isCorrect = ($qData['correct_option'] == $index) ? 1 : 0;
+
                     if (isset($existingOptions[$index])) {
                         $optionId = $existingOptions[$index]->id;
-                        DB::update("UPDATE question_options SET option_text = ? WHERE id = ?", [
+                        DB::update("UPDATE question_options SET option_text = ?, is_correct = ? WHERE id = ?", [
                             $optionText,
+                            $isCorrect,
                             $optionId
                         ]);
                     } else {
-                        DB::insert("INSERT INTO question_options (question_id, option_text) VALUES (?, ?)", [
+                        DB::insert("INSERT INTO question_options (question_id, option_text, is_correct) VALUES (?, ?, ?)", [
                             $questionId,
-                            $optionText
+                            $optionText,
+                            $isCorrect
                         ]);
                         $optionId = DB::getPdo()->lastInsertId();
                     }
-                    $isCorrect = ($qData['correct_option'] == $index) ? 1 : 0;
 
                     DB::insert("INSERT INTO answers (question_id, answer_text, is_correct) VALUES (?, ?, ?)", [
                         $questionId,
@@ -464,7 +483,7 @@ class AdminApiController extends Controller
     ###############################################
     # DELETE QUIZ
     ###############################################
-    public function deleteQuiz($id)
+    public function deleteQuiz(int $id)
     {
         $quiz = Quiz::find($id);
 
@@ -501,7 +520,7 @@ class AdminApiController extends Controller
         ], 200);
     }
 
-    public function updateUser(Request $request, $id)
+    public function updateUser(Request $request, int $id)
     {
         $user = Dasher::findOrFail($id);
 
@@ -539,7 +558,7 @@ class AdminApiController extends Controller
         ]);
     }
 
-    public function deleteUser($id)
+    public function deleteUser(int $id)
     {
         $user = Dasher::findOrFail($id);
         if (!$user) {
