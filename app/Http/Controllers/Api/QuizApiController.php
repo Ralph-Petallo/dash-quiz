@@ -5,29 +5,27 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Quiz;
 use App\Models\Question;
-use App\Models\Dasher;
 use App\Models\QuizRecord;
+use App\Models\QuizAttempt;
 use Illuminate\Http\Request;
 
 class QuizApiController extends Controller
 {
-    // Get quiz with random questions and their options
+    /*
+    |--------------------------------------------------------------------------
+    | GET QUIZ (RANDOM QUESTIONS)
+    |--------------------------------------------------------------------------
+    */
     public function getQuiz(int $id)
     {
-        // Find the quiz and eager load its questions and options
-        // eager loading prevents N+1 query problems
         $quiz = Quiz::with('questions.options')->findOrFail($id);
 
-        // Get random questions from the quiz
-        // whereHas('options') ensures the question actually has answer choices
-        // otherwise the frontend would receive questions without options
-        $questions = $quiz->questions()
-            ->whereHas('options')
-            ->inRandomOrder()
-            ->limit(10) // limit quiz to 10 questions
-            ->get();
+        $questions = $quiz->questions
+            ->filter(fn($q) => $q->options->count() > 0)
+            ->shuffle()
+            ->take(10)
+            ->values();
 
-        // Labels used for options (A, B, C, D)
         $optionLabels = ['A', 'B', 'C', 'D'];
 
         return response()->json([
@@ -38,83 +36,65 @@ class QuizApiController extends Controller
                 'description' => $quiz->description,
                 'total_questions' => $questions->count(),
 
-                // Transform questions into a clean API structure for the frontend
-                'questions' => $questions->values()->map(function ($q, $index) use ($optionLabels) {
+                'questions' => $questions->map(function ($q, $index) use ($optionLabels) {
 
-                    // Shuffle options so the correct answer is not always in the same position
-                    $options = $q->options->shuffle();
+                    $options = $q->options->shuffle()->values();
+
                     return [
                         'id' => $q->id,
                         'text' => $q->question_text,
-                        'question_number' => $index + 1, // used for displaying question order
-                        // Send options to frontend
-                        'options' => $options->values()->map(function ($opt, $optIndex) use ($optionLabels) {
+                        'question_number' => $index + 1,
+
+                        'options' => $options->map(function ($opt, $optIndex) use ($optionLabels) {
                             return [
                                 'id' => $opt->id,
                                 'text' => $opt->option_text,
-
-                                // Assign label (A, B, C, D) based on index
-                                // fallback using ASCII if there are more than 4 options
                                 'label' => $optionLabels[$optIndex] ?? chr(65 + $optIndex),
                             ];
-                        })->toArray()
+                        })->values(),
                     ];
-                })->toArray()
+                })->values(),
             ]
         ]);
     }
 
-    public function getQuizResult($id)
-    {
-        $record = QuizRecord::with(['quiz', 'user'])
-            ->where('id', $id)
-            ->where('user_id', auth('sanctum')->id())
-            ->firstOrFail();
-
-        return response()->json([
-            'status' => 'success',
-            'record' => $record
-        ]);
-    }
-
-    // Check if the submitted answer is correct
+    /*
+    |--------------------------------------------------------------------------
+    | CHECK ANSWER (REALTIME)
+    |--------------------------------------------------------------------------
+    */
     public function submitAnswer(Request $request)
     {
-        // Validate incoming data
-        // ensures question and answer exist in the database
         $validated = $request->validate([
             'question_id' => 'required|exists:questions,id',
             'answer_id' => 'required|exists:question_options,id',
         ]);
 
-        // Load question with its options
         $question = Question::with('options')->findOrFail($validated['question_id']);
 
-        // Find the option selected by the user
-        $selectedOption = $question->options->firstWhere('id', $validated['answer_id']);
+        $selected = $question->options->firstWhere('id', $validated['answer_id']);
+        $correct = $question->options->firstWhere('is_correct', true);
 
-        // Find the correct option from the question
-        $correctOption = $question->options->firstWhere('is_correct', true);
+        $isCorrect = $selected && $correct && $selected->id === $correct->id;
 
-        // Compare selected option with the correct option
-        $isCorrect = $selectedOption && $correctOption &&
-            $selectedOption->id === $correctOption->id;
-
-        // Return result to frontend
         return response()->json([
             'status' => 'success',
             'correct' => $isCorrect
         ]);
     }
 
-    // Save the final quiz score for the user
+    /*
+    |--------------------------------------------------------------------------
+    | SAVE QUIZ RESULT + ATTEMPTS (MAIN FIX)
+    |--------------------------------------------------------------------------
+    */
     public function submitQuizResult(Request $request)
     {
         $validated = $request->validate([
             'quiz_id' => 'required|exists:quizzes,id',
             'score' => 'required|integer|min:0',
-            'total_questions' => 'required|integer|min:1',
             'elapsed_time' => 'required|integer|min:0',
+            'answers' => 'required|array'
         ]);
 
         $user = auth('sanctum')->user();
@@ -126,20 +106,90 @@ class QuizApiController extends Controller
             ], 401);
         }
 
+        /*
+        |---------------------------------------
+        | 1. CREATE QUIZ RECORD
+        |---------------------------------------
+        */
         $record = QuizRecord::create([
             'user_id' => $user->id,
             'quiz_id' => $validated['quiz_id'],
             'score' => $validated['score'],
-            'total_questions' => $validated['total_questions'],
             'elapsed_time' => $validated['elapsed_time'],
-            'completed_at' => now(),
         ]);
+
+        /*
+        |---------------------------------------
+        | 2. SAVE EACH QUESTION ATTEMPT
+        |---------------------------------------
+        */
+        foreach ($validated['answers'] as $answer) {
+
+            $question = Question::with('options')->find($answer['question_id']);
+
+            if (!$question) continue;
+
+            $selected = $question->options->firstWhere('id', $answer['answer_id']);
+            $correct = $question->options->firstWhere('is_correct', true);
+
+            QuizAttempt::create([
+                'quiz_record_id' => $record->id,
+                'question_id' => $question->id,
+                'selected_option_id' => $selected?->id,
+                'is_correct' => $selected && $correct
+                    ? $selected->id === $correct->id
+                    : false,
+            ]);
+        }
 
         return response()->json([
             'status' => 'success',
-            'message' => 'Quiz completed successfully',
-            'result_id' => $record->id,
+            'record_id' => $record->id,
             'record' => $record
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | GET QUIZ RESULT (REVIEW PAGE)
+    |--------------------------------------------------------------------------
+    */
+    public function getQuizResult(int $id)
+    {
+        $record = QuizRecord::with([
+            'quiz',
+            'attempts.question.options',
+            'attempts.selectedOption'
+        ])
+            ->where('id', $id)
+            ->where('user_id', auth('sanctum')->id())
+            ->firstOrFail();
+
+        $questions = $record->attempts->map(function ($attempt) {
+
+            $correct = $attempt->question->options
+                ->firstWhere('is_correct', true);
+
+            return [
+                'question_id' => $attempt->question->id,
+                'question' => $attempt->question->question_text,
+
+                'user_answer' => $attempt->selectedOption?->option_text ?? 'No answer',
+
+                'correct_answer' => $correct?->option_text,
+
+                'is_correct' => (bool) $attempt->is_correct,
+            ];
+        });
+
+        return response()->json([
+            'status' => 'success',
+            'record_id' => $record->id,
+            'quiz_id' => $record->quiz_id,
+            'score' => $record->score,
+            'elapsed_time' => $record->elapsed_time,
+            'total_questions' => $record->attempts->count(),
+            'questions' => $questions
         ]);
     }
 }

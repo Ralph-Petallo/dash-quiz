@@ -22,6 +22,7 @@ class UserApiController extends Controller
             ->get()
             ->map(function ($record) {
                 return [
+                    'id' => $record->id,
                     'name' => "{$record->user->first_name} {$record->user->last_name}",
                     'profile_photo' => $record->user->profile_photo,
                     'score' => $record->score,
@@ -85,10 +86,11 @@ class UserApiController extends Controller
     }
 
     // Get quiz history of the logged-in user
+    // Get quiz history of the logged-in user
     public function records()
     {
         /** @var Dasher|null $user */
-        $user = auth('sanctum')->user(); // authenticated user object
+        $user = auth('sanctum')->user();
 
         if (!$user) {
             return response()->json([
@@ -97,28 +99,144 @@ class UserApiController extends Controller
             ], 401);
         }
 
-        $records = QuizRecord::where('user_id', $user->id)
-            ->with('quiz')
-            ->orderByDesc('created_at')
+        $records = QuizRecord::with([
+            'quiz',
+            'attempts.question.options',
+            'attempts.selectedOption'
+        ])
+            ->where('user_id', $user->id)
+            ->latest()
             ->get()
             ->map(function ($record) {
+
+                /*
+            |--------------------------------------------------
+            | QUESTIONS / ATTEMPTS
+            |--------------------------------------------------
+            */
+                $questions = $record->attempts->map(function ($attempt) {
+
+                    $correctOption = $attempt->question->options
+                        ->firstWhere('is_correct', true);
+
+                    return [
+                        'question_id' => $attempt->question->id,
+
+                        'question' => $attempt->question->question_text,
+
+                        'user_answer' => $attempt->selectedOption?->option_text
+                            ?? 'No answer',
+
+                        'correct_answer' => $correctOption?->option_text
+                            ?? 'N/A',
+
+                        'is_correct' => (bool) $attempt->is_correct,
+                    ];
+                })->values();
+
+                /*
+            |--------------------------------------------------
+            | TOTALS
+            |--------------------------------------------------
+            */
+                $totalQuestions = $questions->count();
+
+                $correctAnswers = $questions
+                    ->where('is_correct', true)
+                    ->count();
+
+                $percentage = $totalQuestions > 0
+                    ? round(($correctAnswers / $totalQuestions) * 100)
+                    : 0;
+
+                /*
+            |--------------------------------------------------
+            | ATTEMPT NUMBER
+            |--------------------------------------------------
+            */
+                $attemptNumber = QuizRecord::where('user_id', $record->user_id)
+                    ->where('quiz_id', $record->quiz_id)
+                    ->where('id', '<=', $record->id)
+                    ->count();
+
                 return [
+                    'id' => $record->id,
+
                     'quiz_id' => $record->quiz_id,
-                    'score' => $record->score,
-                    'quiz_title' => $record->quiz->title,
-                    'quiz_description' => $record->quiz->description,
-                    'created_at' => $record->created_at->format('Y-m-d'),
+
+                    'quiz_title' => $record->quiz?->title
+                        ?? 'Untitled Quiz',
+
+                    'quiz_description' => $record->quiz?->description
+                        ?? null,
+
+                    /*
+                |--------------------------------------------------
+                | SCORE DATA
+                |--------------------------------------------------
+                */
+                    'score' => $correctAnswers,
+
+                    'total_questions' => $totalQuestions,
+
+                    'percentage' => $percentage,
+
+                    'accuracy' => $percentage,
+
+                    /*
+                |--------------------------------------------------
+                | TIME
+                |--------------------------------------------------
+                */
+                    'elapsed_time' => $record->elapsed_time,
+
+                    /*
+                |--------------------------------------------------
+                | STATUS
+                |--------------------------------------------------
+                */
+                    'status' => $percentage >= 70
+                        ? 'Passed'
+                        : 'Failed',
+
+                    /*
+                |--------------------------------------------------
+                | ATTEMPT
+                |--------------------------------------------------
+                */
+                    'attempt' => $attemptNumber,
+
+                    /*
+                |--------------------------------------------------
+                | QUESTIONS
+                |--------------------------------------------------
+                */
+                    'questions' => $questions,
+
+                    /*
+                |--------------------------------------------------
+                | DATES
+                |--------------------------------------------------
+                */
+                    'created_at' => $record->created_at,
+
+                    'formatted_date' => $record->created_at
+                        ->format('Y-m-d H:i:s'),
                 ];
             });
 
         return response()->json([
             'status' => 'success',
+
             'results' => $records,
+
             'user' => [
                 'id' => $user->id,
-                'first_name' => $user->first_name,
-                'last_name' => $user->last_name,
-                'full_name' => "{$user->first_name} {$user->last_name}",
+
+                'full_name' => trim(
+                    "{$user->first_name} {$user->last_name}"
+                ),
+
                 'email' => $user->email,
             ]
         ]);
