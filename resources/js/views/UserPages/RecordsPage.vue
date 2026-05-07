@@ -127,145 +127,377 @@
     </template>
   </div>
 </template>
-
 <script setup>
 import {
-  Chart as ChartJS, Title, Tooltip, Legend, ArcElement,
-  LineElement, CategoryScale, LinearScale, PointElement, Filler
+  Chart as ChartJS,
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Filler
 } from 'chart.js'
-import { ref, computed, onMounted } from "vue"
-import { Doughnut, Line } from 'vue-chartjs'
+
+import {
+  ref,
+  computed,
+  onMounted
+} from "vue"
+
+import {
+  Doughnut,
+  Line
+} from 'vue-chartjs'
+
 import axios from "axios"
+
 import { useUser } from "@/composables/useUser"
+
 import RecordModal from "@/components/UserSide/RecordModal.vue"
 
-ChartJS.register(Title, Tooltip, Legend, ArcElement, LineElement, CategoryScale, LinearScale, PointElement, Filler)
+ChartJS.register(
+  Title,
+  Tooltip,
+  Legend,
+  ArcElement,
+  LineElement,
+  CategoryScale,
+  LinearScale,
+  PointElement,
+  Filler
+)
 
 const { fetchUser } = useUser()
+
+/* --------------------------------------------------------
+| STATE
+-------------------------------------------------------- */
+
 const records = ref([])
+
+const loading = ref(true)
+
 const searchQuery = ref("")
 const dateFilter = ref("")
-const loading = ref(true)
+
 const selectedRecord = ref(null)
+
 const showModal = ref(false)
 
-const openView = (record) => { selectedRecord.value = record; showModal.value = true }
+const loadingModal = ref(false)
 
-const formatDate = (d) => new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+/* --------------------------------------------------------
+| OPEN MODAL + FETCH FULL REVIEW
+-------------------------------------------------------- */
+
+const openView = async (record) => {
+  loadingModal.value = true
+
+  try {
+
+    /*
+    |--------------------------------------------------------------------------
+    | IMPORTANT:
+    | fetch FULL review data from correct endpoint
+    |--------------------------------------------------------------------------
+    */
+
+    const res = await axios.get(
+      `/api/quiz/result/${record.id}`
+    )
+
+    selectedRecord.value = {
+      ...record,
+      ...res.data,
+      questions: res.data.questions || []
+    }
+
+    showModal.value = true
+
+  } catch (err) {
+
+    console.error(
+      'Failed to fetch review:',
+      err
+    )
+
+  } finally {
+
+    loadingModal.value = false
+  }
+}
+
+/* --------------------------------------------------------
+| FORMATTERS
+-------------------------------------------------------- */
+
+const formatDate = (d) =>
+  new Date(d).toLocaleDateString(
+    'en-US',
+    {
+      month: 'short',
+      day: 'numeric',
+      year: 'numeric'
+    }
+  )
 
 const toDateKey = (d) => {
   const date = new Date(d)
-  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`
+
+  return `${date.getFullYear()}-${String(
+    date.getMonth() + 1
+  ).padStart(2, '0')}-${String(
+    date.getDate()
+  ).padStart(2, '0')}`
 }
 
+const formatTime = (sec) => {
+
+  if (
+    sec === null ||
+    sec === undefined
+  ) {
+    return '0:00'
+  }
+
+  const m = Math.floor(sec / 60)
+
+  const s = sec % 60
+
+  return `${m}:${s
+    .toString()
+    .padStart(2, '0')}`
+}
+
+/* --------------------------------------------------------
+| FILTER
+-------------------------------------------------------- */
+
 const filteredRecords = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
+
+  const q = searchQuery.value
+    .toLowerCase()
+    .trim()
+
   const df = dateFilter.value
+
   return records.value.filter(r => {
-    const matchSearch = !q || (r.quiz_title || '').toLowerCase().includes(q)
-    const matchDate = !df || toDateKey(r.created_at) === df
-    return matchSearch && matchDate
+
+    const matchSearch =
+      !q ||
+      (r.quiz_title || '')
+        .toLowerCase()
+        .includes(q)
+
+    const matchDate =
+      !df ||
+      toDateKey(r.created_at) === df
+
+    return (
+      matchSearch &&
+      matchDate
+    )
   })
 })
 
+/* --------------------------------------------------------
+| STATS
+-------------------------------------------------------- */
+
 const averageScore = computed(() => {
-  if (!filteredRecords.value.length) return 0
-  const total = filteredRecords.value.reduce((s, r) => s + r.score, 0)
-  return ((total / (filteredRecords.value.length * 10)) * 100).toFixed(1)
+
+  if (!filteredRecords.value.length) {
+    return 0
+  }
+
+  const total = filteredRecords.value
+    .reduce(
+      (sum, r) =>
+        sum + r.percentage,
+      0
+    )
+
+  return (
+    total /
+    filteredRecords.value.length
+  ).toFixed(1)
 })
 
-const maxScore = computed(() =>
-  filteredRecords.value.length ? Math.max(...filteredRecords.value.map(r => r.score)) : 0
-)
+const maxScore = computed(() => {
 
-const needsImprovement = computed(() => filteredRecords.value.filter(r => r.score < 7).length)
+  if (!filteredRecords.value.length) {
+    return 0
+  }
+
+  return Math.max(
+    ...filteredRecords.value.map(
+      r => r.score
+    )
+  )
+})
+
+const needsImprovement = computed(() => {
+
+  return filteredRecords.value
+    .filter(r => r.percentage < 70)
+    .length
+})
+
+/* --------------------------------------------------------
+| CHARTS
+-------------------------------------------------------- */
 
 const chartData = computed(() => {
-  const passed = filteredRecords.value.filter(r => r.score >= 7).length
+
+  const passed =
+    filteredRecords.value.filter(
+      r => r.percentage >= 70
+    ).length
+
+  const failed =
+    filteredRecords.value.length -
+    passed
+
   return {
-    labels: ['Passed', 'Needs Review'],
+    labels: [
+      'Passed',
+      'Needs Review'
+    ],
     datasets: [{
-      data: [passed, filteredRecords.value.length - passed],
-      backgroundColor: ['#6366f1', '#f43f5e'],
-      borderWidth: 0,
-      hoverOffset: 4,
+      data: [
+        passed,
+        failed
+      ],
+      backgroundColor: [
+        '#6366f1',
+        '#f43f5e'
+      ],
+
+      borderWidth: 0
     }]
   }
 })
 
 const lineData = computed(() => {
-  const sorted = [...filteredRecords.value].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
+  const sorted = [
+    ...filteredRecords.value
+  ].sort(
+    (a, b) =>
+      new Date(a.created_at) -
+      new Date(b.created_at)
+  )
   return {
-    labels: sorted.map(r => new Date(r.created_at).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })),
+    labels: sorted.map(r =>
+      new Date(r.created_at)
+        .toLocaleDateString(
+          'en-US',
+          {
+            month: 'short',
+            day: 'numeric'
+          }
+        )
+    ),
+
     datasets: [{
-      label: 'Score',
-      data: sorted.map(r => r.score),
+      label: 'Score %',
+
+      data: sorted.map(
+        r => r.percentage
+      ),
       borderColor: '#6366f1',
       borderWidth: 2.5,
-      backgroundColor: (context) => {
-        if (!context.chart.chartArea) return
-        const { ctx, chartArea } = context.chart
-        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom)
-        gradient.addColorStop(0, 'rgba(99, 102, 241, 0.15)')
-        gradient.addColorStop(1, 'rgba(99, 102, 241, 0)')
-        return gradient
-      },
+      backgroundColor:
+        'rgba(99,102,241,0.1)',
       fill: true,
       tension: 0.4,
-      pointRadius: 2,
-      pointHoverRadius: 5,
-      pointHitRadius: 20,
-      pointBackgroundColor: '#6366f1',
-      pointBorderColor: '#fff',
-      pointBorderWidth: 2,
+      pointRadius: 2
     }]
   }
 })
-
+/* --------------------------------------------------------
+| CHART OPTIONS
+-------------------------------------------------------- */
 const chartOptions = {
   responsive: true,
   maintainAspectRatio: false,
   plugins: {
-    legend: { position: 'bottom', labels: { boxWidth: 10, usePointStyle: true, font: { size: 11 } } }
+    legend: {
+      position: 'bottom',
+
+      labels: {
+        usePointStyle: true,
+        font: { size: 11 }
+      }
+    }
   }
 }
 
 const lineOptions = {
   responsive: true,
   maintainAspectRatio: false,
-  interaction: { intersect: false, mode: 'index' },
   plugins: {
-    legend: { display: false },
+    legend: {
+      display: false
+    },
     tooltip: {
-      enabled: true,
-      backgroundColor: '#1e293b',
-      padding: 8,
-      borderRadius: 8,
-      titleColor: '#94a3b8',
-      bodyColor: '#fff',
-      bodyFont: { weight: 'bold', size: 13 },
-      displayColors: false,
-      callbacks: { label: (ctx) => `Score: ${ctx.parsed.y} / 10` }
+      callbacks: {
+        label: (ctx) =>
+          `Score: ${ctx.parsed.y}%`
+      }
     }
   },
   scales: {
     y: {
-      min: 0, max: 10,
-      ticks: { stepSize: 2, color: '#94a3b8', font: { size: 11 } },
-      grid: { color: 'rgba(241,245,249,1)', drawBorder: false }
-    },
-    x: {
-      ticks: { color: '#94a3b8', font: { size: 11 }, maxRotation: 0 },
-      grid: { display: false }
+      min: 0,
+      max: 100,
+      ticks: {
+        callback: v => v + '%'
+      }
     }
   }
 }
-
+/* --------------------------------------------------------
+| FETCH RECORDS
+-------------------------------------------------------- */
 const fetchRecords = async () => {
   loading.value = true
   try {
-    const res = await axios.get('/api/records')
-    records.value = res.data.results || []
+    const res = await axios.get(
+      '/api/records'
+    )
+    records.value =
+      (res.data.results || [])
+        .map(r => ({
+
+          id: r.id,
+          quiz_id: r.quiz_id,
+          quiz_title:
+            r.quiz_title,
+          quiz_description:
+            r.quiz_description,
+          score: r.score,
+          total_questions:
+            r.total_questions,
+          elapsed_time:
+            r.elapsed_time,
+          percentage:
+            r.percentage,
+          created_at:
+            r.created_at,
+          duration:
+            formatTime(
+              r.elapsed_time
+            )
+        }))
+  } catch (err) {
+
+    console.error(
+      'Failed to fetch records:',
+      err
+    )
   } finally {
     loading.value = false
   }
@@ -276,7 +508,6 @@ onMounted(async () => {
   fetchRecords()
 })
 </script>
-
 <style scoped>
 *,
 *::before,
@@ -518,6 +749,23 @@ onMounted(async () => {
 
 .col-accuracy {
   width: 80px;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+.fade-enter-from .modal-content,
+.fade-leave-to .modal-content {
+  transform: scale(0.96);
 }
 
 .col-time {
