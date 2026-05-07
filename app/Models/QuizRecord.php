@@ -14,6 +14,8 @@ class QuizRecord extends Model
         'quiz_id',
         'score',
         'total_questions',
+        'elapsed_time',
+        'completed_at',
     ];
 
 
@@ -26,5 +28,4 @@ class QuizRecord extends Model
     {
         return $this->belongsTo(Dasher::class, 'user_id');
     }
-
 }
