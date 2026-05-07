@@ -3,21 +3,16 @@
     <div class="card">
 
       <div class="header">
-        <div class="logo">DQ</div>
+        <div class="logo">
+          <img src="/public/bolt.png" alt="Logo" width="32" height="32">
+        </div>
         <h2>Forgot Password</h2>
         <p>Enter your email and we’ll send you a reset link.</p>
       </div>
 
       <form @submit.prevent="sendResetLink" class="form">
         <div class="field">
-          <input
-            type="email"
-            name="email"
-            v-model="email"
-            placeholder="Email address"
-            required
-            autocomplete="off"
-          />
+          <input type="email" name="email" v-model="email" placeholder="Email address" required autocomplete="off" />
         </div>
 
         <button class="btn" :disabled="loading">
@@ -91,14 +86,14 @@ const sendResetLink = async () => {
 
 .header {
   text-align: center;
+  display: flex;
+  flex-direction: column;
 }
 
 .logo {
   width: 40px;
   height: 40px;
   margin: 0 auto 10px;
-  border-radius: 10px;
-  background: #6366f1;
   color: #fff;
   display: flex;
   align-items: center;
