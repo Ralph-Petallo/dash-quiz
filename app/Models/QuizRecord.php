@@ -13,9 +13,7 @@ class QuizRecord extends Model
         'user_id',
         'quiz_id',
         'score',
-        'total_questions',
         'elapsed_time',
-        'completed_at',
     ];
 
 
@@ -27,5 +25,10 @@ class QuizRecord extends Model
     public function user()
     {
         return $this->belongsTo(Dasher::class, 'user_id');
+    }
+
+    public function attempts()
+    {
+        return $this->hasMany(QuizAttempt::class, 'quiz_record_id');
     }
 }

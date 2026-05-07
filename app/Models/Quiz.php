@@ -20,15 +20,13 @@ class Quiz extends Model
         return $this->hasMany(Question::class);
     }
 
-    public function quiz()
-    {
-        return $this->belongsTo(Quiz::class, 'quiz_id');
-    }
-
     public function records()
     {
         return $this->hasMany(QuizRecord::class, 'quiz_id');
     }
-
-
+    
+    public function attemptsCount()
+    {
+        return $this->records()->count();
+    }
 }
