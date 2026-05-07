@@ -42,7 +42,7 @@ const routes = [
         ]
     },
 
-    { path: '/quiz-result', component: QuizResult, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/quiz-result/:id', component: QuizResult, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/quiz/:quiz_id', name: 'quiz-start', component: TakeQuizPage, meta: { requiresAuth: true, requiresStudent: true } },
 
     {
