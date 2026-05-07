@@ -29,7 +29,7 @@ const routes = [
     { path: '/', component: LoginPage },
     { path: '/register', component: RegisterPage },
     { path: '/forgot', component: ForgotPage },
-    { path: '/reset', component: ResetPage },
+    { path: '/reset/:token', component: ResetPage },
 
     {
         path: '/user',
