@@ -5,14 +5,14 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Quiz;
 use App\Models\Question;
+use App\Models\Dasher;
 use App\Models\QuizRecord;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Auth;
 
 class QuizApiController extends Controller
 {
     // Get quiz with random questions and their options
-    public function getQuiz($id)
+    public function getQuiz(int $id)
     {
         // Find the quiz and eager load its questions and options
         // eager loading prevents N+1 query problems
@@ -57,12 +57,23 @@ class QuizApiController extends Controller
                                 // fallback using ASCII if there are more than 4 options
                                 'label' => $optionLabels[$optIndex] ?? chr(65 + $optIndex),
                             ];
-
                         })->toArray()
                     ];
-
                 })->toArray()
             ]
+        ]);
+    }
+
+    public function getQuizResult($id)
+    {
+        $record = QuizRecord::with(['quiz', 'user'])
+            ->where('id', $id)
+            ->where('user_id', auth('sanctum')->id())
+            ->firstOrFail();
+
+        return response()->json([
+            'status' => 'success',
+            'record' => $record
         ]);
     }
 
@@ -99,26 +110,35 @@ class QuizApiController extends Controller
     // Save the final quiz score for the user
     public function submitQuizResult(Request $request)
     {
-        // Validate submitted quiz result
         $validated = $request->validate([
             'quiz_id' => 'required|exists:quizzes,id',
-            'score' => 'required|integer|min:0'
+            'score' => 'required|integer|min:0',
+            'total_questions' => 'required|integer|min:1',
+            'elapsed_time' => 'required|integer|min:0',
         ]);
 
-        // Get the authenticated user using the "dasher" guard
-        $user = Auth::guard('dasher')->user();
+        $user = auth('sanctum')->user();
 
-        // Store quiz result in database
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
         $record = QuizRecord::create([
             'user_id' => $user->id,
             'quiz_id' => $validated['quiz_id'],
             'score' => $validated['score'],
-            'completed_at' => now()
+            'total_questions' => $validated['total_questions'],
+            'elapsed_time' => $validated['elapsed_time'],
+            'completed_at' => now(),
         ]);
 
-        // Return stored record
         return response()->json([
             'status' => 'success',
+            'message' => 'Quiz completed successfully',
+            'result_id' => $record->id,
             'record' => $record
         ]);
     }
