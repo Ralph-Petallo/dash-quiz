@@ -1,44 +1,76 @@
 <template>
   <div class="quiz-result-page">
+
+    <!-- Top Bar -->
     <header class="top-bar">
       <div class="nav-content">
         <div class="brand">
           <span class="brand-text">Assessment Complete</span>
         </div>
+
         <router-link to="/profile" class="profile-link">
           <img :src="profileImageUrl" alt="Profile" class="user-avatar" />
         </router-link>
       </div>
     </header>
 
+    <!-- Main -->
     <main class="container">
-      <div class="result-card">
+
+      <!-- Loading -->
+      <div v-if="loading" class="result-card">
+        <p>Loading result...</p>
+      </div>
+
+      <!-- Result -->
+      <div v-else-if="record" class="result-card">
+
         <div class="celebration-icon">🎉</div>
 
+        <!-- SCORE -->
         <div class="score-summary">
-          <h2 class="percentage-display">{{ percentage }}%</h2>
-          <p class="score-text">You scored <strong>{{ score }}</strong> out of <strong>{{ totalQuestions }}</strong></p>
+          <h2 class="score-number">
+            {{ record.score }} / {{ record.total_questions }}
+          </h2>
+
+          <p class="score-text">
+            You completed this quiz
+          </p>
+
+          <!-- TIME -->
+          <p class="time-text">
+            ⏱ Time: {{ formatTime(record.elapsed_time) }}
+          </p>
         </div>
 
-        <div class="visual-track">
-          <div class="track-fill" :style="{ width: percentage + '%' }"></div>
-        </div>
-
+        <!-- FEEDBACK -->
         <div class="feedback-msg">
-          <p v-if="percentage >= 75">Excellent work! You have a solid grasp of this COC.</p>
-          <p v-else-if="percentage >= 50">Good effort! A little more review and you'll be an expert.</p>
-          <p v-else>Keep practicing. Consistency is the key to mastery!</p>
+          <p v-if="record.score >= record.total_questions * 0.75">
+            Excellent work! You have a solid grasp of this topic.
+          </p>
+
+          <p v-else-if="record.score >= record.total_questions * 0.5">
+            Good effort! Keep practicing and you'll improve more.
+          </p>
+
+          <p v-else>
+            Keep practicing. Consistency is the key to mastery!
+          </p>
         </div>
 
+        <!-- ACTIONS -->
         <div class="action-grid">
-          <router-link to="/" class="btn-primary">
+          <router-link to="/user/quizzes" class="btn-primary">
             Go to Dashboard
           </router-link>
+
           <button @click="reTake" class="btn-outline">
             Try Again
           </button>
         </div>
+
       </div>
+
     </main>
   </div>
 </template>
@@ -46,59 +78,56 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
+import axios from 'axios'
 import { useUser } from '@/composables/useUser'
 
 const route = useRoute()
 const router = useRouter()
 const { userAvatar, fetchUser } = useUser()
 
-const score = ref(0)
-const totalQuestions = ref(10)
-
-// Compute percentage but clamp between 0 and 100
-const percentage = computed(() => {
-  if (totalQuestions.value <= 0) return 0
-  const percent = Math.round((score.value / totalQuestions.value) * 100)
-  return percent > 100 ? 100 : percent
-})
+const record = ref(null)
+const loading = ref(true)
 
 const profileImageUrl = computed(() => userAvatar.value)
 
 onMounted(async () => {
   await fetchUser()
+
   try {
-    const queryScore = parseInt(route.query.score) || 0
-    const queryTotal = parseInt(route.query.total) || 10
+    const recordId = route.params.id
 
-    // Make sure totalQuestions is at least 1
-    totalQuestions.value = queryTotal > 0 ? queryTotal : 10
+    const { data } = await axios.get(`/api/quiz/result/${recordId}`)
 
-    // Clamp score to 0..totalQuestions
-    score.value = (queryScore < 0) ? 0 : queryScore
-    if (score.value > totalQuestions.value) score.value = totalQuestions.value
+    record.value = {
+      id: data.record_id,
+      score: data.score,
+      total_questions: data.questions?.length || 0,
+      elapsed_time: data.elapsed_time || 0,
+      quiz_id: data.quiz_id || null
+    }
 
-
-
-  } catch (error) {
-    console.error('Error in QuizResult mounted hook:', error)
+  } catch (err) {
+    console.error('Failed to load quiz result:', err)
+  } finally {
+    loading.value = false
   }
 })
 
-// retae
-const reTake = computed(() => {
-  router.replace('/quiz/' + route.query.id)
-})
+const formatTime = (sec) => {
+  if (!sec && sec !== 0) return '00:00'
 
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+  return `${m}:${s.toString().padStart(2, '0')}`
+}
+
+const reTake = () => {
+  if (!record.value?.quiz_id) return
+  router.replace(`/quiz/${record.value.quiz_id}`)
+}
 </script>
 
 <style scoped>
-:root {
-  --primary: #6366f1;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --bg-subtle: #f8fafc;
-}
-
 .quiz-result-page {
   min-height: 100vh;
   background: #f8fafc;
@@ -107,9 +136,9 @@ const reTake = computed(() => {
   flex-direction: column;
 }
 
-/* === Minimal Top Bar === */
+/* TOP BAR */
 .top-bar {
-  background: #ffffff;
+  background: #fff;
   border-bottom: 1px solid #e2e8f0;
   padding: 0.75rem 0;
 }
@@ -136,11 +165,10 @@ const reTake = computed(() => {
   height: 36px;
   border-radius: 50%;
   border: 2px solid #6366f1;
-  padding: 2px;
   object-fit: cover;
 }
 
-/* === Main Container === */
+/* MAIN */
 .container {
   flex: 1;
   display: flex;
@@ -149,14 +177,14 @@ const reTake = computed(() => {
   padding: 2rem 1rem;
 }
 
-/* === Result Card === */
+/* CARD */
 .result-card {
-  background: #ffffff;
-  border-radius: 24px;
+  background: #fff;
+  border-radius: 20px;
   padding: 3rem 2rem;
   text-align: center;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
-  max-width: 450px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.06);
+  max-width: 420px;
   width: 100%;
   border: 1px solid #f1f5f9;
 }
@@ -166,44 +194,36 @@ const reTake = computed(() => {
   margin-bottom: 1rem;
 }
 
-.percentage-display {
-  font-size: 4rem;
-  font-weight: 900;
+/* SCORE */
+.score-number {
+  font-size: 2.5rem;
+  font-weight: 800;
   color: #1e293b;
   margin: 0;
-  letter-spacing: -2px;
 }
 
 .score-text {
   color: #64748b;
-  font-size: 1.1rem;
-  margin-top: -5px;
+  margin-top: 0.5rem;
 }
 
-/* Visual Bar */
-.visual-track {
-  height: 8px;
-  background: #f1f5f9;
-  border-radius: 10px;
-  margin: 2rem 0;
-  overflow: hidden;
+/* TIME */
+.time-text {
+  margin-top: 0.5rem;
+  font-size: 0.9rem;
+  color: #6366f1;
+  font-weight: 600;
 }
 
-.track-fill {
-  height: 100%;
-  background: #6366f1;
-  border-radius: 10px;
-  transition: width 1s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
+/* FEEDBACK */
 .feedback-msg {
+  margin: 2rem 0;
   color: #64748b;
   font-style: italic;
-  margin-bottom: 2.5rem;
   font-size: 0.95rem;
 }
 
-/* === Action Buttons === */
+/* ACTIONS */
 .action-grid {
   display: flex;
   flex-direction: column;
@@ -215,20 +235,20 @@ const reTake = computed(() => {
   color: #fff;
   text-decoration: none;
   padding: 1rem;
-  border-radius: 14px;
+  border-radius: 12px;
   font-weight: 700;
-  transition: transform 0.2s;
+  transition: 0.2s;
 }
 
 .btn-outline {
   background: transparent;
-  color: #64748b;
   border: 2px solid #e2e8f0;
+  color: #64748b;
   padding: 1rem;
-  border-radius: 14px;
+  border-radius: 12px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: 0.2s;
 }
 
 .btn-primary:hover,

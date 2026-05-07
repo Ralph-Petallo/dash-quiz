@@ -18,7 +18,7 @@
 
                 <div class="nav-right">
                     <div class="stat-item">
-                        <span class="stat-label">Progress</span>
+                        <span class="stat-label">Questions</span>
                         <span class="stat-value">{{ currentIndex + 1 }}/{{ questions.length }}</span>
                     </div>
                     <div class="v-divider"></div>
@@ -76,7 +76,7 @@
                                 <button @click="submitAnswer" class="btn-submit"
                                     :disabled="!selectedAnswer || submitting">
                                     <span>{{ currentIndex + 1 === questions.length ? 'Finish Quiz' : 'Continue'
-                                    }}</span>
+                                        }}</span>
                                     <svg v-if="currentIndex + 1 !== questions.length" xmlns="http://www.w3.org/2000/svg"
                                         width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -93,7 +93,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
 import axios from 'axios'
 import { useRoute, useRouter } from 'vue-router'
 
@@ -103,120 +103,91 @@ const router = useRouter()
 const quiz = ref({ title: '', total_questions: 0 })
 const questions = ref([])
 const submitting = ref(false)
-// set current question number -> from localStorage save data, prevent from starting to one if refresh
+
 const currentIndex = ref(parseInt(localStorage.getItem('quiz_current_index')) || 0)
 const selectedAnswer = ref(null)
 const score = ref(parseInt(localStorage.getItem('quiz_score')) || 0)
+
 const loading = ref(true)
 const error = ref(null)
 
-// Computed property needs to be robust
+const timeElapsed = ref(0)
+const answers = ref([]) // ✅ FIX: store ALL answers properly
+
+let timerInterval = null
+
+// CURRENT QUESTION
 const currentQuestion = computed(() => {
     return questions.value[currentIndex.value] || {
         id: null,
         text: '',
-        question_number: 0,
         options: []
     }
 })
 
-// computed the progress bar
+// PROGRESS
 const progress = computed(() => {
-    return questions.value.length > 0 ? ((currentIndex.value + 1) / questions.value.length) * 100 : 0
+    return questions.value.length
+        ? ((currentIndex.value + 1) / questions.value.length) * 100
+        : 0
 })
 
-const fetchQuiz = async () => {
-    loading.value = true
-    error.value = null
-
-    // this will get the current ID in the url
-    const quizId = route.params.quiz_id
-
-    //push back to quizzes page if no id
-    if (!quizId) {
-        error.value = 'No quiz ID in the URL.'
-        loading.value = false
-        router.push('/user/quizzes')
-    } else {
-        // sets the selected quiz
-        localStorage.setItem('quiz_id', quizId)
-    }
-
-    try {
-        const { data } = await axios.get(`/api/quiz/${quizId}`)
-
-        if (data.status === 'success' && data.quiz) {
-            const quizData = data.quiz
-
-            quiz.value = {
-                title: quizData.title || 'Untitled Quiz',
-                description: quizData.description || '',
-                total_questions: quizData.total_questions || 0,
-            }
-
-
-            // CRITICAL FIX: Assign questions directly from the API source (quizData)
-            // Ensure we use .value for the ref
-            if (Array.isArray(quizData?.questions)) {
-                questions.value = quizData.questions
-            } else {
-                questions.value = []
-            }
-
-            if (questions.value.length === 0) {
-                error.value = 'This quiz has no questions available.'
-            }
-        } else {
-            throw new Error('Quiz data not found')
-        }
-
-    } catch (err) {
-        console.error('Fetch error:', err)
-        error.value = err.message || 'Could not load the quiz.'
-    } finally {
-        loading.value = false
-    }
-}
-
-const timeElapsed = ref(0)
-let timerInterval = null
-
-// Start timer on mount
-onMounted(() => {
-    timerInterval = setInterval(() => {
-        timeElapsed.value++
-    }, 1000)
-    fetchQuiz()
-})
-
-// Format seconds to MM:SS
+// FORMAT TIME
 const formattedTime = computed(() => {
     const mins = Math.floor(timeElapsed.value / 60)
     const secs = timeElapsed.value % 60
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 })
 
-// if confirmed, quiz progress will be deleted
-const confirmExit = () => {
-    if (confirm("Are you sure you want to quit? Your progress won't be saved.")) {
-        localStorage.removeItem('quiz_current_index')
-        localStorage.removeItem('quiz_score')
-        localStorage.removeItem('quizId')
+// FETCH QUIZ
+const fetchQuiz = async () => {
+    loading.value = true
+    error.value = null
+
+    const quizId = route.params.quiz_id
+
+    if (!quizId) {
         router.push('/user/quizzes')
+        return
+    }
+
+    localStorage.setItem('quiz_id', quizId)
+
+    try {
+        const { data } = await axios.get(`/api/quiz/${quizId}`)
+
+        if (data.status === 'success') {
+            quiz.value = data.quiz
+            questions.value = data.quiz.questions || []
+
+            if (!questions.value.length) {
+                error.value = 'No questions found'
+            }
+        }
+    } catch (err) {
+        error.value = err.message
+    } finally {
+        loading.value = false
     }
 }
 
+// SUBMIT ANSWER
 const submitAnswer = async () => {
     if (!selectedAnswer.value || submitting.value) return
 
     submitting.value = true
+
     try {
-        const payload = {
+        const { data } = await axios.post('/api/quiz/answer', {
             question_id: currentQuestion.value.id,
             answer_id: selectedAnswer.value
-        }
+        })
 
-        const { data } = await axios.post('/api/quiz/answer', payload)
+        // ✅ SAVE ANSWER (IMPORTANT FOR FINAL RESULT)
+        answers.value.push({
+            question_id: currentQuestion.value.id,
+            answer_id: selectedAnswer.value
+        })
 
         if (data.correct) {
             score.value++
@@ -224,51 +195,63 @@ const submitAnswer = async () => {
         }
 
         selectedAnswer.value = null
-        localStorage.setItem('quiz_current_index', currentIndex.value)
 
         if (currentIndex.value < questions.value.length - 1) {
             currentIndex.value++
+            localStorage.setItem('quiz_current_index', currentIndex.value)
         } else {
             await submitQuizResult()
         }
 
-    } catch (err) {
-        alert(err.response?.data?.message || "Failed to submit answer")
     } finally {
         submitting.value = false
     }
 }
 
+// SUBMIT FINAL RESULT (ALIGNED TO CONTROLLER)
 const submitQuizResult = async () => {
     try {
-        await axios.post('/api/quiz/result', {
+        const { data } = await axios.post('/api/quiz/result', {
             quiz_id: route.params.quiz_id,
             score: score.value,
-        })
-        // redirect to result page
-        router.push({
-            path: '/quiz-result',
-            //query parameter in URI
-            query: { score: score.value, total: questions.value.length, id: route.params.quiz_id }
+            elapsed_time: timeElapsed.value,
+
+            // ✅ REQUIRED BY CONTROLLER
+            answers: answers.value
         })
 
-        // CLEAR STORAGE HERE
+        // cleanup
         localStorage.removeItem('quiz_current_index')
         localStorage.removeItem('quiz_score')
-        localStorage.removeItem('quizId')
+        localStorage.removeItem('quiz_id')
+
+        // ✅ FIXED: controller returns record_id (NOT record.id)
+        router.replace(`/quiz-result/${data.record_id}`)
+
     } catch (err) {
-        console.error('Result error:', err)
+        console.error(err)
     }
 }
 
-//return to quizzes
-const goBackToQuizzes = () => router.push('/user/quizzes')
+// EXIT
+const confirmExit = () => {
+    if (confirm("Exit quiz?")) {
+        localStorage.clear()
+        router.push('/user/quizzes')
+    }
+}
 
+// TIMER
 onMounted(() => {
     timerInterval = setInterval(() => {
         timeElapsed.value++
     }, 1000)
+
     fetchQuiz()
+})
+
+onBeforeUnmount(() => {
+    clearInterval(timerInterval)
 })
 </script>
 
