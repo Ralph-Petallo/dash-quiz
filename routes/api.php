@@ -6,14 +6,17 @@ use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\ProfileApiController;
 use App\Http\Controllers\Api\PasswordResetController;
-use App\Http\Controllers\Api\ChatbotController;
+use App\Models\Dasher;
 
 /*
 | Public Routes
 */
 
-// chat bot test
-
+Route::get('/test', fn() => response()->json(
+    [
+        'ok' => true,
+    ]
+)); // for test route
 
 Route::post('/login', [AdminApiController::class, 'login']);
 Route::post('/mobile/login', [AdminApiController::class, 'mobileLogin']);
@@ -41,6 +44,7 @@ Route::middleware(['auth:sanctum', 'active_user'])->group(function () {
     Route::get('/quiz/progress', [QuizApiController::class, 'getQuizProgress']);
     Route::post('/quiz/answer', [QuizApiController::class, 'submitAnswer']);
     Route::post('/quiz/result', [QuizApiController::class, 'submitQuizResult']);
+    Route::get('/quiz/record/{id}', [QuizApiController::class, 'getQuizRecord']);
 
     // Records
     Route::get('/records', [UserApiController::class, 'records']);
