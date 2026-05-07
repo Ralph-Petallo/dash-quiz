@@ -43,7 +43,9 @@ Route::middleware(['auth:sanctum', 'active_user'])->group(function () {
     Route::get('/quiz/{quiz_id}', [QuizApiController::class, 'getQuiz']);
     Route::get('/quiz/progress', [QuizApiController::class, 'getQuizProgress']);
     Route::post('/quiz/answer', [QuizApiController::class, 'submitAnswer']);
+
     Route::post('/quiz/result', [QuizApiController::class, 'submitQuizResult']);
+    Route::get('/quiz/result/{id}', [QuizApiController::class, 'getQuizResult']);
     Route::get('/quiz/record/{id}', [QuizApiController::class, 'getQuizRecord']);
 
     // Records
