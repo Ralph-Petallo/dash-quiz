@@ -3,67 +3,215 @@
     <div v-if="modelValue" class="modal-overlay" @click.self="close">
 
       <div class="modal-content">
+
+        <!-- HEADER -->
         <div class="modal-header">
+
           <div class="title-group">
-            <h3>{{ record?.details?.quiz_title || 'Quiz Details' }}</h3>
-            <p class="subtitle">Completed on {{ formatDate(record?.created_at) }}</p>
+
+            <h3>
+              Quiz Review
+            </h3>
+
+            <p class="subtitle">
+              Completed on {{ formatDate(record?.created_at) }}
+            </p>
+
           </div>
-          <button class="close-x" @click="close">✕</button>
+
         </div>
 
+        <!-- SUMMARY -->
         <div class="modal-summary" v-if="record">
+
           <div class="m-stat">
+
             <span>Score</span>
-            <strong :class="record.score >= 7 ? 'pass-text' : 'fail-text'">
-              {{ record.score }} / 10
+
+            <strong :class="record.score >= passingScore
+              ? 'pass-text'
+              : 'fail-text'">
+              {{ correctCount }} / {{ totalQuestions }}
+            </strong>
+
+          </div>
+
+          <div class="m-stat">
+
+            <span>Accuracy</span>
+
+            <strong>
+              {{ accuracy }}%
+            </strong>
+
+          </div>
+
+          <div class="m-stat">
+
+            <span>Elapsed</span>
+            <strong>
+              {{ formatElapsed(record.elapsed_time) }}
             </strong>
           </div>
           <div class="m-stat">
-            <span>Accuracy</span>
-            <strong>{{ accuracy }}%</strong>
-          </div>
-          <div class="m-stat">
             <span>Status</span>
-            <span :class="['badge', record.score >= 7 ? 'pass' : 'fail']">
-              {{ record.score >= 7 ? 'Passed' : 'Failed' }}
+            <span :class="[
+              'badge',
+              record.score >= passingScore ? 'pass' : 'fail']">
+              {{
+                record.score >= passingScore
+                  ? 'Passed'
+                  : 'Failed'
+              }}
             </span>
           </div>
         </div>
 
-        <div class="modal-body" v-if="record?.details?.questions">
-          <h4 class="section-label">Review Questions</h4>
+        <!-- BODY -->
+        <div class="modal-body" v-if="record?.questions?.length">
 
-          <div v-for="(q, i) in record.details.questions" :key="i"
-            :class="['q-card', q.correct ? 'card-correct' : 'card-wrong']">
-            <div class="q-header">
-              <span class="q-number">Question {{ i + 1 }}</span>
-              <span :class="['q-status', q.correct ? 'text-correct' : 'text-wrong']">
-                {{ q.correct ? 'Correct' : 'Incorrect' }}
+          <!-- TOPBAR -->
+          <div class="questions-topbar">
+
+            <h4 class="section-label">
+              Question Review
+            </h4>
+
+            <div class="review-stats">
+
+              <span class="correct-pill">
+                {{ correctCount }} Correct
               </span>
+
+              <span class="wrong-pill">
+                {{ wrongCount }} Wrong
+              </span>
+
             </div>
 
-            <p class="q-text">{{ q.question }}</p>
+          </div>
 
-            <div class="answer-box">
-              <div class="ans-line">
-                <span class="ans-label">Your Answer:</span>
-                <span :class="['ans-val', q.correct ? 'text-correct' : 'text-wrong']">
-                  {{ q.user_answer }}
-                </span>
+          <!-- QUESTION LIST -->
+          <div class="question-list">
+
+            <div v-for="(q, i) in record.questions" :key="q.question_id || i" class="question-item">
+
+              <!-- NUMBER -->
+              <div :class="[
+                'question-indicator',
+                q.is_correct
+                  ? 'indicator-correct'
+                  : 'indicator-wrong'
+              ]">
+                {{ i + 1 }}
               </div>
 
-              <div v-if="!q.correct" class="ans-line correct-line">
-                <span class="ans-label">Correct Answer:</span>
-                <span class="ans-val text-correct">{{ q.correct_answer }}</span>
+              <!-- CONTENT -->
+              <div class="question-content">
+
+                <!-- QUESTION BODY -->
+                <div class="question-card-body">
+
+                  <!-- QUESTION -->
+                  <div class="question-block">
+
+                    <span class="mini-label">
+                      Question
+                    </span>
+
+                    <p class="question-text">
+                      {{ q.question }}
+                    </p>
+
+                  </div>
+
+                  <!-- ANSWERS -->
+                  <div class="answers-grid">
+
+                    <!-- USER ANSWER -->
+                    <div class="answer-card">
+
+                      <div class="answer-head">
+
+                        <span class="answer-dot your-dot"></span>
+
+                        <span class="answer-title-small">
+                          Your Answer
+                        </span>
+
+                      </div>
+
+                      <div :class="[
+                        'answer-content',
+                        q.is_correct
+                          ? 'answer-correct-box'
+                          : 'answer-wrong-box'
+                      ]">
+                        {{
+                          q.user_answer ||
+                          'No answer selected'
+                        }}
+                      </div>
+
+                    </div>
+
+                    <!-- CORRECT ANSWER -->
+                    <div class="answer-card" v-if="!q.is_correct">
+
+                      <div class="answer-head">
+
+                        <span class="answer-dot correct-dot"></span>
+
+                        <span class="answer-title-small">
+                          Correct Answer
+                        </span>
+
+                      </div>
+
+                      <div class="answer-content answer-correct-box">
+                        {{ q.correct_answer }}
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                  <!-- META -->
+                  <div class="question-meta">
+
+                    <div :class="[
+                      'meta-pill',
+                      q.is_correct
+                        ? 'meta-success'
+                        : 'meta-danger'
+                    ]">
+                      {{
+                        q.is_correct
+                          ? 'Answered Correctly'
+                          : 'Needs Review'
+                      }}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
         </div>
 
-        <div class="modal-footer">
-          <button class="btn-secondary" @click="close">Close Review</button>
-          <button class="btn-primary" @click="handleRetake">Retake Quiz</button>
+        <!-- EMPTY -->
+        <div v-else class="empty-state">
+          No question data found.
         </div>
+
+        <!-- FOOTER -->
+        <div class="modal-footer">
+
+          <button class="btn-secondary" @click="close">
+            Close Review
+          </button>
+
+        </div>
+
       </div>
 
     </div>
@@ -71,27 +219,168 @@
 </template>
 
 <script setup>
-import { computed } from 'vue'
+import {
+  computed,
+  watch,
+  onMounted,
+  onUnmounted
+} from 'vue'
 
 const props = defineProps({
   modelValue: Boolean,
   record: Object
 })
 
-const emit = defineEmits(['update:modelValue', 'retake'])
+const emit = defineEmits([
+  'update:modelValue',
+  'retake'
+])
 
-const close = () => emit('update:modelValue', false)
+const passingScore = 7
 
-const accuracy = computed(() => {
-  if (!props.record?.details?.questions?.length) return 0
-  const correct = props.record.details.questions.filter(q => q.correct).length
-  return ((correct / props.record.details.questions.length) * 100).toFixed(0)
+const close = () => {
+  emit('update:modelValue', false)
+}
+
+/*
+|--------------------------------------------------------------------------
+| LOCK BODY SCROLL
+|--------------------------------------------------------------------------
+*/
+watch(
+  () => props.modelValue,
+  (val) => {
+    document.body.style.overflow = val
+      ? 'hidden'
+      : ''
+  },
+  { immediate: true }
+)
+
+/*
+|--------------------------------------------------------------------------
+| ESC CLOSE
+|--------------------------------------------------------------------------
+*/
+const handleEscape = (e) => {
+  if (e.key === 'Escape') {
+    close()
+  }
+}
+
+onMounted(() => {
+  window.addEventListener(
+    'keydown',
+    handleEscape
+  )
 })
 
-const formatDate = (d) => d ? new Date(d).toLocaleDateString('en-US', {
-  year: 'numeric', month: 'long', day: 'numeric'
-}) : ''
+onUnmounted(() => {
+  window.removeEventListener(
+    'keydown',
+    handleEscape
+  )
 
+  document.body.style.overflow = ''
+})
+
+/*
+|--------------------------------------------------------------------------
+| TOTAL QUESTIONS
+|--------------------------------------------------------------------------
+*/
+const totalQuestions = computed(() => {
+  return (
+    props.record?.total_questions ||
+    props.record?.questions?.length ||
+    0
+  )
+})
+
+/*
+|--------------------------------------------------------------------------
+| ACCURACY
+|--------------------------------------------------------------------------
+*/
+const accuracy = computed(() => {
+  const qs =
+    props.record?.questions || []
+
+  if (!qs.length) return 0
+
+  const correct = qs.filter(
+    q => q.is_correct
+  ).length
+
+  return (
+    (correct / qs.length) * 100
+  ).toFixed(0)
+})
+
+/*
+|--------------------------------------------------------------------------
+| COUNTS
+|--------------------------------------------------------------------------
+*/
+const correctCount = computed(() => {
+  return (
+    props.record?.questions?.filter(
+      q => q.is_correct
+    ).length || 0
+  )
+})
+
+const wrongCount = computed(() => {
+  return (
+    props.record?.questions?.filter(
+      q => !q.is_correct
+    ).length || 0
+  )
+})
+
+/*
+|--------------------------------------------------------------------------
+| FORMAT DATE
+|--------------------------------------------------------------------------
+*/
+const formatDate = (d) =>
+  d
+    ? new Date(d).toLocaleDateString(
+      'en-US',
+      {
+        year: 'numeric',
+        month: 'long',
+        day: 'numeric'
+      }
+    )
+    : ''
+
+/*
+|--------------------------------------------------------------------------
+| FORMAT TIME
+|--------------------------------------------------------------------------
+*/
+const formatElapsed = (sec) => {
+  if (
+    sec === null ||
+    sec === undefined
+  ) {
+    return '0:00'
+  }
+
+  const m = Math.floor(sec / 60)
+  const s = sec % 60
+
+  return `${m}:${s
+    .toString()
+    .padStart(2, '0')}`
+}
+
+/*
+|--------------------------------------------------------------------------
+| RETAKE
+|--------------------------------------------------------------------------
+*/
 const handleRetake = () => {
   emit('retake', props.record.quiz_id)
   close()
@@ -100,71 +389,110 @@ const handleRetake = () => {
 
 <style scoped>
 /* OVERLAY */
+
 .modal-overlay {
   position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(15, 23, 42, 0.7);
+  inset: 0;
+
+  background: rgba(15, 23, 42, 0.72);
+
   display: flex;
   justify-content: center;
   align-items: center;
+
   z-index: 9999;
+
   padding: 1rem;
+
+  backdrop-filter: blur(4px);
 }
 
-/* CONTENT BOX */
+/* CONTENT */
+
 .modal-content {
-  background: white;
   width: 100%;
-  max-width: 1200px;
-  max-height: 100vh;
-  border-radius: 20px;
+  max-width: 1100px;
+  max-height: 95vh;
+
+  background: #fff;
+
+  border-radius: 12px;
+
+  overflow: hidden;
+
   display: flex;
   flex-direction: column;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  overflow: hidden;
+
+  box-shadow:
+    0 10px 40px rgba(15, 23, 42, 0.15),
+    0 2px 10px rgba(15, 23, 42, 0.08);
 }
 
 /* HEADER */
+
 .modal-header {
-  padding: 1.5rem;
   display: flex;
   justify-content: space-between;
   align-items: center;
+
+  padding: 1.5rem;
+
   border-bottom: 1px solid #f1f5f9;
 }
 
 .title-group h3 {
   margin: 0;
-  color: #1e293b;
-  font-size: 1.2rem;
+
+  font-size: 1.25rem;
   font-weight: 800;
+
+  color: #0f172a;
 }
 
 .subtitle {
-  margin: 4px 0 0;
-  font-size: 0.8rem;
-  color: #64748b;
+  margin-top: 4px;
+
+  font-size: 0.82rem;
+
+  color: #94a3b8;
 }
 
 .close-x {
-  background: #f1f5f9;
+  width: 38px;
+  height: 38px;
+
   border: none;
-  width: 32px;
-  height: 32px;
+
   border-radius: 50%;
-  cursor: pointer;
+
+  background: #f8fafc;
+
   color: #64748b;
+
+  cursor: pointer;
+
+  font-size: 0.95rem;
+
+  transition: all 0.2s ease;
+}
+
+.close-x:hover {
+  background: #eef2ff;
+  color: #4f46e5;
 }
 
 /* SUMMARY */
+
 .modal-summary {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  padding: 1.25rem;
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 1rem;
+
+  padding: 1.25rem 1.5rem;
+
   background: #f8fafc;
+
   border-bottom: 1px solid #f1f5f9;
 }
 
@@ -176,178 +504,457 @@ const handleRetake = () => {
 }
 
 .m-stat span {
-  font-size: 0.65rem;
-  color: #64748b;
+  font-size: 0.68rem;
+
   text-transform: uppercase;
+
+  color: #94a3b8;
+
   font-weight: 700;
-  margin-bottom: 4px;
+
+  margin-bottom: 0.35rem;
 }
 
 .m-stat strong {
-  font-size: 1.2rem;
-  color: #1e293b;
-}
-
-/* BODY & CARDS */
-.modal-body {
-  padding: 1.5rem;
-  overflow-y: auto;
-  flex-grow: 1;
-  background: #fff;
-}
-
-.section-label {
-  font-size: 0.85rem;
-  color: #94a3b8;
-  text-transform: uppercase;
-  margin-bottom: 1rem;
-  letter-spacing: 0.05em;
-}
-
-.q-card {
-  border-radius: 12px;
-  padding: 1rem;
-  margin-bottom: 1rem;
-  border: 1px solid transparent;
-}
-
-.card-correct {
-  background: #f0fdf4;
-  border-color: #dcfce7;
-}
-
-.card-wrong {
-  background: #fff1f2;
-  border-color: #ffe4e6;
-}
-
-.q-header {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 0.5rem;
-}
-
-.q-number {
-  font-size: 0.75rem;
-  font-weight: 700;
-  color: #64748b;
-}
-
-.q-status {
-  font-size: 0.75rem;
+  font-size: 1.25rem;
   font-weight: 800;
-  text-transform: uppercase;
-}
 
-.q-text {
-  font-weight: 600;
-  color: #1e293b;
-  margin: 0 0 1rem 0;
-  font-size: 0.95rem;
-  line-height: 1.5;
-}
-
-/* ANSWERS */
-.answer-box {
-  font-size: 0.9rem;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.ans-line {
-  display: flex;
-  gap: 8px;
-}
-
-.ans-label {
-  color: #64748b;
-  font-weight: 500;
-}
-
-.ans-val {
-  font-weight: 700;
-}
-
-.text-correct {
-  color: #10b981;
-}
-
-.text-wrong {
-  color: #f43f5e;
-}
-
-/* FOOTER */
-.modal-footer {
-  padding: 1.25rem 1.5rem;
-  background: #fff;
-  border-top: 1px solid #f1f5f9;
-  display: flex;
-  justify-content: flex-end;
-  gap: 0.75rem;
-}
-
-/* BUTTONS */
-.btn-primary {
-  background: #6366f1;
-  color: white;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.2s;
-}
-
-.btn-primary:hover {
-  background: #4f46e5;
-  transform: translateY(-1px);
-}
-
-.btn-secondary {
-  background: white;
-  border: 1px solid #e2e8f0;
-  padding: 10px 20px;
-  border-radius: 10px;
-  cursor: pointer;
-  color: #64748b;
-  font-weight: 600;
-  font-size: 0.9rem;
+  color: #0f172a;
 }
 
 .pass-text {
-  color: #6366f1;
+  color: #10b981;
 }
 
 .fail-text {
   color: #f43f5e;
 }
 
+/* BADGES */
+
 .badge {
-  padding: 4px 12px;
-  border-radius: 20px;
-  font-size: 0.7rem;
-  font-weight: 800;
+  padding: 5px 12px;
+
+  border-radius: 999px;
+
+  font-size: 0.72rem;
+  font-weight: 700;
 }
 
 .badge.pass {
-  background: #e0e7ff;
-  color: #6366f1;
+  background: #ecfdf5;
+  color: #10b981;
 }
 
 .badge.fail {
-  background: #ffe4e6;
+  background: #fff1f2;
   color: #f43f5e;
 }
 
-/* SCROLLBAR */
+/* BODY */
+
+.modal-body {
+  flex: 1;
+
+  overflow-y: auto;
+
+  padding: 1.5rem;
+}
+
 .modal-body::-webkit-scrollbar {
   width: 6px;
 }
 
 .modal-body::-webkit-scrollbar-thumb {
   background: #e2e8f0;
-  border-radius: 10px;
+  border-radius: 999px;
+}
+
+/* TOPBAR */
+
+.questions-topbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 1.25rem;
+
+  gap: 1rem;
+
+  flex-wrap: wrap;
+}
+
+.section-label {
+  margin: 0;
+
+  font-size: 0.78rem;
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  color: #94a3b8;
+}
+
+.review-stats {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.correct-pill,
+.wrong-pill {
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.correct-pill {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.wrong-pill {
+  background: #fff1f2;
+  color: #f43f5e;
+}
+
+/* QUESTION LIST */
+
+.question-list {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-item {
+  display: flex;
+  align-items: flex-start;
+
+  padding: 1.5rem;
+
+  border-radius: 18px;
+  box-shadow: grey 0px 0px 0.5px 1px;
+
+  background: #fff;
+
+  transition: all 0.2s ease;
+}
+
+.question-item:hover {
+  border-color: #dbeafe;
+}
+
+/* INDICATOR */
+
+.question-indicator {
+  width: 44px;
+  height: 44px;
+  min-width: 44px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  font-weight: 800;
+  margin-right: 10px;
+}
+
+.indicator-correct {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.indicator-wrong {
+  background: #fff1f2;
+  color: #f43f5e;
+}
+
+/* CONTENT */
+
+.question-content {
+  flex: 1;
+}
+
+.question-top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+
+  margin-bottom: 0.8rem;
+
+  gap: 1rem;
+
+  flex-wrap: wrap;
+}
+
+.question-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+
+  color: #64748b;
+
+  text-transform: uppercase;
+}
+
+.question-badge {
+  padding: 5px 10px;
+
+  border-radius: 999px;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+}
+
+.badge-correct {
+  background: #ecfdf5;
+  color: #10b981;
+}
+
+.badge-wrong {
+  background: #fff1f2;
+  color: #f43f5e;
+}
+
+/* QUESTION BODY */
+
+.question-card-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.question-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+}
+
+.mini-label {
+  font-size: 0.7rem;
+
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  color: #94a3b8;
+}
+
+.question-text {
+  margin: 0;
+
+  font-size: 0.96rem;
+  line-height: 1.75;
+
+  font-weight: 600;
+
+  color: #0f172a;
+}
+
+/* ANSWERS */
+
+.answers-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 0.9rem;
+}
+
+.answer-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0.55rem;
+}
+
+.answer-head {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+}
+
+.answer-dot {
+  width: 10px;
+  height: 10px;
+
+  border-radius: 999px;
+}
+
+.your-dot {
+  background: #6366f1;
+}
+
+.correct-dot {
+  background: #10b981;
+}
+
+.answer-title-small {
+  font-size: 0.72rem;
+
+  font-weight: 700;
+
+  text-transform: uppercase;
+
+  color: #94a3b8;
+}
+
+.answer-content {
+  padding: 0.9rem;
+
+  border-radius: 14px;
+
+  font-size: 0.92rem;
+  font-weight: 600;
+
+  line-height: 1.6;
+
+  border: 1px solid transparent;
+
+  word-break: break-word;
+}
+
+.answer-correct-box {
+  background: #ecfdf5;
+  border-color: #d1fae5;
+  color: #047857;
+}
+
+.answer-wrong-box {
+  background: #fff1f2;
+  border-color: #ffe4e6;
+  color: #be123c;
+}
+
+/* META */
+
+.question-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.meta-pill {
+  padding: 6px 12px;
+
+  border-radius: 999px;
+
+  background: #f8fafc;
+
+  border: 1px solid #e2e8f0;
+
+  font-size: 0.72rem;
+  font-weight: 700;
+
+  color: #64748b;
+}
+
+.meta-success {
+  background: #ecfdf5;
+  border-color: #d1fae5;
+  color: #10b981;
+}
+
+.meta-danger {
+  background: #fff1f2;
+  border-color: #ffe4e6;
+  color: #f43f5e;
+}
+
+/* EMPTY */
+
+.empty-state {
+  padding: 3rem 1rem;
+
+  text-align: center;
+
+  color: #94a3b8;
+}
+
+/* FOOTER */
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  background-color: grey;
+  padding: 1.25rem 1.5rem;
+
+  border-top: 1px solid #f1f5f9;
+}
+
+.btn-primary,
+.btn-secondary {
+  border: none;
+
+  padding: 0.75rem 1.2rem;
+
+  border-radius: 12px;
+
+  font-size: 0.9rem;
+  font-weight: 700;
+
+  cursor: pointer;
+
+  transition: all 0.2s ease;
+}
+
+.btn-primary {
+  background: #6366f1;
+  color: #fff;
+}
+
+.btn-primary:hover {
+  background: #4f46e5;
+}
+
+.btn-secondary {
+  background: #fff;
+
+  border: 1px solid #e2e8f0;
+
+  color: #64748b;
+}
+
+/* TRANSITION */
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  opacity: 0;
+}
+
+/* RESPONSIVE */
+
+@media (max-width: 768px) {
+
+  .modal-summary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .answers-grid {
+    grid-template-columns: 1fr;
+  }
+
+}
+
+@media (max-width: 640px) {
+
+  .modal-body {
+    padding: 1rem;
+  }
+
+  .modal-footer {
+    flex-direction: column;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    width: 100%;
+  }
+
 }
 </style>
