@@ -35,7 +35,7 @@ class AdminApiController extends Controller
     {
         // Ensure admin is authenticated
         $admin = Auth::guard('dasher')->user();
-        if ($admin->role !== 'admin') {
+        if (!$admin || $admin->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.'
@@ -132,7 +132,9 @@ class AdminApiController extends Controller
             'password' => 'required'
         ]);
 
-        $user = Dasher::where('email', $credentials['email'])->first();
+        $user = Dasher::where('email', $credentials['email'])
+            ->where('role', 'dasher')
+            ->first();
 
         if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
@@ -167,12 +169,13 @@ class AdminApiController extends Controller
             'email' => 'required|email|unique:dasher,email',
             'password' => 'required|string|confirmed|min:6',
         ], [
-            // custom error messages
             'first_name.required' => 'Enter your first name',
             'last_name.required' => 'Enter your last name',
+
             'email.required' => 'Email is required',
             'email.email' => 'Email must be a valid email address',
             'email.unique' => 'Email is already in use',
+
             'password.required' => 'Password is required',
             'password.min' => 'Password must be at least 6 characters',
             'password.confirmed' => 'Please confirm your password',
@@ -189,7 +192,7 @@ class AdminApiController extends Controller
         $token = $dasher->createToken('mobile')->plainTextToken;
 
         return response()->json([
-            'status' => 'success',
+            'status' => true,
             'message' => 'Account created successfully',
             'token' => $token,
             'data' => $dasher
