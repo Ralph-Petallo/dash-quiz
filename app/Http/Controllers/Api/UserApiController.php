@@ -40,12 +40,21 @@ class UserApiController extends Controller
     {
         // Retrieve quiz list with only necessary fields
         // Reduces response size and improves performance
-        $quizzes = Quiz::all(['id', 'title', 'description']);
+        $quizzes = Quiz::with('questions')->get();
+
         return response()->json([
             'status' => 'success',
-            'data' => $quizzes
+            'data' => $quizzes->map(function ($quiz) {
+                return [
+                    'id' => $quiz->id,
+                    'title' => $quiz->title,
+                    'description' => $quiz->description,
+                    'total_questions' => $quiz->questions->count(),
+                ];
+            })->values()
         ]);
     }
+
     public function profile()
     {
         /** @var Dasher|null $user */
