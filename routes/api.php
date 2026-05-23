@@ -9,108 +9,89 @@ use App\Http\Controllers\Api\PasswordResetController;
 
 /*
 |--------------------------------------------------------------------------
-| PUBLIC ROUTES (light protection)
+| PUBLIC ROUTES
 |--------------------------------------------------------------------------
 */
 
-Route::middleware('throttle:30,1')->group(function () {
+Route::middleware('throttle:auth')->group(function () {
+    Route::get('/test', fn() => response()->json(['ok' => true]));
 
-    Route::get('/test', fn () => response()->json(['ok' => true]));
+    Route::controller(AdminApiController::class)->group(function () {
+        Route::post('/login',        'login');
+        Route::post('/mobile/login', 'mobileLogin');
+        Route::post('/register',     'register');
+    });
 
-    Route::post('/login', [AdminApiController::class, 'login']);
-    Route::post('/mobile/login', [AdminApiController::class, 'mobileLogin']);
-
-    Route::post('/register', [AdminApiController::class, 'register']);
-
-    Route::post('/forgot-password', [PasswordResetController::class, 'sendResetLink']);
-    Route::post('/reset-password', [PasswordResetController::class, 'resetPassword']);
-
+    Route::controller(PasswordResetController::class)->group(function () {
+        Route::post('/forgot-password', 'sendResetLink');
+        Route::post('/reset-password',  'resetPassword');
+    });
 });
-
 
 /*
 |--------------------------------------------------------------------------
-| AUTHENTICATED USER ROUTES (medium protection)
+| AUTHENTICATED USER ROUTES
 |--------------------------------------------------------------------------
 */
 
-Route::middleware([
-    'auth:sanctum',
-    'active_user',
-    'throttle:60,1'
-])->group(function () {
+Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(function () {
 
-    Route::get('/me', [UserApiController::class, 'profile']);
+    Route::controller(UserApiController::class)->group(function () {
+        Route::get('/me',                    'profile');
+        Route::get('/dashboard/leaderboard', 'leaderboard');
+        Route::get('/quizzes',               'quizzes');
+        Route::get('/records',               'records');
+        Route::get('/stats',                 'stats');
+    });
 
-    Route::post('/heartbeat', [AdminApiController::class, 'heartbeat'])
-        ->middleware('throttle:20,1');
+    Route::controller(QuizApiController::class)->group(function () {
+        // ✅ Static before wildcard
+        Route::get('/quiz/progress',    'getQuizProgress');
+        Route::get('/quiz/result/{id}', 'getQuizResult');
+        Route::get('/quiz/{quiz_id}',   'getQuiz');
 
-    Route::get('/dashboard/leaderboard', [UserApiController::class, 'leaderboard']);
+        Route::post('/quiz/answer', 'submitAnswer');
+        Route::post('/quiz/result', 'submitQuizResult')
+            ->middleware('throttle:quiz_submit');
+    });
 
-    Route::get('/quizzes', [UserApiController::class, 'quizzes']);
+    Route::controller(AdminApiController::class)->group(function () {
+        Route::post('/heartbeat', 'heartbeat');
+        Route::post('/logout',    'logout');
+    });
 
-    Route::get('/quiz/{quiz_id}', [QuizApiController::class, 'getQuiz']);
-
-    Route::get('/quiz/progress', [QuizApiController::class, 'getQuizProgress']);
-
-    Route::post('/quiz/answer', [QuizApiController::class, 'submitAnswer'])
-        ->middleware('throttle:30,1');
-
-    Route::post('/quiz/result', [QuizApiController::class, 'submitQuizResult'])
-        ->middleware('throttle:10,1'); // IMPORTANT (prevents spam submit)
-
-    Route::get('/quiz/result/{id}', [QuizApiController::class, 'getQuizResult']);
-
-    Route::get('/records', [UserApiController::class, 'records'])
-        ->middleware('throttle:60,1');
-
-    Route::put('/profile/update', [ProfileApiController::class, 'updateProfile'])
-        ->middleware('throttle:10,1');
-
-    Route::post('/profile/photo', [ProfileApiController::class, 'uploadPhoto'])
-        ->middleware('throttle:10,1');
-
-    Route::delete('/profile/delete', [ProfileApiController::class, 'selfDeleteAccount'])
-        ->middleware('throttle:5,1');
-
-    Route::post('/logout', [AdminApiController::class, 'logout']);
+    Route::controller(ProfileApiController::class)->group(function () {
+        Route::get('/profile',          'getProfile');
+        Route::put('/profile/update',   'updateProfile');
+        Route::post('/profile/photo',   'uploadPhoto');
+        Route::delete('/profile/delete', 'selfDeleteAccount');
+    });
 });
-
 
 /*
 |--------------------------------------------------------------------------
-| ADMIN ROUTES (strict protection)
+| ADMIN ROUTES
 |--------------------------------------------------------------------------
 */
 
-Route::middleware([
-    'auth:sanctum',
-    'role:admin',
-    'throttle:120,1'
-])->group(function () {
+Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(function () {
 
-    Route::get('/admin/dashboard', [AdminApiController::class, 'dashboard']);
+    Route::controller(AdminApiController::class)->group(function () {
+        Route::get('/admin/dashboard', 'dashboard');
+        Route::get('/admin/records',   'studentRecords');
 
-    Route::get('/admin/quizzes', [QuizApiController::class, 'allQuizzes']);
+        Route::prefix('/admin/quizzes')->group(function () {
+            Route::get('/',          'allQuizzes');
+            Route::get('/{id}/edit', 'editQuiz');
+            Route::post('/create',   'createQuiz');
+            Route::put('/{id}',      'updateQuiz');
+            Route::delete('/{id}',   'deleteQuiz');
+        });
 
-    Route::get('/admin/quizzes/{id}/edit', [AdminApiController::class, 'editQuiz']);
-
-    Route::put('/admin/quizzes/{id}', [AdminApiController::class, 'updateQuiz'])
-        ->middleware('throttle:30,1');
-
-    Route::post('/admin/quizzes/create', [AdminApiController::class, 'createQuiz'])
-        ->middleware('throttle:20,1');
-
-    Route::delete('/admin/quizzes/{id}', [AdminApiController::class, 'deleteQuiz'])
-        ->middleware('throttle:10,1');
-
-    Route::get('/admin/users', [AdminApiController::class, 'allUsers']);
-
-    Route::delete('/admin/user/delete/{id}', [AdminApiController::class, 'deleteUser'])
-        ->middleware('throttle:10,1');
-
-    Route::put('/admin/user/update/{id}', [AdminApiController::class, 'updateUser'])
-        ->middleware('throttle:20,1');
-
-    Route::get('/admin/records', [AdminApiController::class, 'studentRecords']);
+        Route::prefix('/admin/user')->group(function () {
+            Route::get('/',           'allUsers');
+            Route::put('/update/{id}', 'updateUser');
+            Route::delete('/delete/{id}', 'deleteUser');
+        });
+    });
 });
