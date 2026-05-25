@@ -63,7 +63,7 @@ const pageTitles = {
   '/user/': 'Home',
   '/user/quizzes': 'Quizzes',
   '/user/records': 'Records',
-  '/user/profile': 'Profile',
+  '/user/profile': 'My Profile',
 }
 
 const currentPageTitle = computed(() => pageTitles[route.path] ?? 'Home')
