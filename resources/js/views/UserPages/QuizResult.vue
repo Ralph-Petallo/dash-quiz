@@ -8,7 +8,7 @@
           <span class="brand-text">Assessment Complete</span>
         </div>
 
-        <router-link to="/profile" class="profile-link">
+        <router-link to="/user/profile" class="profile-link">
           <img :src="profileImageUrl" alt="Profile" class="user-avatar" />
         </router-link>
       </div>
