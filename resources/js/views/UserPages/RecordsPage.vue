@@ -13,9 +13,7 @@
     <div class="header-flex">
       <div class="title-wrap">
         <div class="icon-box">
-          <svg class="icon" viewBox="0 0 24 24">
-            <path d="M13 2L2 14h9l-1 8L22 10h-9l1-8z" />
-          </svg>
+          <i class="fas fa-chart-line"></i>
         </div>
         <div>
           <h3 class="records-title">Performance Analytics</h3>
@@ -141,21 +139,10 @@ import {
   Filler
 } from 'chart.js'
 
-import {
-  ref,
-  computed,
-  onMounted
-} from "vue"
-
-import {
-  Doughnut,
-  Line
-} from 'vue-chartjs'
-
+import { ref, computed, onMounted } from "vue"
+import { Doughnut, Line } from 'vue-chartjs'
 import axios from "axios"
-
 import { useUser } from "@/composables/useUser"
-
 import RecordModal from "@/components/UserSide/RecordModal.vue"
 
 ChartJS.register(
@@ -170,7 +157,63 @@ ChartJS.register(
   Filler
 )
 
+const RECORDS_CACHE_KEY = 'dash-quiz_records_cache'
+const RECORDS_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
+const RECORD_DETAIL_CACHE_KEY = 'dash-quiz_record_detail_cache'
+const RECORD_DETAIL_TTL = 1000 * 60 * 15 // 15 minutes
+
 const { fetchUser } = useUser()
+
+const getCachedRecords = () => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(RECORDS_CACHE_KEY))
+    if (!cached || typeof cached !== 'object') return null
+    if (Date.now() - cached.ts > RECORDS_CACHE_TTL) {
+      localStorage.removeItem(RECORDS_CACHE_KEY)
+      return null
+    }
+    return cached.value
+  } catch {
+    return null
+  }
+}
+
+const setRecordsCache = (value) => {
+  try {
+    localStorage.setItem(RECORDS_CACHE_KEY, JSON.stringify({ ts: Date.now(), value }))
+  } catch {
+    // ignore
+  }
+}
+
+const getCachedRecordDetail = (id) => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECORD_DETAIL_CACHE_KEY))
+    if (!raw || typeof raw !== 'object') return null
+    const entry = raw[id]
+
+    if (!entry) return null
+
+    if (Date.now() - entry.ts > RECORD_DETAIL_TTL) {
+      delete raw[id]
+      localStorage.setItem(RECORD_DETAIL_CACHE_KEY, JSON.stringify(raw))
+      return null
+    }
+    return entry.value
+  } catch {
+    return null
+  }
+}
+
+const setRecordDetailCache = (id, value) => {
+  try {
+    const raw = JSON.parse(localStorage.getItem(RECORD_DETAIL_CACHE_KEY)) || {}
+    raw[id] = { ts: Date.now(), value }
+    localStorage.setItem(RECORD_DETAIL_CACHE_KEY, JSON.stringify(raw))
+  } catch {
+    // ignore
+  }
+}
 
 /* --------------------------------------------------------
 | STATE
@@ -192,22 +235,22 @@ const loadingModal = ref(false)
 /* --------------------------------------------------------
 | OPEN MODAL + FETCH FULL REVIEW
 -------------------------------------------------------- */
-
 const openView = async (record) => {
   loadingModal.value = true
 
   try {
+    const cachedDetail = getCachedRecordDetail(record.id)
+    if (cachedDetail) {
+      selectedRecord.value = {
+        ...record,
+        ...cachedDetail,
+        questions: cachedDetail.questions || []
+      }
+      showModal.value = true
+      return
+    }
 
-    /*
-    |--------------------------------------------------------------------------
-    | IMPORTANT:
-    | fetch FULL review data from correct endpoint
-    |--------------------------------------------------------------------------
-    */
-
-    const res = await axios.get(
-      `/api/quiz/result/${record.id}`
-    )
+    const res = await axios.get(`/api/quiz/result/${record.id}`)
 
     selectedRecord.value = {
       ...record,
@@ -215,17 +258,12 @@ const openView = async (record) => {
       questions: res.data.questions || []
     }
 
+    setRecordDetailCache(record.id, res.data)
     showModal.value = true
 
   } catch (err) {
-
-    console.error(
-      'Failed to fetch review:',
-      err
-    )
-
+    console.error('Failed to fetch review:', err)
   } finally {
-
     loadingModal.value = false
   }
 }
@@ -233,7 +271,6 @@ const openView = async (record) => {
 /* --------------------------------------------------------
 | FORMATTERS
 -------------------------------------------------------- */
-
 const formatDate = (d) =>
   new Date(d).toLocaleDateString(
     'en-US',
@@ -255,11 +292,7 @@ const toDateKey = (d) => {
 }
 
 const formatTime = (sec) => {
-
-  if (
-    sec === null ||
-    sec === undefined
-  ) {
+  if (sec === null || sec === undefined) {
     return '0:00'
   }
 
@@ -275,31 +308,15 @@ const formatTime = (sec) => {
 /* --------------------------------------------------------
 | FILTER
 -------------------------------------------------------- */
-
 const filteredRecords = computed(() => {
-
-  const q = searchQuery.value
-    .toLowerCase()
-    .trim()
-
+  const q = searchQuery.value.toLowerCase().trim()
   const df = dateFilter.value
 
   return records.value.filter(r => {
+    const matchSearch = !q || (r.quiz_title || '').toLowerCase().includes(q)
+    const matchDate = !df || toDateKey(r.created_at) === df
 
-    const matchSearch =
-      !q ||
-      (r.quiz_title || '')
-        .toLowerCase()
-        .includes(q)
-
-    const matchDate =
-      !df ||
-      toDateKey(r.created_at) === df
-
-    return (
-      matchSearch &&
-      matchDate
-    )
+    return (matchSearch && matchDate)
   })
 })
 
@@ -308,17 +325,11 @@ const filteredRecords = computed(() => {
 -------------------------------------------------------- */
 
 const averageScore = computed(() => {
-
   if (!filteredRecords.value.length) {
     return 0
   }
 
-  const total = filteredRecords.value
-    .reduce(
-      (sum, r) =>
-        sum + r.percentage,
-      0
-    )
+  const total = filteredRecords.value.reduce((sum, r) => sum + r.percentage, 0)
 
   return (
     total /
@@ -327,7 +338,6 @@ const averageScore = computed(() => {
 })
 
 const maxScore = computed(() => {
-
   if (!filteredRecords.value.length) {
     return 0
   }
@@ -340,10 +350,7 @@ const maxScore = computed(() => {
 })
 
 const needsImprovement = computed(() => {
-
-  return filteredRecords.value
-    .filter(r => r.percentage < 70)
-    .length
+  return filteredRecords.value.filter(r => r.percentage < 70).length
 })
 
 /* --------------------------------------------------------
@@ -375,20 +382,17 @@ const chartData = computed(() => {
         '#6366f1',
         '#f43f5e'
       ],
-
       borderWidth: 0
     }]
   }
 })
 
 const lineData = computed(() => {
-  const sorted = [
-    ...filteredRecords.value
-  ].sort(
-    (a, b) =>
-      new Date(a.created_at) -
-      new Date(b.created_at)
+  const sorted = [...filteredRecords.value].sort((a, b) =>
+    new Date(a.created_at) -
+    new Date(b.created_at)
   )
+
   return {
     labels: sorted.map(r =>
       new Date(r.created_at)
@@ -403,7 +407,6 @@ const lineData = computed(() => {
 
     datasets: [{
       label: 'Score %',
-
       data: sorted.map(
         r => r.percentage
       ),
@@ -462,36 +465,40 @@ const lineOptions = {
 /* --------------------------------------------------------
 | FETCH RECORDS
 -------------------------------------------------------- */
-const fetchRecords = async () => {
+const fetchRecords = async (force = false) => {
+  const cached = !force ? getCachedRecords() : null
+  if (cached) {
+    records.value = cached
+    loading.value = false
+    return
+  }
+
   loading.value = true
   try {
-    const res = await axios.get(
-      '/api/records'
-    )
-    records.value =
-      (res.data.results || [])
-        .map(r => ({
+    const res = await axios.get('/api/records')
 
-          id: r.id,
-          quiz_id: r.quiz_id,
-          quiz_title:
-            r.quiz_title,
-          quiz_description:
-            r.quiz_description,
-          score: r.score,
-          total_questions:
-            r.total_questions,
-          elapsed_time:
-            r.elapsed_time,
-          percentage:
-            r.percentage,
-          created_at:
-            r.created_at,
-          duration:
-            formatTime(
-              r.elapsed_time
-            )
-        }))
+    records.value = (res.data.results || []).map(r => ({
+      id: r.id,
+      quiz_id: r.quiz_id,
+      quiz_title:
+        r.quiz_title,
+      quiz_description:
+        r.quiz_description,
+      score: r.score,
+      total_questions:
+        r.total_questions,
+      elapsed_time:
+        r.elapsed_time,
+      percentage:
+        r.percentage,
+      created_at:
+        r.created_at,
+      duration:
+        formatTime(
+          r.elapsed_time
+        )
+    }))
+    setRecordsCache(records.value)
   } catch (err) {
 
     console.error(
@@ -508,6 +515,7 @@ onMounted(async () => {
   fetchRecords()
 })
 </script>
+
 <style scoped>
 *,
 *::before,
@@ -795,13 +803,14 @@ onMounted(async () => {
 
 .records-table thead th.col-date,
 .records-table thead th.col-quiz {
-  text-align: left;
+  text-align: center;
 }
 
 /* TBODY */
 .records-table td {
   padding: 0.65rem 0.875rem;
   text-align: center;
+  vertical-align: middle;
   border-bottom: 1px solid #f8fafc;
   color: #334155;
   font-size: 0.84rem;
@@ -819,17 +828,14 @@ onMounted(async () => {
   background: #fafafe;
 }
 
-.records-table td.col-date,
-.records-table td.col-quiz {
-  text-align: left;
-}
-
-/* Cells */
 .quiz-info {
   display: flex;
   flex-direction: column;
   gap: 0.15rem;
+  align-items: center;
 }
+
+/* Cells */
 
 .quiz-name {
   font-weight: 500;
