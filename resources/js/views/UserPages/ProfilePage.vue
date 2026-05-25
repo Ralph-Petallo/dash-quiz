@@ -241,25 +241,26 @@ onMounted(async () => {
 /* Avatar */
 .avatar-wrap {
   position: relative;
+  margin-bottom: 14px;
   width: 100px;
   height: 100px;
-  margin-bottom: 16px;
 }
 
 .avatar {
-  width: 100px;
-  height: 100px;
+  width: 90px;
+  height: 90px;
+  border: 3px solid #6366f1;
   border-radius: 50%;
-  overflow: hidden;
-  border: 3px solid #4b32a8;
-  background: #eeedfe;
+  display: flex;
+  justify-content: center;
+  align-items: center;
 }
 
 .avatar img {
-  width: 100%;
-  height: 100%;
+  width: 95%;
+  height: 95%;
+  border-radius: 50%;
   object-fit: cover;
-  display: block;
 }
 
 .avatar-loader {
@@ -391,7 +392,7 @@ button:active {
 }
 
 #edit-profile {
-  background: #4b32a8;
+  background: #6366f1;
   color: #fff;
 }
 
