@@ -1,17 +1,25 @@
 <template>
   <div class="leaderboard">
 
+    <div class="greet-container">
+      <div class="greet">
+        {{ greetMessage }}, {{ user.full_name }}!👋
+      </div>
+      <div class="greet-sub">
+        See how you rank against other quiz takers.
+      </div>
+    </div>
     <!-- HEADER -->
     <div class="lb-header">
+
       <div class="lb-title-group">
+
         <div class="lb-icon">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 21V11M12 21V3M16 21V7" stroke-linecap="round" stroke-linejoin="round" />
-          </svg>
+          <i class="fas fa-trophy leaderboard-icon"></i>
         </div>
         <div>
           <h1 class="lb-title">Leaderboard</h1>
-          <p class="lb-sub">{{ leaderboard.length }} participants this week</p>
+          <p class="lb-sub">TOP {{ leaderboard.length }} participants this week</p>
         </div>
       </div>
 
@@ -117,10 +125,45 @@ import axios from 'axios'
 import { ref, computed, onMounted } from 'vue'
 import { useUser } from "@/composables/useUser"
 
+const greetMessage = computed(() => {
+  const hour = new Date().getHours()
+  if (hour < 12) return 'Good morning'
+  if (hour < 18) return 'Good afternoon'
+  return 'Good evening'
+})
+
+const LEADERBOARD_CACHE_KEY = 'dash-quiz_leaderboard_cache'
+const LEADERBOARD_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
+
 const leaderboard = ref([])
 const isLoading = ref(false)
 const searchQuery = ref('')
 const { user, fetchUser } = useUser()
+
+const getCachedLeaderboard = () => {
+  try {
+    const cached = JSON.parse(localStorage.getItem(LEADERBOARD_CACHE_KEY))
+    if (!cached || typeof cached !== 'object') return null
+    if (Date.now() - cached.ts > LEADERBOARD_CACHE_TTL) {
+      localStorage.removeItem(LEADERBOARD_CACHE_KEY)
+      return null
+    }
+    return cached.value
+  } catch {
+    return null
+  }
+}
+
+const setLeaderboardCache = (value) => {
+  try {
+    localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify({
+      ts: Date.now(),
+      value,
+    }))
+  } catch {
+    // ignore
+  }
+}
 
 const userPosition = computed(() => {
   if (!user.value?.id) return null
@@ -153,7 +196,13 @@ const filteredList = computed(() => {
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
 
-const getLeaderBoard = async () => {
+const getLeaderBoard = async (force = false) => {
+  const cached = !force ? getCachedLeaderboard() : null
+  if (cached) {
+    leaderboard.value = cached
+    return
+  }
+
   isLoading.value = true
   try {
     await axios.get('/sanctum/csrf-cookie')
@@ -164,6 +213,7 @@ const getLeaderBoard = async () => {
       isYou: u.user_id === currentUserId,
       displayName: u.name,
     }))
+    setLeaderboardCache(leaderboard.value)
   } catch (err) {
     console.error(err)
   } finally {
@@ -211,6 +261,18 @@ onMounted(async () => {
   gap: 12px;
 }
 
+.greet {
+  font-size: 18px;
+  font-family: BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  color: #1e293b;
+  font-weight: 800;
+}
+
+.greet-sub {
+  font-size: 12px;
+  color: #64748b;
+}
+
 .lb-title-group {
   display: flex;
   align-items: center;
@@ -218,19 +280,16 @@ onMounted(async () => {
 }
 
 .lb-icon {
-  width: 40px;
-  height: 40px;
-  background: #f1f0ff;
   border-radius: 10px;
   display: grid;
   place-items: center;
   flex-shrink: 0;
 }
 
-.lb-icon svg {
-  width: 20px;
-  height: 20px;
-  stroke: #6366f1;
+
+.leaderboard-icon {
+  color: #6366f1;
+  font-size: 1.2rem;
 }
 
 .lb-title {
@@ -421,15 +480,15 @@ onMounted(async () => {
 }
 
 .podium-1 .podium-bar {
-  background: linear-gradient(180deg, #fbbf24, #f59e0b);
+  background: #f59e0b;
 }
 
 .podium-2 .podium-bar {
-  background: linear-gradient(180deg, #cbd5e1, #94a3b8);
+  background: #94a3b8
 }
 
 .podium-3 .podium-bar {
-  background: linear-gradient(180deg, #d4956a, #c97f4a);
+  background: #c97f4a;
 }
 
 .podium-card.is-you .podium-bar {
@@ -529,15 +588,6 @@ onMounted(async () => {
   position: absolute;
   inset: -3px;
   border-radius: 50%;
-  border: 2px solid #6366f1;
-  animation: spin-ring 4s linear infinite;
-  border-top-color: transparent;
-}
-
-@keyframes spin-ring {
-  to {
-    transform: rotate(360deg);
-  }
 }
 
 /* INFO */
