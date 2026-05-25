@@ -7,7 +7,6 @@
                     <div class="icon-box">
                         <i class="fas fa-desktop"></i>
                     </div>
-
                     <div class="text-group">
                         <h2>Computer Systems Servicing</h2>
                         <p>Select a competency to begin your assessment</p>
@@ -75,14 +74,48 @@ defineProps({
     }
 })
 
+const QUIZZES_CACHE_KEY = 'dash-quiz_quizzes_cache'
+const QUIZZES_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
+
 const { fetchUser } = useUser()
 const quizzes = ref([])
 const loading = ref(false)
 
+const getCachedQuizzes = () => {
+    try {
+        const cached = JSON.parse(localStorage.getItem(QUIZZES_CACHE_KEY))
+        if (!cached || typeof cached !== 'object') return null
+        if (Date.now() - cached.ts > QUIZZES_CACHE_TTL) {
+            localStorage.removeItem(QUIZZES_CACHE_KEY)
+            return null
+        }
+        return cached.value
+    } catch {
+        return null
+    }
+}
+
+const setQuizzesCache = (value) => {
+    try {
+        localStorage.setItem(QUIZZES_CACHE_KEY, JSON.stringify({
+            ts: Date.now(),
+            value,
+        }))
+    } catch {
+        // ignore
+    }
+}
+
 const icons = ['fa-solid fa-microchip', 'fa-solid fa-desktop', 'fa-solid fa-cogs']
 
-const fetchQuizzes = async () => {
+const fetchQuizzes = async (force = false) => {
     if (loading.value) return
+
+    const cached = !force ? getCachedQuizzes() : null
+    if (cached) {
+        quizzes.value = cached
+        return
+    }
 
     try {
         loading.value = true
@@ -92,6 +125,7 @@ const fetchQuizzes = async () => {
             quiz.total_questions = quiz.questions ? quiz.questions.length : 10,
             quiz.icons = icons[index]
         })
+        setQuizzesCache(quizzes.value)
     } catch (err) {
         console.error('Failed to fetch quizzes:', err)
     } finally {
@@ -137,7 +171,7 @@ onMounted(async () => {
 .icon-box {
     width: 52px;
     height: 52px;
-    background: linear-gradient(135deg, #4b3fc2, #6366f1);
+    background: #6366f1;
     color: white;
     border-radius: 14px;
     display: flex;
