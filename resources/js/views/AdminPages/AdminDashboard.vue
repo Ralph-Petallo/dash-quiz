@@ -135,18 +135,26 @@
 </template>
 
 <script setup>
-import { ref, computed, nextTick, onMounted } from "vue"
+import { ref, computed, nextTick, onMounted, onUnmounted } from "vue"
 import Chart from "chart.js/auto"
-import axios from "axios"
+import { useAdminDashboard } from "@/composables/useAdminDashboard"
 
-const stats = ref(null)
+const {
+  stats,
+  fetchStats,
+  startAutoRefresh,
+  stopAutoRefresh,
+  isLoading
+} = useAdminDashboard()
+
 const chartCanvas = ref(null)
 const notification = ref("")
 const filterType = ref("today")
+
 let chartInstance = null
 
 /* =========================
-   FILTERED LOGS (ALIGNED)
+   FILTER LOGS
 ========================= */
 const filteredLogs = computed(() => {
   if (!stats.value?.logs?.length) return []
@@ -171,41 +179,12 @@ const filteredLogs = computed(() => {
 })
 
 /* =========================
-   HELPERS
-========================= */
-const formatDate = (date) =>
-  new Date(date).toLocaleString('en-US', {
-    month: 'short',
-    day: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit'
-  })
-
-const getLogIcon = (type) => {
-  const map = {
-    delete: 'fas fa-trash',
-    create: 'fas fa-plus',
-    update: 'fas fa-edit'
-  }
-  return map[type] || 'fas fa-info-circle'
-}
-
-const getLogType = (type) => ({
-  'log-delete': type === 'delete',
-  'log-create': type === 'create',
-  'log-update': type === 'update',
-  'log-info': !['delete', 'create', 'update'].includes(type),
-})
-
-/* =========================
-   CHART (SAFE + SYNCED)
+   CHART
 ========================= */
 const renderChart = () => {
   if (!chartCanvas.value || !stats.value) return
 
-  if (chartInstance) {
-    chartInstance.destroy()
-  }
+  if (chartInstance) chartInstance.destroy()
 
   requestAnimationFrame(() => {
     chartInstance = new Chart(chartCanvas.value, {
@@ -215,75 +194,48 @@ const renderChart = () => {
         datasets: [
           {
             label: "Users",
-            data: [stats.value.total_users || 0],
-            backgroundColor: "#8b5cf6"
+            data: [stats.value.total_users || 0]
           },
           {
             label: "Quizzes",
-            data: [stats.value.total_quizzes || 0],
-            backgroundColor: "#16a34a"
+            data: [stats.value.total_quizzes || 0]
           },
           {
             label: "Active",
-            data: [stats.value.active_users || 0],
-            backgroundColor: "#4b3cd1"
+            data: [stats.value.active_users || 0]
           }
-        ],
+        ]
       },
       options: {
         responsive: true,
-        maintainAspectRatio: false,
-        plugins: {
-          legend: {
-            position: 'bottom',
-            labels: { boxWidth: 12, usePointStyle: true }
-          }
-        },
-        scales: {
-          y: {
-            beginAtZero: true,
-            grid: { color: 'rgba(0,0,0,0.05)' }
-          },
-          x: {
-            grid: { display: false }
-          }
-        }
+        maintainAspectRatio: false
       }
     })
   })
 }
 
-const fetchStats = async () => {
-  try {
-    const res = await axios.get("/api/admin/dashboard")
+/* =========================
+   FETCH + RENDER
+========================= */
+const loadDashboard = async () => {
+  const data = await fetchStats()
+  if (!data) return
 
-    if (res.data.status !== "success") {
-      notification.value = "Failed to load dashboard"
-      return
-    }
-
-    // ✅ Normalize structure (IMPORTANT)
-    stats.value = {
-      total_users: res.data.data.total_users ?? 0,
-      total_quizzes: res.data.data.total_quizzes ?? 0,
-      active_users: res.data.data.active_users ?? 0,
-      logs: res.data.data.logs ?? [],
-      top_users: res.data.data.top_users ?? [],
-      admin_name: res.data.data.admin_name ?? ""
-    }
-
-    console.log("Dashboard stats:", stats.value)
-
-    await nextTick()
-    renderChart()
-
-  } catch (err) {
-    console.error("Dashboard error:", err)
-    notification.value = "Something went wrong"
-  }
+  await nextTick()
+  renderChart()
 }
 
-onMounted(fetchStats)
+/* =========================
+   LIFECYCLE
+========================= */
+onMounted(async () => {
+  await loadDashboard()
+  startAutoRefresh()   // 🔥 LIVE UPDATES START
+})
+
+onUnmounted(() => {
+  stopAutoRefresh()    // prevent memory leak
+})
 </script>
 
 <style scoped>
