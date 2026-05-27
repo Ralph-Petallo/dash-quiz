@@ -6,7 +6,6 @@
       <div class="header-row">
         <div>
           <h3 class="section-title">
-            <i class="fas fa-clipboard-list"></i>
             Dasher Records
           </h3>
           <p class="section-subtitle">
