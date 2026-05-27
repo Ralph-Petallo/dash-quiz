@@ -85,18 +85,22 @@ class QuizApiController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | SAVE QUIZ RESULT + ATTEMPTS (MAIN FIX)
+    | SAVE QUIZ RESULT + ATTEMPTS (FIXED)
     |--------------------------------------------------------------------------
     */
     public function submitQuizResult(Request $request)
     {
+        // FIX #2: Proper nested validation for answers array
         $validated = $request->validate([
             'quiz_id' => 'required|exists:quizzes,id',
             'score' => 'required|integer|min:0',
             'elapsed_time' => 'required|integer|min:0',
-            'answers' => 'required|array'
+            'answers' => 'required|array',
+            'answers.*.question_id' => 'required|exists:questions,id',
+            'answers.*.answer_id' => 'required|exists:question_options,id',
         ]);
 
+        // FIX #1: Consistent auth usage
         $user = auth('sanctum')->user();
 
         if (!$user) {
@@ -145,7 +149,10 @@ class QuizApiController extends Controller
         return response()->json([
             'status' => 'success',
             'record_id' => $record->id,
-            'record' => $record
+            'score' => $record->score,
+            'elapsed_time' => $record->elapsed_time,
+            'total_questions' => count($validated['answers']),
+            'message' => 'Quiz result saved successfully'
         ]);
     }
 
@@ -160,24 +167,18 @@ class QuizApiController extends Controller
             'quiz',
             'attempts.question.options',
             'attempts.selectedOption'
-        ])
-            ->where('id', $id)
-            ->where('user_id', auth('sanctum')->id())
+        ])->where('id', $id)
+            ->where('user_id', auth('sanctum')->user()?->id)
             ->firstOrFail();
 
         $questions = $record->attempts->map(function ($attempt) {
-
-            $correct = $attempt->question->options
-                ->firstWhere('is_correct', true);
+            $correct = $attempt->question->options->firstWhere('is_correct', true);
 
             return [
                 'question_id' => $attempt->question->id,
                 'question' => $attempt->question->question_text,
-
                 'user_answer' => $attempt->selectedOption?->option_text ?? 'No answer',
-
                 'correct_answer' => $correct?->option_text,
-
                 'is_correct' => (bool) $attempt->is_correct,
             ];
         });
@@ -186,6 +187,7 @@ class QuizApiController extends Controller
             'status' => 'success',
             'record_id' => $record->id,
             'quiz_id' => $record->quiz_id,
+            'quiz_title' => $record->quiz->title,
             'score' => $record->score,
             'elapsed_time' => $record->elapsed_time,
             'total_questions' => $record->attempts->count(),
