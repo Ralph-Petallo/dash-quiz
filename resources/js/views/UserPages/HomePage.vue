@@ -9,17 +9,15 @@
         See how you rank against other quiz takers.
       </div>
     </div>
-    <!-- HEADER -->
+
     <div class="lb-header">
-
       <div class="lb-title-group">
-
         <div class="lb-icon">
           <i class="fas fa-trophy leaderboard-icon"></i>
         </div>
         <div>
           <h1 class="lb-title">Leaderboard</h1>
-          <p class="lb-sub">TOP {{ leaderboard.length }} participants this week</p>
+          <p class="lb-sub">TOP {{ displayedLeaderboard.length }} participants for this selection</p>
         </div>
       </div>
 
@@ -31,7 +29,6 @@
       </div>
     </div>
 
-    <!-- SEARCH -->
     <div class="lb-search">
       <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
         <circle cx="11" cy="11" r="8" />
@@ -40,7 +37,19 @@
       <input v-model="searchQuery" placeholder="Search participant..." class="search-input" />
     </div>
 
-    <!-- TOP 3 PODIUM -->
+    <div class="lb-filters-row">
+      <div class="filter-label">Filter Results</div>
+      <div class="select-wrapper">
+        <select v-model="selectedQuiz" class="quiz-select">
+          <option value="">All Quizzes</option>
+          <option v-for="quiz in availableQuizzes" :key="quiz" :value="quiz">
+            {{ quiz }}
+          </option>
+        </select>
+        <span class="select-arrow"></span>
+      </div>
+    </div>
+
     <div class="podium" v-if="!searchQuery && topThree.length">
       <div v-for="(entry, i) in podiumOrder" :key="entry.id" class="podium-card"
         :class="[`podium-${podiumPositions[i]}`, entry.isYou ? 'is-you' : '']">
@@ -57,7 +66,6 @@
       </div>
     </div>
 
-    <!-- LIST -->
     <div class="lb-list" ref="listRef">
 
       <div v-if="isLoading" class="lb-loading">
@@ -68,20 +76,18 @@
         <div v-for="(entry, index) in filteredList" :key="entry.id" class="lb-item"
           :class="[entry.isYou ? 'is-you' : '', index < 3 && !searchQuery ? 'is-top' : '']"
           :style="{ animationDelay: `${index * 20}ms` }">
-          <!-- RANK -->
+
           <div class="item-rank" :class="index < 3 && !searchQuery ? `rank-${index + 1}` : ''">
             <span v-if="index < 3 && !searchQuery" class="rank-medal">{{ ['🥇', '🥈', '🥉'][index] }}</span>
             <span v-else class="rank-num">{{ index + 1 }}</span>
           </div>
 
-          <!-- AVATAR -->
           <div class="item-avatar-wrap">
             <img :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`" class="item-avatar"
               alt="user" />
             <span v-if="entry.isYou" class="avatar-ring"></span>
           </div>
 
-          <!-- INFO -->
           <div class="item-info">
             <div class="item-name">
               {{ entry.displayName }}
@@ -90,7 +96,6 @@
             <div class="item-quiz">{{ entry.quiz_title }}</div>
           </div>
 
-          <!-- RIGHT -->
           <div class="item-right">
             <div class="score-ring-wrap">
               <svg class="score-ring" viewBox="0 0 36 36">
@@ -116,7 +121,6 @@
       </template>
 
     </div>
-
   </div>
 </template>
 
@@ -138,6 +142,7 @@ const LEADERBOARD_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
 const leaderboard = ref([])
 const isLoading = ref(false)
 const searchQuery = ref('')
+const selectedQuiz = ref('') // Tracks active dropdown value
 const { user, fetchUser } = useUser()
 
 const getCachedLeaderboard = () => {
@@ -165,16 +170,35 @@ const setLeaderboardCache = (value) => {
   }
 }
 
+// Dynamically grab all unique quiz titles from the raw dataset
+const availableQuizzes = computed(() => {
+  const titles = leaderboard.value.map(item => item.quiz_title).filter(Boolean)
+  return [...new Set(titles)]
+})
+
+// Sorts and filters dataset based on dropdown selection
+const displayedLeaderboard = computed(() => {
+  let list = [...leaderboard.value]
+
+  // First step: slice down to only matching selected quiz title if picked
+  if (selectedQuiz.value) {
+    list = list.filter(item => item.quiz_title === selectedQuiz.value)
+  }
+
+  // Second step: sort highest score first so rankings are true to the filtered subset
+  return list.sort((a, b) => b.score - a.score)
+})
+
 const userPosition = computed(() => {
   if (!user.value?.id) return null
-  const idx = leaderboard.value.findIndex(u => u.user_id === user.value.id)
+  const idx = displayedLeaderboard.value.findIndex(u => u.user_id === user.value.id)
   return idx !== -1 ? idx + 1 : null
 })
 
-// Top 3 for podium
-const topThree = computed(() => leaderboard.value.slice(0, 3))
+// Top 3 for podium based on selected filters
+const topThree = computed(() => displayedLeaderboard.value.slice(0, 3))
 
-// Podium order: 2nd, 1st, 3rd (classic podium layout)
+// Podium order layout mapping
 const podiumOrder = computed(() => {
   const t = topThree.value
   if (t.length < 3) return t
@@ -183,11 +207,11 @@ const podiumOrder = computed(() => {
 const podiumPositions = [2, 1, 3]
 const podiumHeights = ['60px', '80px', '44px']
 
-// Filtered list (all entries when no search, skips top 3 podium when no search)
+// Final displayed list after overlaying input text filter 
 const filteredList = computed(() => {
   const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return leaderboard.value
-  return leaderboard.value.filter(e =>
+  if (!q) return displayedLeaderboard.value
+  return displayedLeaderboard.value.filter(e =>
     (e.displayName || '').toLowerCase().includes(q) ||
     (e.quiz_title || '').toLowerCase().includes(q)
   )
@@ -286,7 +310,6 @@ onMounted(async () => {
   flex-shrink: 0;
 }
 
-
 .leaderboard-icon {
   color: #6366f1;
   font-size: 1.2rem;
@@ -374,6 +397,66 @@ onMounted(async () => {
 .search-input:focus {
   border-color: #6366f1;
   background: #fff;
+}
+
+/* ── NEW FILTERS ROW (SPACE-BETWEEN) ── */
+.lb-filters-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  background: #f8fafc;
+  padding: 10px 14px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  gap: 12px;
+}
+
+.filter-label {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.select-wrapper {
+  position: relative;
+  min-width: 180px;
+}
+
+.quiz-select {
+  width: 100%;
+  padding: 6px 32px 6px 12px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #1e293b;
+  background: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  cursor: pointer;
+  outline: none;
+  appearance: none;
+  /* Removes native browser styles */
+  transition: border-color 0.15s, box-shadow 0.15s;
+}
+
+.quiz-select:focus {
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
+}
+
+.select-arrow {
+  position: absolute;
+  right: 12px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid #64748b;
+  pointer-events: none;
 }
 
 /* ── PODIUM ── */
@@ -484,7 +567,7 @@ onMounted(async () => {
 }
 
 .podium-2 .podium-bar {
-  background: #94a3b8
+  background: #94a3b8;
 }
 
 .podium-3 .podium-bar {
@@ -723,6 +806,16 @@ onMounted(async () => {
     padding: 16px;
     gap: 16px;
     border-radius: 16px;
+  }
+
+  .lb-filters-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .select-wrapper {
+    min-width: 100%;
   }
 
   .podium {
