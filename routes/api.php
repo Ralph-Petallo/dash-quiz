@@ -88,10 +88,14 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
             Route::delete('/{id}',   'deleteQuiz');
         });
 
+
         Route::prefix('/admin/user')->group(function () {
             Route::get('/',           'allUsers');
             Route::put('/update/{id}', 'updateUser');
             Route::delete('/delete/{id}', 'deleteUser');
         });
     });
+
+    Route::post('/admin/upload-photo', [ProfileApiController::class, 'uploadPhoto']);
+    Route::post('/admin/update-profile', [ProfileApiController::class, 'updateProfile']);
 });
