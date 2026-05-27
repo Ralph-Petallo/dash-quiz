@@ -62,7 +62,7 @@ const pageTitles = {
   '/user': 'Home',
   '/user/': 'Home',
   '/user/quizzes': 'Quizzes',
-  '/user/records': 'Records',
+  '/user/records': 'My Records',
   '/user/profile': 'My Profile',
 }
 
