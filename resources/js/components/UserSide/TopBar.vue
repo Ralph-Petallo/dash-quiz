@@ -14,7 +14,7 @@
           <span class="user-name">{{ userFullName }}</span>
           <span class="user-status">Online</span>
         </div>
-        <div v-if="currentPageTitle !== 'Profile'">
+        <div v-if="currentPageTitle !== 'My Profile'">
           <router-link to="/user/profile">
             <div class="avatar-container">
               <img :src="userAvatar" alt="avatar" class="avatar-img">
@@ -86,7 +86,7 @@ const isMobile = computed(() => screenWidth.value <= 768)
 .page-title {
   font-size: clamp(1rem, 2.5vw, 1.3rem);
   font-weight: 700;
-  background: linear-gradient(135deg, #667eea, #764ba2);
+  background: black;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
@@ -97,15 +97,10 @@ const isMobile = computed(() => screenWidth.value <= 768)
 }
 
 .menu-trigger {
-  flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  background: rgba(102, 126, 234, 0.1);
-  border: 1px solid rgba(102, 126, 234, 0.2);
-  border-radius: 10px;
-  color: #667eea;
+  background: transparent;
+  border: none;
   cursor: pointer;
-  font-size: 1rem;
+  font-size: 1.5rem;
   display: flex;
   align-items: center;
   justify-content: center;
