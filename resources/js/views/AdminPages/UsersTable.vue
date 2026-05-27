@@ -12,7 +12,7 @@
       <!-- Header -->
       <div class="header-row">
         <div>
-          <h3 class="section-title"><i class="fas fa-id-badge"></i>Registered Dashers</h3>
+          <h3 class="section-title">Registered Dashers</h3>
           <p class="section-subtitle">Manage all user accounts</p>
         </div>
 
@@ -249,7 +249,6 @@ onMounted(fetchUsers)
 }
 
 .section-title {
-  font-size: clamp(1.1rem, 2vw, 1.4rem);
   font-weight: 700;
   color: #1e293b;
 }
