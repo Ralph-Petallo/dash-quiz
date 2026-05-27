@@ -27,6 +27,10 @@
         <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
         <span class="nav-text">Records</span>
       </router-link>
+      <router-link to="/admin/settings" active-class="active" @click="$emit('closeSidebar')" class="nav-link">
+        <span class="nav-icon"><i class="fas fa-key"></i></span>
+        <span class="nav-text">Admin Settings</span>
+      </router-link>
     </nav>
 
     <div class="sidebar-spacer"></div>
