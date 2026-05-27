@@ -14,7 +14,6 @@
       <div class="header-row">
         <div>
           <h3 class="section-title">
-            <i class="fas fa-layer-group"></i>
             Manage Quizzes
           </h3>
           <p class="section-subtitle">
