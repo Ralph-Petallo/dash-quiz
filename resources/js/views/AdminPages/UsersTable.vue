@@ -155,7 +155,7 @@ const notification = ref({
 
 const fetchUsers = async () => {
   try {
-    const response = await axios.get('/api/admin/users')
+    const response = await axios.get('/api/admin/user')
     users.value = response.data?.data
   } finally {
     loading.value = false
