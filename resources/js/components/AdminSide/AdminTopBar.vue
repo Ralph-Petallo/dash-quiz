@@ -8,18 +8,22 @@
         </button>
         <h2 class="page-title">{{ currentPageTitle }}</h2>
       </div>
-
+      <div v-if="route.path !== '/admin/settings'">
       <div class="user-section">
         <div class="user-meta" v-if="showUserMeta">
           <span class="user-name">{{ userFullName }}</span>
           <span class="user-status">Online</span>
         </div>
-        <div class="avatar-container">
-          <img :src="userAvatar" class="avatar-img" alt="avatar" />
-          <span class="pulse-indicator"></span>
-        </div>
-      </div>
 
+
+        <router-link to="/admin/settings">
+          <div class="avatar-container">
+            <img :src="userAvatar" class="avatar-img" alt="avatar" />
+            <span class="pulse-indicator"></span>
+          </div>
+        </router-link>
+      </div>
+    </div>
     </div>
   </header>
 </template>
@@ -27,6 +31,7 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useUser } from '@/composables/useUser'
+import { useRoute } from 'vue-router'
 
 defineProps({
   currentPageTitle: {
@@ -36,8 +41,8 @@ defineProps({
 })
 defineEmits(['toggleSidebar'])
 
+const route = useRoute();
 const { fetchUser, userFullName, userAvatar } = useUser()
-
 const windowWidth = ref(window.innerWidth)
 const updateWidth = () => { windowWidth.value = window.innerWidth }
 
@@ -47,7 +52,7 @@ onMounted(() => {
 })
 onUnmounted(() => window.removeEventListener('resize', updateWidth))
 
-const isMobile    = computed(() => windowWidth.value <= 768)
+const isMobile = computed(() => windowWidth.value <= 768)
 const showUserMeta = computed(() => windowWidth.value > 640)
 </script>
 
@@ -182,13 +187,23 @@ const showUserMeta = computed(() => windowWidth.value > 640)
 }
 
 @keyframes pulse {
-  0%   { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70%  { box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
-  100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
+  }
+
+  70% {
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
+  }
+
+  100% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+  }
 }
 
 /* ── SMALL MOBILE ── */
 @media (max-width: 480px) {
-  .navbar-container { padding: 0 0.75rem; }
+  .navbar-container {
+    padding: 0 0.75rem;
+  }
 }
 </style>
