@@ -19,6 +19,7 @@ import ResetPage from './views/ResetPage.vue'
 // Admin Pages
 import AdminDashboard from './views/AdminPages/AdminDashboard.vue'
 import UsersTable from './views/AdminPages/UsersTable.vue'
+import Settings from './views/AdminPages/Settings.vue'
 import StudentRecords from './views/AdminPages/StudentRecords.vue'
 import QuizAdd from './views/AdminPages/QuizAdd.vue'
 import QuizEdit from './views/AdminPages/QuizEdit.vue'
@@ -55,6 +56,7 @@ const routes = [
             { path: 'records', component: StudentRecords },
             { path: 'quizzes/create', component: QuizAdd },
             { path: 'quizzes/:id/edit', component: QuizEdit },
+            { path: 'settings', component: Settings },
             { path: 'manage-quizzes', component: ManageQuestions }
         ]
     },
