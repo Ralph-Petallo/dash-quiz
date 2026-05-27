@@ -8,13 +8,13 @@
         </button>
         <h2 class="page-title">{{ currentPageTitle }}</h2>
       </div>
+      <div v-if="currentPageTitle !== 'My Profile'">
+        <div class="user-section">
+          <div class="user-meta">
+            <span class="user-name">{{ userFullName }}</span>
+            <span class="user-status">Online</span>
+          </div>
 
-      <div class="user-section">
-        <div class="user-meta">
-          <span class="user-name">{{ userFullName }}</span>
-          <span class="user-status">Online</span>
-        </div>
-        <div v-if="currentPageTitle !== 'My Profile'">
           <router-link to="/user/profile">
             <div class="avatar-container">
               <img :src="userAvatar" alt="avatar" class="avatar-img">
