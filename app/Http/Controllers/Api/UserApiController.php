@@ -95,7 +95,6 @@ class UserApiController extends Controller
     }
 
     // Get quiz history of the logged-in user
-    // Get quiz history of the logged-in user
     public function records()
     {
         /** @var Dasher|null $user */
@@ -125,29 +124,17 @@ class UserApiController extends Controller
             */
                 $questions = $record->attempts->map(function ($attempt) {
 
-                    $correctOption = $attempt->question->options
-                        ->firstWhere('is_correct', true);
+                    $correctOption = $attempt->question->options->firstWhere('is_correct', true);
 
                     return [
                         'question_id' => $attempt->question->id,
-
                         'question' => $attempt->question->question_text,
-
-                        'user_answer' => $attempt->selectedOption?->option_text
-                            ?? 'No answer',
-
-                        'correct_answer' => $correctOption?->option_text
-                            ?? 'N/A',
-
+                        'user_answer' => $attempt->selectedOption?->option_text ?? 'No answer',
+                        'correct_answer' => $correctOption?->option_text ?? 'N/A',
                         'is_correct' => (bool) $attempt->is_correct,
                     ];
                 })->values();
 
-                /*
-            |--------------------------------------------------
-            | TOTALS
-            |--------------------------------------------------
-            */
                 $totalQuestions = $questions->count();
 
                 $correctAnswers = $questions
@@ -173,11 +160,9 @@ class UserApiController extends Controller
 
                     'quiz_id' => $record->quiz_id,
 
-                    'quiz_title' => $record->quiz?->title
-                        ?? 'Untitled Quiz',
+                    'quiz_title' => $record->quiz?->title ?? 'Untitled Quiz',
 
-                    'quiz_description' => $record->quiz?->description
-                        ?? null,
+                    'quiz_description' => $record->quiz?->description ?? null,
 
                     /*
                 |--------------------------------------------------
@@ -185,11 +170,8 @@ class UserApiController extends Controller
                 |--------------------------------------------------
                 */
                     'score' => $correctAnswers,
-
                     'total_questions' => $totalQuestions,
-
                     'percentage' => $percentage,
-
                     'accuracy' => $percentage,
 
                     /*
@@ -207,21 +189,18 @@ class UserApiController extends Controller
                     'status' => $percentage >= 70
                         ? 'Passed'
                         : 'Failed',
-
                     /*
                 |--------------------------------------------------
                 | ATTEMPT
                 |--------------------------------------------------
                 */
                     'attempt' => $attemptNumber,
-
                     /*
                 |--------------------------------------------------
                 | QUESTIONS
                 |--------------------------------------------------
                 */
                     'questions' => $questions,
-
                     /*
                 |--------------------------------------------------
                 | DATES
