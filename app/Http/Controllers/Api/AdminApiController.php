@@ -11,6 +11,8 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Cache;
+
 
 class AdminApiController extends Controller
 {
@@ -21,105 +23,130 @@ class AdminApiController extends Controller
     {
         $admin = Auth::guard('dasher')->user();
         // insert log
-        AdminLog::insert([
+        AdminLog::create([
             'admin_id' => $admin->id,
             'action_type' => $action,
             'description' => $description,
-            'created_at' => now()
         ]);
     }
     ###############################################
     # DASHBOARD DATA API
     ###############################################
+
     public function dashboard()
     {
-        // Ensure admin is authenticated
         $admin = Auth::guard('dasher')->user();
+
         if (!$admin || $admin->role !== 'admin') {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.'
             ], 401);
         }
-        // Total number of dashers
-        $totalUsers = Dasher::where('role', 'dasher')->count();
-        // Total number of quizzes
-        $totalQuizzes = Quiz::count();
-        // Number of active dashers
-        $activeCount = Dasher::where('role', 'dasher')
-            ->where('last_activity', '>=', now()->subMinutes(1))
-            ->count();
-        // Top 10 dashers by average score
-        $topDashers = Dasher::with('quizRecords')
-            ->where('role', 'dasher')
-            ->withCount('quizRecords AS total_quizzes') // total quizzes taken
-            ->withSum('quizRecords AS total_score', 'score') // total score
-            ->get()
-            ->map(function ($dasher) {
-                $average = $dasher->total_quizzes
-                    ? round(($dasher->total_score / ($dasher->total_quizzes * 10)) * 100, 1)
-                    : 0;
-                return [
-                    'id' => $dasher->id,
-                    'first_name' => $dasher->first_name,
-                    'last_name' => $dasher->last_name,
-                    'average_score' => $average
-                ];
-            })
-            ->sortByDesc('average_score')
-            ->take(10)
-            ->values();
-        // Last 20 admin logs
-        $logs = AdminLog::latest()
-            ->take(20)
-            ->get();
 
-        // Prepare stats
-        $stats = [
-            'total_users' => $totalUsers,
-            'total_quizzes' => $totalQuizzes,
-            'active_users' => $activeCount,
-            'logs' => $logs,
-            'admin_name' => $admin->first_name,
-            'top_users' => $topDashers
-        ];
+        $stats = Cache::remember(
+            'admin:dashboard:stats',
+            now()->addMinutes(5),
+            function () use ($admin) {
+
+                $totalUsers = Dasher::where('role', 'dasher')->count();
+
+                $totalQuizzes = Quiz::count();
+
+                $activeCount = Dasher::where('role', 'dasher')
+                    ->where('last_activity', '>=', now()->subMinutes(1))
+                    ->count();
+
+                $topDashers = Dasher::where('role', 'dasher')
+                    ->withCount('quizRecords as total_quizzes')
+                    ->withSum('quizRecords as total_score', 'score')
+                    ->get()
+                    ->map(function ($dasher) {
+                        $average = $dasher->total_quizzes
+                            ? round(
+                                ($dasher->total_score / ($dasher->total_quizzes * 10)) * 100,
+                                1
+                            )
+                            : 0;
+
+                        return [
+                            'id' => $dasher->id,
+                            'first_name' => $dasher->first_name,
+                            'last_name' => $dasher->last_name,
+                            'average_score' => $average,
+                        ];
+                    })
+                    ->sortByDesc('average_score')
+                    ->take(10)
+                    ->values();
+
+                $logs = AdminLog::latest()
+                    ->take(20)
+                    ->get();
+
+                return [
+                    'total_users' => $totalUsers,
+                    'total_quizzes' => $totalQuizzes,
+                    'active_users' => $activeCount,
+                    'logs' => $logs,
+                    'top_users' => $topDashers,
+                ];
+            }
+        );
+
+        // Admin name should NOT be cached
+        $stats['admin_name'] = $admin->first_name;
+
         return response()->json([
             'status' => 'success',
-            'data' => $stats
-        ], 200);
+            'data' => $stats,
+        ]);
     }
     ###############################################
     # LOGIN API
     ###############################################
     public function login(Request $request)
     {
-        $valid = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+        $credentials = $request->validate([
+            'email' => ['required', 'email'],
+            'password' => ['required', 'string'],
         ]);
 
-        if (Auth::guard('dasher')->attempt($valid)) {
-
-            /** @var Dasher $user */
-            $user = Auth::guard('dasher')->user();
-
-            $request->session()->regenerate();
-
-            $user->forceFill([
-                'active_status' => 1,
-                'last_activity' => now()
-            ])->save();
-
+        if (!Auth::guard('dasher')->attempt($credentials)) {
             return response()->json([
-                'status' => 'success',
-                'role' => $user->role
-            ], 200);
+                'status' => 'error',
+                'message' => 'Invalid email or password.',
+            ], 401);
         }
 
+        $request->session()->regenerate();
+
+        /** @var Dasher $user */
+        $user = Auth::guard('dasher')->user();
+
+        $user->update([
+            'active_status' => 1,
+            'last_activity' => now(),
+        ]);
+
+        Cache::forget('dashquiz:dashboard:stats');
+        Cache::forget('dashquiz:leaderboard');
+
+        Cache::put(
+            "dashquiz:user:{$user->id}:status",
+            'online',
+            now()->addMinutes(5)
+        );
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'Invalid email or password.'
-        ], 401);
+            'status' => 'success',
+            'role' => $user->role,
+            'user' => [
+                'id' => $user->id,
+                'name' => $user->first_name,
+                'email' => $user->email,
+            ],
+        ]);
     }
 
     ###############################################
@@ -128,8 +155,8 @@ class AdminApiController extends Controller
     public function mobileLogin(Request $request)
     {
         $credentials = $request->validate([
-            'email' => 'required|email',
-            'password' => 'required'
+            'email' => ['required', 'email'],
+            'password' => ['required'],
         ]);
 
         $user = Dasher::where('email', $credentials['email'])
@@ -143,12 +170,29 @@ class AdminApiController extends Controller
             ], 401);
         }
 
+        // create token
         $token = $user->createToken('mobile')->plainTextToken;
+
+        // update user activity
+        $user->update([
+            'active_status' => 1,
+            'last_activity' => now(),
+        ]);
+
+        Cache::forget('dashquiz:dashboard:stats');
+        Cache::forget('dashquiz:leaderboard');
+
+        Cache::put(
+            "dashquiz:user:{$user->id}:status",
+            'online',
+            now()->addMinutes(5)
+        );
 
         return response()->json([
             'status' => 'success',
             'token' => $token,
             'user' => [
+                'id' => $user->id,
                 'first_name' => $user->first_name,
                 'last_name' => $user->last_name,
                 'email' => $user->email,
@@ -208,11 +252,15 @@ class AdminApiController extends Controller
         if ($user) {
             $user->update([
                 'active_status' => 0,
-                'last_activity' => now()
+                'last_activity' => now(),
             ]);
 
             // delete Sanctum token(s)
             $user->tokens()->delete();
+
+            Cache::forget("dashquiz:user:{$user->id}:status");
+            Cache::forget('dashquiz:dashboard:stats');
+            Cache::forget('dashquiz:leaderboard');
         }
 
         Auth::guard('dasher')->logout();
