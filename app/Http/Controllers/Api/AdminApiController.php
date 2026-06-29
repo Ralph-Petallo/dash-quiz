@@ -559,12 +559,21 @@ class AdminApiController extends Controller
     ###############################################
     public function allUsers()
     {
-        $users = Dasher::where('role', 'dasher')->get();
+        $users = Dasher::select(
+            'id',
+            'email',
+            'first_name',
+            'last_name',
+            'profile_photo',
+            'created_at',
+        )->where('role', 'dasher')->orderBy('created_at', 'desc')->get();
 
         $users->map(function ($user) {
+            //count quizzes taken for each user
             $user->quizzes_taken = QuizRecord::where('user_id', $user->id)->count();
             return $user;
         });
+
         return response()->json([
             'status' => 'success',
             'data' => $users,
@@ -635,7 +644,19 @@ class AdminApiController extends Controller
         if (Auth::guard('dasher')->check()) {
             return response()->json([
                 'status' => 'success',
-                'data' => QuizRecord::with(['quiz', 'user'])
+                'data' => QuizRecord::query()
+                    ->select([
+                        'id',
+                        'quiz_id',
+                        'user_id',
+                        'score',
+                        'created_at'
+                    ])
+                    ->with([
+                        'quiz:id,title',
+                        'user:id,profile_photo,first_name,last_name'
+                    ])
+                    ->orderBy('created_at', 'asc')
                     ->get()
             ], 200);
         }
