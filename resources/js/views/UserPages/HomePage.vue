@@ -3,7 +3,7 @@
 
     <div class="greet-container">
       <div class="greet">
-        {{ greetMessage }}, {{ user.full_name }}!👋
+        {{ greetMessage }}, {{ userFullName }}!👋
       </div>
       <div class="greet-sub">
         See how you rank against other quiz takers.
@@ -21,41 +21,40 @@
         </div>
       </div>
 
+
+    </div>
+
+    <div class="lb-search">
+      <i class="fa-solid fa-magnifying-glass search-icon"></i>
+      <input v-model="searchQuery" placeholder="Search participant..." class="search-input" />
+      <div class="lb-filters-row">
+        <div class="filter-label">Filter Results</div>
+        <div class="select-wrapper">
+          <select v-model="selectedQuiz" class="quiz-select">
+            <option value="">All</option>
+            <option v-for="quiz in availableQuizzes" :key="quiz" :value="quiz">
+              {{ quiz }}
+            </option>
+          </select>
+          <span class="select-arrow"></span>
+        </div>
+      </div>
       <div class="lb-controls">
         <div v-if="userPosition" class="you-pill">
           <span class="you-dot"></span>
-          Rank #{{ userPosition }}
+          Current Rank #{{ userPosition }}
         </div>
       </div>
     </div>
 
-    <div class="lb-search">
-      <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-        <circle cx="11" cy="11" r="8" />
-        <path d="m21 21-4.35-4.35" stroke-linecap="round" />
-      </svg>
-      <input v-model="searchQuery" placeholder="Search participant..." class="search-input" />
-    </div>
 
-    <div class="lb-filters-row">
-      <div class="filter-label">Filter Results</div>
-      <div class="select-wrapper">
-        <select v-model="selectedQuiz" class="quiz-select">
-          <option value="">All Quizzes</option>
-          <option v-for="quiz in availableQuizzes" :key="quiz" :value="quiz">
-            {{ quiz }}
-          </option>
-        </select>
-        <span class="select-arrow"></span>
-      </div>
-    </div>
 
     <div class="podium" v-if="!searchQuery && topThree.length">
       <div v-for="(entry, i) in podiumOrder" :key="entry.id" class="podium-card"
         :class="[`podium-${podiumPositions[i]}`, entry.isYou ? 'is-you' : '']">
         <div class="podium-avatar-wrap">
-          <img :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`" class="podium-avatar"
-            alt="user" />
+          <img :draggable="false" :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`"
+            class="podium-avatar" alt="user" />
           <div class="podium-medal">{{ ['🥇', '🥈', '🥉'][podiumPositions[i] - 1] }}</div>
         </div>
         <div class="podium-name">{{ entry.displayName }}<span v-if="entry.isYou" class="you-tag">You</span></div>
@@ -79,12 +78,14 @@
 
           <div class="item-rank" :class="index < 3 && !searchQuery ? `rank-${index + 1}` : ''">
             <span v-if="index < 3 && !searchQuery" class="rank-medal">{{ ['🥇', '🥈', '🥉'][index] }}</span>
+
             <span v-else class="rank-num">{{ index + 1 }}</span>
+
           </div>
 
           <div class="item-avatar-wrap">
-            <img :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`" class="item-avatar"
-              alt="user" />
+            <img :draggable="false" :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`"
+              class="item-avatar" alt="user" />
             <span v-if="entry.isYou" class="avatar-ring"></span>
           </div>
 
@@ -137,20 +138,22 @@ const greetMessage = computed(() => {
 })
 
 const LEADERBOARD_CACHE_KEY = 'dash-quiz_leaderboard_cache'
-const LEADERBOARD_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
+const LEADERBOARD_CACHE_TTL = 1000 * 60 * 5 // 5 minutes
 
 const leaderboard = ref([])
 const isLoading = ref(false)
 const searchQuery = ref('')
 const selectedQuiz = ref('') // Tracks active dropdown value
-const { user, fetchUser } = useUser()
+const { user, fetchUser, userFullName } = useUser()
 
+// Cache getter with validation to prevent stale data usage and reduce server load
 const getCachedLeaderboard = () => {
   try {
     const cached = JSON.parse(localStorage.getItem(LEADERBOARD_CACHE_KEY))
-    if (!cached || typeof cached !== 'object') return null
+    if (!cached) {
+      return null
+    }
     if (Date.now() - cached.ts > LEADERBOARD_CACHE_TTL) {
-      localStorage.removeItem(LEADERBOARD_CACHE_KEY)
       return null
     }
     return cached.value
@@ -159,15 +162,13 @@ const getCachedLeaderboard = () => {
   }
 }
 
+// Cache setter with timestamp to localStorage for quick retrieval and reduced server hits
 const setLeaderboardCache = (value) => {
-  try {
-    localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify({
-      ts: Date.now(),
-      value,
-    }))
-  } catch {
-    // ignore
-  }
+  localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify({
+    ts: Date.now(),
+    value,
+  })
+  )
 }
 
 // Dynamically grab all unique quiz titles from the raw dataset
@@ -180,12 +181,12 @@ const availableQuizzes = computed(() => {
 const displayedLeaderboard = computed(() => {
   let list = [...leaderboard.value]
 
-  // First step: slice down to only matching selected quiz title if picked
+  // Slice down to only matching selected quiz title if picked
   if (selectedQuiz.value) {
     list = list.filter(item => item.quiz_title === selectedQuiz.value)
   }
 
-  // Second step: sort highest score first so rankings are true to the filtered subset
+  // Sort highest score first so rankings are true to the filtered subset
   return list.sort((a, b) => b.score - a.score)
 })
 
@@ -204,6 +205,7 @@ const podiumOrder = computed(() => {
   if (t.length < 3) return t
   return [t[1], t[0], t[2]]
 })
+
 const podiumPositions = [2, 1, 3]
 const podiumHeights = ['60px', '80px', '44px']
 
@@ -228,6 +230,7 @@ const getLeaderBoard = async (force = false) => {
   }
 
   isLoading.value = true
+
   try {
     await axios.get('/sanctum/csrf-cookie')
     const { data } = await axios.get('/api/dashboard/leaderboard')
@@ -368,6 +371,10 @@ onMounted(async () => {
 /* ── SEARCH ── */
 .lb-search {
   position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .search-icon {
@@ -377,17 +384,16 @@ onMounted(async () => {
   transform: translateY(-50%);
   width: 16px;
   height: 16px;
-  stroke: #94a3b8;
+  color: grey;
   pointer-events: none;
 }
 
 .search-input {
-  width: 100%;
+  width: 250px;
   padding: 10px 14px 10px 38px;
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.875rem;
-  font-family: 'DM Sans', sans-serif;
   color: #1e293b;
   background: #f8fafc;
   transition: border-color 0.2s, background 0.2s;
@@ -405,7 +411,7 @@ onMounted(async () => {
   justify-content: space-between;
   align-items: center;
   background: #f8fafc;
-  padding: 10px 14px;
+  padding: 4px 14px;
   border-radius: 12px;
   border: 1px solid #e2e8f0;
   gap: 12px;
@@ -428,13 +434,9 @@ onMounted(async () => {
   width: 100%;
   padding: 6px 32px 6px 12px;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #1e293b;
-  background: #ffffff;
-  border: 1px solid #cbd5e1;
   border-radius: 8px;
   cursor: pointer;
+  border: none;
   outline: none;
   appearance: none;
   /* Removes native browser styles */
@@ -442,7 +444,6 @@ onMounted(async () => {
 }
 
 .quiz-select:focus {
-  border-color: #6366f1;
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.15);
 }
 
