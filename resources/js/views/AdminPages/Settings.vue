@@ -1,100 +1,129 @@
-    <template>
-        <div class="settings-page">
+<template>
+    <div class="settings-page">
 
-            <!-- Header -->
-            <div class="page-header">
-                <div>
-                    <h1>Admin Settings</h1>
-                    <p>Manage administrator account details.</p>
-                </div>
-            </div>
+        <div class="alert-success" v-if="successMessage">
+            {{ successMessage }}
+        </div>
 
-            <div class="alert-success" v-if="successMessage">
-                {{ successMessage }}
-            </div>
+        <div class="settings-grid">
 
-            <div class="settings-grid">
+            <!-- Profile card -->
+            <div class="card">
 
-                <!-- Profile card -->
-                <div class="card">
-
-                    <div class="profile-section">
-                        <div class="profile-image-wrapper">
-                            <img :src="previewAvatar || userAvatar" alt="Profile" class="profile-photo" />
-                            <label for="profile-upload" class="camera-btn">
-                                <i class="fa-solid fa-camera"></i>
-                            </label>
-                            <input id="profile-upload" type="file" accept="image/*" hidden
-                                @change="handleProfileUpload" />
-                        </div>
-
-                        <div>
-                            <h2 class="profile-name">{{ userFullName }}</h2>
-                            <p class="role-badge">{{ user?.role }}</p>
-                            <small class="upload-text">JPG, PNG or WEBP · max 2MB</small>
-                        </div>
+                <div class="profile-section">
+                    <div class="profile-image-wrapper">
+                        <img :src="previewAvatar || userAvatar" alt="Profile" class="profile-photo" />
+                        <label for="profile-upload" class="camera-btn">
+                            <i class="fa-solid fa-camera"></i>
+                        </label>
+                        <input id="profile-upload" type="file" accept="image/*" hidden @change="handleProfileUpload" />
                     </div>
 
-                    <div class="form-group">
-                        <label for="first_name">First Name</label>
-                        <input id="first_name" type="text" v-model="form.first_name" placeholder="First name" />
+                    <div>
+                        <h2 class="profile-name">{{ userFullName }}</h2>
+                        <p class="role-badge">{{ user?.role }}</p>
+                        <small class="upload-text">JPG, PNG or WEBP · max 2MB</small>
                     </div>
-
-                    <div class="form-group">
-                        <label for="last_name">Last Name</label>
-                        <input id="last_name" type="text" v-model="form.last_name" placeholder="Last name" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="email">Email Address</label>
-                        <input id="email" type="email" v-model="form.email" placeholder="Email address" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="role">Role</label>
-                        <input id="role" type="text" :value="user?.role" disabled />
-                    </div>
-
                 </div>
 
-                <!-- Security card -->
-                <div class="card">
+                <div class="form-group">
+                    <label for="first_name">First Name</label>
+                    <input id="first_name" type="text" v-model="form.first_name" placeholder="First name" />
+                </div>
 
-                    <div class="card-header">
-                        <h2>Security</h2>
-                        <p>Update your password</p>
-                    </div>
+                <div class="form-group">
+                    <label for="last_name">Last Name</label>
+                    <input id="last_name" type="text" v-model="form.last_name" placeholder="Last name" />
+                </div>
 
-                    <div class="form-group">
-                        <label for="current_password">Current Password</label>
-                        <input id="current_password" type="password" v-model="password.current"
-                            placeholder="Enter current password" />
-                    </div>
+                <div class="form-group">
+                    <label for="email">Email Address</label>
+                    <input id="email" type="email" v-model="form.email" placeholder="Email address" />
+                </div>
 
-                    <div class="form-group">
-                        <label for="new_password">New Password</label>
-                        <input id="new_password" type="password" v-model="password.new"
-                            placeholder="Enter new password" />
-                    </div>
-
-                    <div class="form-group">
-                        <label for="confirm_password">Confirm Password</label>
-                        <input id="confirm_password" type="password" v-model="password.confirm"
-                            placeholder="Confirm new password" />
-                    </div>
-
+                <div class="form-group">
+                    <label for="role">Role</label>
+                    <input id="role" type="text" :value="user?.role" disabled />
                 </div>
 
             </div>
 
-            <!-- Action buttons -->
-            <div class="action-buttons">
-                <button class="btn btn-secondary" @click="resetForm">Reset</button>
-                <button class="btn btn-primary" @click="saveChanges">Save Changes</button>
+            <!-- Security card -->
+            <div class="card">
+
+                <div class="card-header">
+                    <h2>Security</h2>
+                    <p>Update your password</p>
+                </div>
+
+                <div class="form-group">
+                    <label for="current_password">Current Password</label>
+                    <input id="current_password" type="password" v-model="password.current"
+                        placeholder="Enter current password" />
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input id="new_password" type="password" v-model="password.new" placeholder="Enter new password" />
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input id="confirm_password" type="password" v-model="password.confirm"
+                        placeholder="Confirm new password" />
+                </div>
+
+            </div>
+
+            <!-- Create new admin section -->
+            <div class="card">
+
+                <div class="card-header">
+                    <h2>New Admin</h2>
+                    <p>Fill in the details to create a new admin user</p>
+                </div>
+                <div class="form-group">
+                    <label for="current_password">First Name</label>
+                    <input id="current_password" type="text" v-model="newAdmin.first_name"
+                        placeholder="Enter first name" />
+                </div>
+                <div class="form-group">
+                    <label for="current_password">Last Name</label>
+                    <input id="current_password" type="text" v-model="newAdmin.last_name"
+                        placeholder="Enter last name" />
+                </div>
+
+                <div class="form-group">
+                    <label for="current_password">Admin Email</label>
+                    <input id="current_password" type="email" v-model="newAdmin.email"
+                        placeholder="Enter admin email" />
+                </div>
+
+                <div class="form-group">
+                    <label for="new_password">New Password</label>
+                    <input id="new_password" type="password" v-model="newAdmin.password" placeholder="Enter new password" />
+                </div>
+
+                <div class="form-group">
+                    <label for="confirm_password">Confirm Password</label>
+                    <input id="confirm_password" type="password" v-model="newAdmin.password_confirmation"
+                        placeholder="Confirm new password" />       
+                </div>
+
+                <button class="btn btn-primary" @click="createAdmin">Create Admin</button>
+
             </div>
 
         </div>
-    </template>
+
+        <!-- Action buttons -->
+        <div class="action-buttons">
+            <button class="btn btn-secondary" @click="resetForm">Reset</button>
+            <button class="btn btn-primary" @click="saveChanges">Save Changes</button>
+        </div>
+
+    </div>
+</template>
 
 <script setup>
 import { reactive, watchEffect, ref } from 'vue'
@@ -107,6 +136,14 @@ const form = reactive({
     first_name: '',
     last_name: '',
     email: '',
+})
+
+const newAdmin = reactive({
+    first_name: '',
+    last_name: '',
+    email: '',
+    password: '',
+    password_confirmation: '',
 })
 
 const password = reactive({
@@ -200,6 +237,35 @@ const saveChanges = async () => {
     }
 }
 
+const createAdmin = async () => {
+    try {
+        if (!newAdmin.first_name || !newAdmin.last_name || !newAdmin.email || !newAdmin.password) {
+            alert('Please fill in all fields for the new admin.')
+            return
+        }
+
+        if (newAdmin.password !== newAdmin.password_confirmation) {
+            alert('New password and confirm password do not match.')
+            return
+        }
+
+        const response = await axios.post('/api/admin/create-admin', newAdmin)
+        console.log(response)
+
+        // Reset new admin form
+        newAdmin.first_name = ''
+        newAdmin.last_name = ''
+        newAdmin.email = ''
+        newAdmin.password = ''
+        newAdmin.password_confirmation = ''
+
+        alert('New admin created successfully!')
+
+    } catch (error) {
+        console.error(error)
+    }
+}
+
 fetchUser()
 </script>
 
@@ -228,16 +294,18 @@ fetchUser()
 
 /* Grid */
 .settings-grid {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 20px;
+    display: flex;
+    justify-content: space-between;
+    gap: 5px;
+    margin-bottom: 24px;
 }
 
 /* Card */
 .card {
     background: #fff;
     border-radius: 16px;
-    padding: 24px;
+    width:100%;
+    padding: 12px;
     border: 1px solid #f1f5f9;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
 }
