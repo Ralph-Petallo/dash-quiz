@@ -14,6 +14,7 @@
       <div class="header-row">
         <div>
           <h3 class="section-title">
+            <i class="fa-solid fa-pen-to-square"></i>
             Manage Quizzes
           </h3>
           <p class="section-subtitle">
@@ -38,7 +39,7 @@
         <!-- HEADER -->
         <div class="table-header">
           <span @click="sortBy('id')">
-            <i class="fas fa-hashtag"></i> ID
+            <i class="fas fa-hashtag"></i>
           </span>
 
           <span @click="sortBy('title')">
@@ -56,17 +57,11 @@
 
         <!-- ROWS -->
         <div v-if="sortedQuizzes.length">
-          <div
-            v-for="quiz in sortedQuizzes"
-            :key="quiz.id"
-            class="table-row"
-          >
-            <span class="id">
-              <i class="fas fa-id-badge"></i> #{{ quiz.id }}
+          <div v-for="quiz in sortedQuizzes" :key="quiz.id" class="table-row">
+            <span class="id">{{ quiz.id }}
             </span>
 
             <span class="title">
-              <i class="fas fa-file-alt"></i>
               {{ quiz.title }}
             </span>
 
@@ -196,11 +191,11 @@ onMounted(fetchQuizzes)
   color: #1e1b4b;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 5px;
 }
 
 .section-subtitle {
-  font-size: 0.85rem;
+  font-size: 12px;
   color: #64748b;
 }
 
@@ -265,10 +260,11 @@ onMounted(fetchQuizzes)
 /* ROW */
 .table-row {
   display: grid;
-  grid-template-columns: 80px 1.5fr 2fr 160px;
+  grid-template-columns: 80px .5fr 2fr 160px;
   padding: 12px 16px;
   border-top: 1px solid #f1f5f9;
   align-items: center;
+  gap: 5px;
   transition: 0.2s;
 }
 
@@ -289,6 +285,7 @@ onMounted(fetchQuizzes)
   font-weight: 500;
   display: flex;
   align-items: center;
+  font-size: 0.85rem;
   gap: 6px;
 }
 
@@ -363,7 +360,9 @@ onMounted(fetchQuizzes)
 
 /* ANIMATION */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 .fade-slide-enter-active {

@@ -6,6 +6,7 @@
       <div class="header-row">
         <div>
           <h3 class="section-title">
+            <i class="fa-solid fa-chart-line"></i>
             Dasher Records
           </h3>
           <p class="section-subtitle">
@@ -36,17 +37,23 @@
             <i class="fas fa-user"></i> Dasher
           </span>
 
+
           <span @click="sortBy('quiz_title')">
             <i class="fas fa-book"></i> Quiz
           </span>
 
-          <span class="text-center" @click="sortBy('score')">
+          <span @click="sortBy('score')">
             <i class="fas fa-star"></i> Score
+          </span>
+
+          <span>
+            <i class="fas fa-user"></i> Status
           </span>
 
           <span @click="sortBy('created_at')">
             <i class="fas fa-calendar"></i> Date
           </span>
+
         </div>
 
         <!-- Rows -->
@@ -54,24 +61,25 @@
           <div v-for="rec in paginatedRecords" :key="rec.id" class="table-row">
 
             <span class="user">
-              <i class="fas fa-user-circle"></i>
+              <img :src="profileImageUrl(rec.user)" :alt="rec.user?.first_name + ' ' + rec.user?.last_name"
+                class="user-avatar" />
               {{ rec.user ? rec.user.first_name + ' ' + rec.user.last_name : 'User #' + rec.user_id }}
             </span>
 
             <span class="quiz">
-              <i class="fas fa-book-open"></i>
               {{ rec.quiz ? rec.quiz.title : 'Deleted Quiz' }}
             </span>
 
-            <span class="text-center">
+            <span>
               <span class="score-badge" :class="getScoreClass(rec)">
                 <i class="fas fa-chart-line"></i>
                 {{ rec.score }} / {{ rec.total_questions || 10 }}
               </span>
             </span>
-
+            <span :class="getStatus(status = false)">
+              {{ rec.status || 'Not Ready' }}
+            </span>
             <span class="date">
-              <i class="fas fa-clock"></i>
               {{ formatDate(rec.created_at) }}
             </span>
 
@@ -90,7 +98,7 @@
             <i class="fas fa-chevron-left"></i> Prev
           </button>
 
-          <span>Page {{ currentPage }} / {{ totalPages }}</span>
+          <div class="number">Page {{ currentPage }} / {{ totalPages }}</div>
 
           <button :disabled="currentPage === totalPages" @click="currentPage++">
             Next <i class="fas fa-chevron-right"></i>
@@ -122,6 +130,7 @@ const fetchRecords = async () => {
     loading.value = true
     const { data } = await axios.get('/api/admin/records')
     records.value = data.data
+    console.log('Fetched records:', records.value)
   } catch (error) {
     console.log(error)
   } finally {
@@ -129,11 +138,25 @@ const fetchRecords = async () => {
   }
 }
 
+const getStatus = (status) => {
+  if (!status) {
+    return 'status-not-ready'
+  }
+  return 'status-ready'
+}
+
+const profileImageUrl = (user) => {
+  const profilepath = `/storage/images/profiles`
+  return user?.profile_photo
+    ? `${profilepath}/${user.profile_photo}`
+    : `${profilepath}/default.png`
+}
+
 const formatDate = (dateString) => {
   if (!dateString) return 'N/A'
   const date = new Date(dateString)
   return date.toLocaleDateString('en-US', {
-    day: '2-digit', month: 'short', year: 'numeric'
+    day: '2-digit', month: '2-digit', year: '2-digit'
   }).replace(/ /g, '/')
 }
 
@@ -232,6 +255,14 @@ onMounted(fetchRecords)
   margin-bottom: 1.2rem;
 }
 
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #6366f1;
+  object-fit: cover;
+}
+
 .section-title {
   font-size: clamp(1.1rem, 1.5vw, 1.3rem);
   font-weight: 600;
@@ -274,7 +305,7 @@ onMounted(fetchRecords)
 /* HEADER */
 .table-header {
   display: grid;
-  grid-template-columns: 1.5fr 1.5fr 120px 160px;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
   padding: 12px 16px;
   font-size: 0.75rem;
   font-weight: 600;
@@ -284,19 +315,22 @@ onMounted(fetchRecords)
 
 .table-header span {
   cursor: pointer;
-  display: flex;
-  align-items: center;
+  text-align: center;
   gap: 6px;
 }
 
 /* ROW */
 .table-row {
   display: grid;
-  grid-template-columns: 1.5fr 1.5fr 120px 160px;
+  grid-template-columns: 1fr 1fr 1fr 1fr 1fr;
   padding: 12px 16px;
   align-items: center;
   border-top: 1px solid #f1f5f9;
   transition: 0.2s;
+}
+
+.table-row span {
+  text-align: center;
 }
 
 .table-row:hover {
@@ -304,15 +338,34 @@ onMounted(fetchRecords)
 }
 
 /* CELLS */
-.user, .quiz, .date {
+.user {
   display: flex;
+  align-items: flex-start;
   align-items: center;
   gap: 6px;
   font-size: 0.85rem;
 }
 
-.quiz { color: #4f46e5; }
-.date { color: #6b7280; }
+.quiz{
+  font-size: 0.85rem;
+}
+
+
+.quiz {
+  color: #4f46e5;
+}
+
+.status-ready {
+  color: green;
+}
+
+.status-not-ready {
+  color: brown;
+}
+
+.date {
+  color: #6b7280;
+}
 
 /* SCORE */
 .score-badge {
@@ -324,10 +377,24 @@ onMounted(fetchRecords)
   align-items: center;
 }
 
-.score-high { background: #dcfce7; color: #166534; }
-.score-mid { background: #fef9c3; color: #854d0e; }
-.score-low { background: #fee2e2; color: #991b1b; }
-.neutral { background: #f1f5f9; }
+.score-high {
+  background: #dcfce7;
+  color: #166534;
+}
+
+.score-mid {
+  background: #fef9c3;
+  color: #854d0e;
+}
+
+.score-low {
+  background: #fee2e2;
+  color: #991b1b;
+}
+
+.neutral {
+  background: #f1f5f9;
+}
 
 /* EMPTY */
 .empty-state {
@@ -353,7 +420,9 @@ onMounted(fetchRecords)
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* PAGINATION */
@@ -363,6 +432,12 @@ onMounted(fetchRecords)
   gap: 10px;
   padding: 14px;
   flex-wrap: wrap;
+}
+
+.pagination .number {
+  display: flex;
+  align-items: center;
+  font-size: 12px;
 }
 
 .pagination button {
@@ -375,7 +450,9 @@ onMounted(fetchRecords)
 
 /* RESPONSIVE */
 @media (max-width: 768px) {
-  .table-header { display: none; }
+  .table-header {
+    display: none;
+  }
 
   .table-row {
     grid-template-columns: 1fr;

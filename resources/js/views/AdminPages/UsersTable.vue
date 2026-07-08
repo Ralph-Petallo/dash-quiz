@@ -12,7 +12,10 @@
       <!-- Header -->
       <div class="header-row">
         <div>
-          <h3 class="section-title">Registered Dashers</h3>
+          <h3 class="section-title">
+            <i class="fa-solid fa-users"></i>
+            Registered Dashers
+          </h3>
           <p class="section-subtitle">Manage all user accounts</p>
         </div>
 
@@ -35,30 +38,28 @@
             <thead>
               <tr>
                 <th @click="sortBy('id')">
-                  <span>ID</span>
                   <i class="fas fa-sort"></i>
+                  <span> ID</span>
                 </th>
 
                 <th @click="sortBy('full_name')">
-                  <span>Name</span>
                   <i class="fas fa-user"></i>
+                  <span> Name</span>
                 </th>
 
                 <th @click="sortBy('email')">
-                  <span>Email</span>
                   <i class="fas fa-envelope"></i>
+                  <span> Email</span>
                 </th>
-
                 <th @click="sortBy('quizzes_taken')">
-                  <span>Quizzes</span>
                   <i class="fas fa-list-ol"></i>
+                  <span> Quizzes</span>
                 </th>
 
                 <th @click="sortBy('created_at')">
-                  <span>Date</span>
                   <i class="fas fa-calendar"></i>
+                  <span> Date</span>
                 </th>
-
                 <th>
                   <span>Actions</span>
                   <i class="fas fa-cogs"></i>
@@ -75,7 +76,10 @@
                 <td>{{ user.id }}</td>
 
                 <td class="name">
-                  {{ user.first_name }} {{ user.last_name }}
+                  <div class="user-box">
+                    <img :src="setProfileURL(user)" :alt="user.first_name + ' ' + user.last_name" class="user-avatar" />
+                    {{ user.first_name }} {{ user.last_name }}
+                  </div>
                 </td>
 
                 <td class="email">
@@ -153,10 +157,20 @@ const notification = ref({
   type: 'success'
 })
 
+const setProfileURL = (user) => {
+  const profilepath = `/storage/images/profiles`
+  return user?.profile_photo
+    ? `${profilepath}/${user.profile_photo}`
+    : `${profilepath}/default.png`
+}
+
 const fetchUsers = async () => {
   try {
     const response = await axios.get('/api/admin/user')
     users.value = response.data?.data
+    console.log('Fetched users:', users.value)
+  } catch (error) {
+    console.error('Error fetching users:', error)
   } finally {
     loading.value = false
   }
@@ -322,6 +336,21 @@ onMounted(fetchUsers)
 .name {
   font-weight: 600;
   color: #111827;
+}
+
+.user-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  justify-content: flex-start;
+}
+
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #6366f1;
+  object-fit: cover;
 }
 
 .email {

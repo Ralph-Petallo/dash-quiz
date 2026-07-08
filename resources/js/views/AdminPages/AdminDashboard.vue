@@ -73,7 +73,8 @@
               </div>
 
               <div class="leader-avatar">
-                {{ user.first_name?.[0] }}{{ user.last_name?.[0] }}
+                <img :draggable="false" :src="`/storage/images/profiles/${user.profile_photo || 'default.png'}`"
+                  :width="32" :height="32" class="user-avatar" />
               </div>
 
               <div class="leader-info">
@@ -107,8 +108,7 @@
 
         <div v-if="filteredLogs.length" class="logs-list">
           <div v-for="log in filteredLogs" :key="log.id" class="log-item">
-            <div class="log-icon" :class="getLogType(log.type)">
-              <i :class="getLogIcon(log.type)"></i>
+            <div class="log-icon" :class="log.action_type.toLowerCase()">
             </div>
             <div class="log-body">
               <p class="log-text">{{ log.description }}</p>
@@ -158,7 +158,7 @@ let chartInstance = null
 ========================= */
 const filteredLogs = computed(() => {
   if (!stats.value?.logs?.length) return []
-
+  console.log(stats.value?.logs?.length)
   const now = new Date()
 
   return stats.value.logs.filter(log => {
@@ -171,12 +171,21 @@ const filteredLogs = computed(() => {
     if (filterType.value === "week") {
       const weekAgo = new Date()
       weekAgo.setDate(now.getDate() - 7)
+      console.log(weekAgo)
       return logDate >= weekAgo
     }
 
     return true
   })
 })
+
+const formatDate = (dateString) => {
+  if (!dateString) return 'N/A'
+  const date = new Date(dateString)
+  return date.toLocaleDateString('en-US', {
+    day: '2-digit', month: '2-digit', year: '2-digit'
+  }).replace(/ /g, '/')
+}
 
 /* =========================
    CHART
@@ -312,6 +321,14 @@ onUnmounted(() => {
   color: #16a34a;
 }
 
+.user-avatar {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  border: 1.5px solid #6366f1;
+  object-fit: cover;
+}
+
 .icon-active {
   background: rgba(75, 60, 209, 0.1);
   color: #4b3cd1;
@@ -395,14 +412,6 @@ onUnmounted(() => {
   margin-bottom: 10px;
 }
 
-.leader-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-height: 340px;
-  overflow-y: auto;
-  padding: 0.5rem;
-}
 
 .leader-list::-webkit-scrollbar {
   width: 4px;
@@ -446,18 +455,6 @@ onUnmounted(() => {
   color: #94a3b8;
 }
 
-.leader-avatar {
-  width: 34px;
-  height: 34px;
-  border-radius: 8px;
-  background: linear-gradient(135deg, #6366f1, #4f46e5);
-  display: grid;
-  place-items: center;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #fff;
-  flex-shrink: 0;
-}
 
 .leader-info {
   display: flex;
