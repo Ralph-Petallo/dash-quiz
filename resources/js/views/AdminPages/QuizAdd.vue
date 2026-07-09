@@ -48,8 +48,8 @@
                 <div class="options-grid">
                     <div v-for="(opt, i) in ['A', 'B', 'C', 'D']" :key="i" class="option-item">
                         <input type="radio" :name="'correct_' + index" :value="i" v-model="q.correct_option" />
-
-                        <input v-model="q.options[i]" type="text" :placeholder="'Option ' + opt" />
+                        <span>{{ opt }}</span>
+                        <input v-model="q.options[i]" type="text" :placeholder="'....'" />
                     </div>
                 </div>
             </div>
@@ -82,9 +82,9 @@ const form = ref({
     title: "",
     description: "",
     questions: Array.from({ length: 10 }, () => ({
-        text: "", 
+        text: "",
         options: ["", "", "", ""],
-        correct_option: 0, 
+        correct_option: 0,
     })),
 });
 
@@ -113,7 +113,7 @@ const submitQuiz = async () => {
         await axios.post("/api/admin/quizzes/create", form.value);
 
         alert("Quiz created successfully!");
-        router.push("/admin/quizzes/manage");
+        router.push("/admin/manage-quizzes");
     } catch (e) {
         console.error("Submission Error:", e.response?.data || console.error("Backend Crash Details:", exactError));
         alert(
