@@ -77,7 +77,7 @@ defineEmits(['closeSidebar', 'logout'])
   display: flex;
   flex-direction: column;
   padding: 1.5rem;
-  z-index: 1001;
+  z-index: 1000;
   border-right: 1px solid var(--border);
   overflow-y: auto;
   font-family: 'Inter', -apple-system, sans-serif;
