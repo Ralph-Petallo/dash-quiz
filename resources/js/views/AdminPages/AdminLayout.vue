@@ -47,6 +47,7 @@ const pageTitles = {
     '/admin/manage-quizzes': 'Quizzes',
     '/admin/users': 'Users',
     '/admin/records': 'Records',
+    '/admin/settings': 'Admin Settings',
 }
 
 const currentPageTitle = computed(() => pageTitles[route.path] ?? 'Dashboard')
@@ -60,13 +61,13 @@ const handleLogout = async () => {
     try {
         await axios.post('/api/logout')
 
-        // 🧠 clear frontend auth state
+        // clear frontend auth state
         user.value = null
 
-        // 🧠 clear any stored tokens/session data
+        // clear any stored tokens/session data
         localStorage.clear()
 
-        // 🧠 remove axios auth header (important if you set it globally)
+        // remove axios auth header (important if you set it globally)
         delete axios.defaults.headers.common['Authorization']
 
         router.replace('/')
@@ -83,6 +84,7 @@ const handleLogout = async () => {
 watch(isSidebarOpen, (val) => {
     document.body.classList.toggle('sidebar-open', val && isMobile.value)
 })
+
 </script>
 
 <style scoped>
@@ -136,7 +138,6 @@ watch(isSidebarOpen, (val) => {
     pointer-events: none;
     transition: opacity 0.3s cubic-bezier(0.4, 0, 0.2, 1);
     z-index: 999;
-    backdrop-filter: blur(2px);
 }
 
 .sidebar-overlay.active {
