@@ -24,19 +24,19 @@
 
       <section class="form-section">
         <form class="card" @submit.prevent="handleLogin">
-          <h2>Welcome back!</h2>
+          <h2>Welcome{{ visited ? ' Back!' : '!' }}</h2>
           <p class="subtitle">Sign in to your account</p>
 
           <div class="field">
             <label for="email">Email address</label>
-            <input id="email" type="email" v-model.trim="form.email" placeholder="@example.com"
+            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="@example.com"
               :class="{ error: errors.email }" autocomplete="off" />
             <small v-if="errors.email">{{ errors.email[0] }}</small>
           </div>
 
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" type="password" v-model.trim="form.password" placeholder="••••••"
+            <input id="password" type="password" name="password" v-model="form.password" placeholder="••••••"
               :class="{ error: errors.password }" autocomplete="off" />
             <small v-if="errors.password">{{ errors.password[0] }}</small>
           </div>
@@ -51,7 +51,9 @@
           </button>
 
           <div class="footer-links">
-            <router-link to="/forgot" class="forgot-link">Forgot password?</router-link>
+            <div class="forgot-link">
+              <router-link to="/forgot">Forgot password?</router-link>
+            </div>
             <div class="divider">
               <div class="line"></div>or<div class="line"></div>
             </div>
@@ -75,6 +77,8 @@ import { useRouter } from 'vue-router'
 import { useUser } from '@/composables/useUser'
 import axios from 'axios'
 
+const visited = ref(false) // check if user has visited the page before to prevent multiple login attempts on page reload
+
 const router = useRouter()
 const { fetchUser } = useUser()
 
@@ -87,9 +91,20 @@ const maxAttempts = 3
 const attempts = ref(0)
 const isLocked = ref(false)
 
+function newVisitorCheck() {
+  if (localStorage.getItem('visited')) {
+    visited.value = true
+  } else {
+    localStorage.setItem('visited', 'true')
+  }
+}
+newVisitorCheck()
+
 function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
+
+console.log(window.innerWidth)
 
 function timeout(seconds) {
   setTimeout(() => {
@@ -105,6 +120,8 @@ const handleLogin = async () => {
   generalError.value = ''
 
   // Validate BEFORE setting loading — so early returns don't leave button stuck
+  form.email = form.email.trim()
+
   if (!form.email || !form.password) {
     generalError.value = 'Please enter your email and password.'
     return
@@ -127,22 +144,50 @@ const handleLogin = async () => {
     await fetchUser(true)
 
     router.push(data.role === 'admin' ? '/admin' : '/user')
+  } catch (error) {
+    const response = error?.response
+    const status = response?.status
+    const responseData = response?.data
+    let shouldIncrementAttempts = false
 
-  } catch {
-    attempts.value++
+    if (status === 422 && responseData?.errors) {
+      errors.value = responseData.errors
+      generalError.value = responseData.message || 'Please fix the highlighted fields.'
+    } else if (status === 401) {
+      shouldIncrementAttempts = true
+      generalError.value = responseData?.message || 'Invalid email or password.'
+    } else if (status === 429) {
+      shouldIncrementAttempts = true
+      const retryAfter = parseInt(response?.headers?.['retry-after'], 10)
+      if (retryAfter > 0) {
+        generalError.value = `Too many login attempts. Please wait ${retryAfter} seconds and try again.`
+      } else {
+        generalError.value = responseData?.message || 'Too many login attempts. Please try again later.'
+      }
+    } else {
+      generalError.value = responseData?.message || 'Unable to login right now. Please try again later.'
+    }
+
+    if (shouldIncrementAttempts) {
+      attempts.value++
+    }
 
     if (attempts.value >= maxAttempts) {
       isLocked.value = true
       generalError.value = 'Too many failed attempts. Please wait 30 seconds.'
       timeout(30) // 30 seconds
-    } else {
-      generalError.value = `Invalid email or password.`
     }
-
   } finally {
     loading.value = false
   }
 }
+
+// Clear any quiz-related caches on mount to prevent stale data if user tries to login with different account on same device
+Object.keys(localStorage).forEach(key => {
+  if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
+    localStorage.removeItem(key)
+  }
+})
 </script>
 
 <style scoped>
@@ -363,13 +408,26 @@ const handleLogin = async () => {
 }
 
 .forgot-link {
-  text-align: center;
+  display: flex;
   text-decoration: none;
   color: #6366f1;
+  justify-content: center;
   font-size: 13px;
 }
 
-.forgot-link:hover {
+.forgot-link a {
+  text-decoration: none;
+}
+
+.forgot-link a:hover {
+  text-decoration: underline;
+}
+
+.forgot-link a:visited {
+  text-decoration: none;
+}
+
+.forgot-link a:visited:hover {
   text-decoration: underline;
 }
 
