@@ -6,7 +6,7 @@ import HomePage from './views/UserPages/HomePage.vue'
 import Profile from './views/UserPages/ProfilePage.vue'
 import Records from './views/UserPages/RecordsPage.vue'
 import QuizPage from './views/UserPages/QuizPage.vue'
-import TakeQuizPage from './views/UserPages/TakeQuizPage.vue'
+import TakeQuizPage from './views/UserPages/QuizzesPages/TakeQuizPage.vue'
 import QuizResult from './views/UserPages/QuizResult.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 
