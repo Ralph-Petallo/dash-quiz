@@ -74,6 +74,7 @@ class AdminApiController extends Controller
                             'first_name' => $dasher->first_name,
                             'last_name' => $dasher->last_name,
                             'average_score' => $average,
+                            'profile_photo' => $dasher->profile_photo,
                         ];
                     })
                     ->sortByDesc('average_score')
@@ -381,7 +382,7 @@ class AdminApiController extends Controller
                 }
             }
             // Log the activity
-            $this->logActivity('New Quiz!', "Quiz '{$request->title}' was created");
+            $this->logActivity('New Quiz', "Quiz '{$request->title}' was created");
 
             DB::commit();
 
@@ -405,9 +406,10 @@ class AdminApiController extends Controller
     public function editQuiz(int $id)
     {
         try {
-            $sql = "SELECT * FROM quizzes WHERE id = ?";
-            $quizData = DB::select($sql, [$id]);
 
+            $quizData = Quiz::where('id', $id)->get();
+
+            //if its empty, then return error
             if (empty($quizData)) {
                 return response()->json([
                     'status' => 'error',
@@ -440,6 +442,36 @@ class AdminApiController extends Controller
             ], 500);
         }
     }
+    public function createNewAdmin(Request $request)
+    {
+
+        if ($request->user()->role === 'admin') {
+            $valid = $request->validate([
+                'first_name' => 'required|string|max:50',
+                'last_name' => 'required|string|max:50',
+                'email' => 'required|email|unique:dasher,email',
+                'password' => 'required|string|min:6|confirmed',
+            ]);
+
+            Dasher::create([
+                'first_name' => $valid['first_name'],
+                'last_name' => $valid['last_name'],
+                'email' => $valid['email'],
+                'password' => Hash::make($valid['password']),
+                'role' => 'admin',
+            ]);
+            return response()->json([
+                'status' => 'success',
+                'message' => 'New admin created successfully!'
+            ], 200);
+        }
+
+        return response()->json([
+            'status' => 'error',
+            'message' => 'Unauthorized'
+        ], 403);
+    }
+
     ###############################################
     # UPDATE QUIZ (API Submission)
     ###############################################
@@ -452,14 +484,20 @@ class AdminApiController extends Controller
             'questions.*.text' => 'required|string',
             'questions.*.options' => 'required|array|size:4',
             'questions.*.correct_option' => 'required|integer|min:0|max:3',
+            'questions.*.id' => 'nullable|integer|exists:questions,id',
+            'questions.*.image' => 'nullable|image|mimes:jpeg,png,jpg,gif,svg|max:2048',
+            'category' => 'nullable|string|max:255',
+            'difficulty' => 'nullable|string|in:easy,medium,hard'
         ]);
 
         try {
             DB::beginTransaction();
 
-            DB::update("UPDATE quizzes SET title = ?, description = ? WHERE id = ?", [
+            DB::update("UPDATE quizzes SET title = ?, description = ?, category = ?, difficulty = ? WHERE id = ?", [
                 $request->title,
                 $request->description,
+                $request->category,
+                $request->difficulty,
                 $id
             ]);
 
@@ -547,7 +585,7 @@ class AdminApiController extends Controller
         $quizTitle = $quiz->title; // Save title before deleting for the log
         $quiz->delete();
         // <-- LOG ACTIVITY HERE (Quiz Deletion)
-        $this->logActivity('Deletion', "Quiz '{$quizTitle}' (ID: $id) was deleted by");
+        $this->logActivity('Delete', "Quiz '{$quizTitle}' (ID: $id) was deleted by");
         return response()->json([
             'status' => 'success',
             'message' => "Quiz ID $id deleted"
@@ -587,11 +625,8 @@ class AdminApiController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
-
             'email' => 'required|email|unique:dasher,email,' . $user->id . '|max:255',
-
             'password' => ['nullable', 'required_with:new_password'],
-
             'new_password' => ['nullable', 'min:6', 'confirmed'],
         ]);
 
@@ -611,7 +646,7 @@ class AdminApiController extends Controller
         $user->email = $validated['email'];
         $user->save();
 
-        $this->logActivity('User Update', "Dasher ID #'{$user->id}' was updated");
+        $this->logActivity('Update', "Dasher ID #'{$user->id}' was updated");
 
         return response()->json([
             'message' => 'User updated successfully'
@@ -629,7 +664,7 @@ class AdminApiController extends Controller
         }
 
         // <-- LOG ACTIVITY HERE (User Deletion)
-        $this->logActivity('User Deletion', "User ID {$id} named {$user->first_name} was deleted");
+        $this->logActivity('Delete', "User ID {$id} named {$user->first_name} was deleted");
         $user->delete();
         return response()->json([
             'status' => 'success',
