@@ -50,6 +50,10 @@ class UserApiController extends Controller
                     'title' => $quiz->title,
                     'description' => $quiz->description,
                     'total_questions' => $quiz->questions->count(),
+                    'quiz_type' => $quiz->quiz_type,
+                    'coc_number' => $quiz->coc_number,
+                    'difficulty' => $quiz->difficulty,
+                    'category' => $quiz->category,
                 ];
             })->values()
         ]);

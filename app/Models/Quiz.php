@@ -13,6 +13,10 @@ class Quiz extends Model
     protected $fillable = [
         'title',
         'description',
+        'quiz_type',
+        'coc_number',
+        'difficulty',
+        'category',
     ];
 
     public function questions()
@@ -24,7 +28,6 @@ class Quiz extends Model
     {
         return $this->hasMany(QuizRecord::class, 'quiz_id');
     }
-    
     public function attemptsCount()
     {
         return $this->records()->count();
