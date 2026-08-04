@@ -184,9 +184,23 @@ const displayedLeaderboard = computed(() => {
     list = list.filter(item => item.quiz_title === selectedQuiz.value)
   }
 
-  // Sort highest score first so rankings are true to the filtered subset
-  return list.sort((a, b) => b.score - a.score)
-})
+  // Keep only the highest score per user
+  const uniqueUsers = new Map();
+
+  list.forEach(item => {
+    const existing = uniqueUsers.get(item.user_id);
+
+    // If no existing entry or current score is higher, update the map
+    if (!existing || item.score > existing.score) {
+      uniqueUsers.set(item.user_id, item);
+    }
+  });
+
+  list = Array.from(uniqueUsers.values());
+
+  // Sort highest score first
+  return list.sort((a, b) => b.score - a.score);
+});
 
 const userPosition = computed(() => {
   if (!user.value?.id) return null
