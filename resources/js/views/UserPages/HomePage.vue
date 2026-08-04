@@ -31,7 +31,6 @@
         <div class="filter-label">Filter Results</div>
         <div class="select-wrapper">
           <select v-model="selectedQuiz" class="quiz-select">
-            <option value="">All</option>
             <option v-for="quiz in availableQuizzes" :key="quiz" :value="quiz">
               {{ quiz }}
             </option>
@@ -46,8 +45,6 @@
         </div>
       </div>
     </div>
-
-
 
     <div class="podium" v-if="!searchQuery && topThree.length">
       <div v-for="(entry, i) in podiumOrder" :key="entry.id" class="podium-card"
@@ -174,6 +171,7 @@ const setLeaderboardCache = (value) => {
 // Dynamically grab all unique quiz titles from the raw dataset
 const availableQuizzes = computed(() => {
   const titles = leaderboard.value.map(item => item.quiz_title).filter(Boolean)
+  selectedQuiz.value = titles[0]; // maintain selected quiz when leaderboard updates
   return [...new Set(titles)]
 })
 
@@ -394,8 +392,6 @@ onMounted(async () => {
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   font-size: 0.875rem;
-  color: #1e293b;
-  background: #f8fafc;
   transition: border-color 0.2s, background 0.2s;
   outline: none;
 }
@@ -419,9 +415,7 @@ onMounted(async () => {
 
 .filter-label {
   font-size: 0.8rem;
-  font-weight: 700;
   color: #64748b;
-  text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
