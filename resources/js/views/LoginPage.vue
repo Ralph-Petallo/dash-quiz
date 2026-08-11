@@ -14,7 +14,6 @@
     <main class="container">
 
       <section class="hero">
-        <div class="hero-badge">✦ SNSU Capstone Project</div>
         <h1>
           Learning is <span>better</span><br />
           when we do it <span>together</span>
@@ -58,6 +57,10 @@
               <div class="line"></div>or<div class="line"></div>
             </div>
             <router-link to="/register" class="btn-register">Create account</router-link>
+            <a class="btn-google" @click="toGoogle">
+              <img class="google-logo" src="/public/google logo.png" alt="Google Logo" width="20" height="20">
+              Sign up with Google
+            </a>
           </div>
         </form>
       </section>
@@ -104,7 +107,7 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
 }
 
-console.log(window.innerWidth)
+function toGoogle() { window.location.href = "auth/google" }
 
 function timeout(seconds) {
   setTimeout(() => {
@@ -463,6 +466,26 @@ Object.keys(localStorage).forEach(key => {
 
 .btn-register:hover {
   background: #15803d;
+}
+
+.btn-google {
+  padding: 11px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  text-decoration: none;
+  color: black;
+  border: 1px solid #e5e7eb;
+  background: #f3f4f6;
+  border-radius: 10px;
+  cursor: pointer;
+  font-weight: 600;
+  font-size: 14px;
+  transition: all 0.15s;
+}
+
+.google-logo {
+  margin-right: 8px;
 }
 
 .auth-footer {
