@@ -36,7 +36,7 @@
             <label for="password">Password</label>
 
             <div class="eyeButton" @click="togglePassword">
-              <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+              <i :class="showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
             </div>
 
             <input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password"
@@ -378,8 +378,7 @@ Object.keys(localStorage).forEach(key => {
   color: #b91c1c;
   padding: 10px 14px;
   border-radius: 10px;
-  font-size: 13px;
-  border-left: 3px solid #ef4444;
+  font-size: 10px;
 }
 
 .btn {
@@ -470,7 +469,7 @@ Object.keys(localStorage).forEach(key => {
 }
 
 .btn-register {
-  padding: 11px;
+  padding: 11px 13px;
   display: flex;
   justify-content: center;
   align-items: center;
