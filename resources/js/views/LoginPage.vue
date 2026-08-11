@@ -7,7 +7,6 @@
           <img src="/public/bolt.png" alt="Logo" width="32" height="32">
           <span class="brand-name">Dash<span>Quiz</span></span>
         </div>
-        <span class="portal">Assessment Portal</span>
       </div>
     </header>
 
@@ -28,16 +27,20 @@
 
           <div class="field">
             <label for="email">Email address</label>
-            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="@example.com"
+            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="..."
               :class="{ error: errors.email }" autocomplete="off" />
             <small v-if="errors.email">{{ errors.email[0] }}</small>
           </div>
 
           <div class="field">
             <label for="password">Password</label>
-            <input id="password" type="password" name="password" v-model="form.password" placeholder="••••••"
-              :class="{ error: errors.password }" autocomplete="off" />
-            <small v-if="errors.password">{{ errors.password[0] }}</small>
+
+            <div class="eyeButton" @click="togglePassword">
+              <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'"></i>
+            </div>
+
+            <input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password"
+              placeholder="••••••" />
           </div>
 
           <div v-if="generalError" class="alert">
@@ -45,7 +48,7 @@
           </div>
 
           <button class="btn" type="submit" :disabled="loading || isLocked">
-            <span v-if="!loading">Login</span>
+            <span v-if="!loading"><i class="fa-solid fa-right-to-bracket"></i>&nbsp;Login</span>
             <span v-else class="loader"></span>
           </button>
 
@@ -56,7 +59,8 @@
             <div class="divider">
               <div class="line"></div>or<div class="line"></div>
             </div>
-            <router-link to="/register" class="btn-register">Create account</router-link>
+            <router-link to="/register" class="btn-register"><i class="fas fa-user-plus"></i>
+              &nbsp;Sign Up</router-link>
             <a class="btn-google" @click="toGoogle">
               <img class="google-logo" src="/public/google logo.png" alt="Google Logo" width="20" height="20">
               Sign up with Google
@@ -93,6 +97,7 @@ const generalError = ref('')
 const maxAttempts = 3
 const attempts = ref(0)
 const isLocked = ref(false)
+const showPassword = ref(false)
 
 function newVisitorCheck() {
   if (localStorage.getItem('visited')) {
@@ -114,6 +119,10 @@ function timeout(seconds) {
     attempts.value = 0
     isLocked.value = false
   }, seconds * 1000)
+}
+
+const togglePassword = () => {
+  showPassword.value = !showPassword.value
 }
 
 const handleLogin = async () => {
@@ -219,6 +228,16 @@ Object.keys(localStorage).forEach(key => {
   align-items: center;
 }
 
+.field .eyeButton {
+  position: absolute;
+  right: 15px;
+  top: 68.5%;
+  transform: translateY(-50%);
+  cursor: pointer;
+  color: #9ca3af;
+  z-index: 2;
+}
+
 .brand {
   display: flex;
   align-items: center;
@@ -315,6 +334,7 @@ Object.keys(localStorage).forEach(key => {
 }
 
 .field {
+  position:relative;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -475,7 +495,6 @@ Object.keys(localStorage).forEach(key => {
   align-items: center;
   text-decoration: none;
   color: black;
-  border: 1px solid #e5e7eb;
   background: #f3f4f6;
   border-radius: 10px;
   cursor: pointer;
@@ -485,7 +504,7 @@ Object.keys(localStorage).forEach(key => {
 }
 
 .google-logo {
-  margin-right: 8px;
+  margin-right: 5px;
 }
 
 .auth-footer {
