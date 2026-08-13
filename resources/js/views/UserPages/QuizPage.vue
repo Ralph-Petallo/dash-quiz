@@ -3,55 +3,63 @@
         <div class="container">
 
             <header class="page-header">
-                <div class="header-content">
-                    <div class="icon-box">
-                        <i class="fas fa-desktop"></i>
-                    </div>
-                    <div class="text-group">
-                        <h2>Computer Systems Servicing</h2>
-                        <p>Select a competency to begin your assessment</p>
-                    </div>
+                <div class="eyebrow">
+                    <span class="pulse-dot" aria-hidden="true"></span>
+                    NC II · Computer Systems Servicing
                 </div>
+                <h1>Choose a competency</h1>
+                <p>Work through each Certificate of Competency at your own pace. Progress is scored per attempt.</p>
             </header>
 
             <div v-if="loading" class="loading">
                 <div class="spinner"></div>
+                <span>Loading competencies…</span>
             </div>
 
             <template v-else>
-                <section class="challenge-container">
-                    <!-- EMPTY -->
-                    <div v-if="quizzes.length === 0" class="empty">
-                        No quizzes yet 📊
+                <section v-for="group in cocGroups" :key="group.number" class="coc-block">
+                    <div class="coc-heading">
+                        <span class="coc-tag">COC&nbsp;/&nbsp;{{ String(group.number).padStart(2, '0') }}</span>
+                        <span class="coc-line" aria-hidden="true"></span>
+                        <span class="coc-count">{{ group.quizzes.length }} {{ group.quizzes.length === 1 ? 'module' : 'modules' }}</span>
+                    </div>
+
+                    <div v-if="group.quizzes.length === 0" class="empty">
+                        <i class="fas fa-box-archive"></i>
+                        <span>No modules published for this competency yet</span>
                     </div>
 
                     <div v-else class="quiz-grid">
-                        <router-link v-for="(quiz, index) in quizzes" :key="quiz.id" :title=quiz.description
-                            :to="`/quiz/${quiz.id}`" class="quiz-card">
-                            <div class="card-inner">
+                        <router-link
+                            v-for="quiz in group.quizzes"
+                            :key="quiz.id"
+                            :title="quiz.description"
+                            :to="`quizzes/assessment/${quiz.id}`"
+                            class="quiz-card"
+                        >
+                            <div class="card-top">
                                 <div class="icon-wrapper">
                                     <i :class="quiz.icons"></i>
                                 </div>
+                                <span class="difficulty" :class="quiz.difficulty.toLowerCase()">
+                                    <span class="difficulty-dot"></span>
+                                    {{ quiz.difficulty }}
+                                </span>
+                            </div>
 
-                                <div class="quiz-content">
-                                    <h3>{{ quiz.title }}</h3>
-                                    <div class="quiz-meta">
-                                        <span class="meta-item">
-                                            <i class="fas fa-list-ol"></i>
-                                            {{ quiz.total_questions || 10 }}
-                                            <span>Questions</span>
-                                        </span>
-                                        <span class="meta-item difficulty"
-                                            :class="quiz.difficulty?.toLowerCase() || 'beginner'">
-                                            <i class="fas fa-signal"></i>
-                                            {{ quiz.difficulty }}
-                                        </span>
-                                    </div>
-                                </div>
+                            <h3>{{ quiz.title }}</h3>
 
-                                <div class="arrow-indicator">
-                                    <i class="fas fa-chevron-right"></i>
-                                </div>
+                            <div class="card-meta">
+                                <span class="meta-item">
+                                    <i class="fas fa-list-ol"></i>
+                                    {{ quiz.total_questions }} questions
+                                </span>
+                                <span class="meta-item">{{ quiz.quiz_type }}</span>
+                            </div>
+
+                            <div class="card-foot">
+                                <span>Start module</span>
+                                <i class="fas fa-arrow-right"></i>
                             </div>
                         </router-link>
                     </div>
@@ -63,7 +71,7 @@
 
 <script setup>
 import { useUser } from "@/composables/useUser"
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import axios from 'axios'
 
 // 1. Receive sidebar state from Parent Layout to adjust margins
@@ -74,62 +82,42 @@ defineProps({
     }
 })
 
-const QUIZZES_CACHE_KEY = 'dash-quiz_quizzes_cache'
-const QUIZZES_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
 
 const { fetchUser } = useUser()
 const quizzes = ref([])
 const loading = ref(false)
 
-const getCachedQuizzes = () => {
-    try {
-        const cached = JSON.parse(localStorage.getItem(QUIZZES_CACHE_KEY))
-        if (!cached || typeof cached !== 'object') return null
-        if (Date.now() - cached.ts > QUIZZES_CACHE_TTL) {
-            localStorage.removeItem(QUIZZES_CACHE_KEY)
-            return null
-        }
-        return cached.value
-    } catch {
-        return null
-    }
-}
+const icons = ['fa-solid fa-microchip', 'fa-solid fa-desktop', 'fa-solid fa-cogs', 'fa-solid fa-network-wired', 'fa-solid fa-screwdriver-wrench']
 
-const setQuizzesCache = (value) => {
-    try {
-        localStorage.setItem(QUIZZES_CACHE_KEY, JSON.stringify({
-            ts: Date.now(),
-            value,
-        }))
-    } catch {
-        // ignore
-    }
-}
+// Group quizzes by their COC number so COC1 / COC2 / COC3 always render,
+// even when a competency has no modules published yet.
+const cocGroups = computed(() => {
+    const groups = { 1: [], 2: [], 3: [] }
+    quizzes.value.forEach((quiz) => {
+        const number = Number(quiz.coc_number) || 1
+        if (!groups[number]) groups[number] = []
+        groups[number].push(quiz)
+    })
+    return Object.keys(groups)
+        .sort((a, b) => a - b)
+        .map((number) => ({ number: Number(number), quizzes: groups[number] }))
+})
 
-const icons = ['fa-solid fa-microchip', 'fa-solid fa-desktop', 'fa-solid fa-cogs']
 
 const fetchQuizzes = async (force = false) => {
     if (loading.value) return
-
-    const cached = !force ? getCachedQuizzes() : null
-    if (cached) {
-        quizzes.value = cached
-        return
-    }
 
     try {
         loading.value = true
         const { data } = await axios.get('/api/quizzes')
         quizzes.value = data.data
         quizzes.value.forEach((quiz, index) => {
-            quiz.total_questions = quiz.questions ? quiz.questions.length : 10,
-            quiz.icons = icons[index]
+            quiz.icons = icons[index % icons.length]
         })
-        setQuizzesCache(quizzes.value)
     } catch (err) {
         console.error('Failed to fetch quizzes:', err)
     } finally {
-        loading.value = false;
+        loading.value = false
     }
 }
 
@@ -140,220 +128,297 @@ onMounted(async () => {
 </script>
 
 <style scoped>
-/* ROOT */
 .dash-quiz {
+    --surface: #fafaf9;
+    --card: #ffffff;
+    --border: #e7e5e4;
+    --ink: #1c1917;
+    --ink-muted: #78716c;
+    --accent: #0d9488;
+    --accent-soft: #f0fdfa;
+    --easy: #16a34a;
+    --medium: #d97706;
+    --hard: #dc2626;
+
     width: 100%;
     height: auto;
-    background: #f8fafc;
-    padding: clamp(1rem, 2vw, 1.5rem);
-    border-radius: 12px;
+    background: var(--surface);
+    padding: clamp(1.25rem, 3vw, 2.25rem);
+    border-radius: 16px;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    color: var(--ink);
 }
 
-/* CONTAINER */
 .container {
     width: 100%;
-    max-width: 1100px;
+    max-width: 1080px;
     margin: 0 auto;
 }
 
 /* HEADER */
 .page-header {
-    margin-bottom: 1.5rem;
+    margin-bottom: 2.25rem;
 }
 
-.header-content {
-    display: flex;
+.eyebrow {
+    display: inline-flex;
     align-items: center;
-    gap: 14px;
-    flex-wrap: wrap;
+    gap: 8px;
+    font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+    font-size: 0.7rem;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+    color: var(--accent);
+    background: var(--accent-soft);
+    border: 1px solid #ccfbf1;
+    padding: 5px 10px;
+    border-radius: 999px;
+    margin-bottom: 14px;
 }
 
-.icon-box {
-    width: 52px;
-    height: 52px;
-    background: #6366f1;
-    color: white;
-    border-radius: 14px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.3rem;
+.pulse-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 0 3px var(--accent-soft);
 }
 
-.text-group h2 {
-    font-size: clamp(1.2rem, 2vw, 1.5rem);
-    font-weight: 800;
-    color: #1e1b4b;
+.page-header h1 {
+    font-size: clamp(1.5rem, 3vw, 2rem);
+    font-weight: 700;
+    letter-spacing: -0.02em;
+    margin-bottom: 6px;
 }
 
-.text-group p {
-    font-size: 0.85rem;
-    color: #64748b;
+.page-header p {
+    font-size: 0.9rem;
+    color: var(--ink-muted);
+    max-width: 46ch;
 }
 
-/* ✅ GRID FIXED */
-.quiz-grid {
-    display: grid;
-    gap: 14px;
-    /* responsive auto layout */
-    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-}
-
+/* LOADING */
 .loading {
     display: flex;
-    justify-content: center;
-    padding: 30px;
-}
-
-/* CARD */
-.quiz-card {
-    text-decoration: none;
-    color: inherit;
-    padding: 14px 16px;
-    height: 100px;
-}
-
-.card-inner {
-    background: white;
-    border-radius: 14px;
-    display: flex;
-    padding: 0 10px;
+    flex-direction: column;
     align-items: center;
     gap: 12px;
-    border: 1px solid #e2e8f0;
-    transition: 0.2s ease;
-    height: 100%;
+    padding: 50px 0;
+    color: var(--ink-muted);
+    font-size: 0.8rem;
 }
-
-.quiz-card:hover .card-inner {
-    transform: translateY(-3px);
-    border-color: #6366f1;
-    box-shadow: 0 8px 20px rgba(99, 102, 241, 0.08);
-}
-
-/* ICON */
-.icon-wrapper {
-    width: 42px;
-    height: 42px;
-    background: #f5f3ff;
-    border-radius: 10px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: #6366f1;
-    font-size: 1rem;
-    flex-shrink: 0;
-}
-
-/* CONTENT */
-.quiz-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.quiz-content h3 {
-    font-size: 0.9rem;
-    font-weight: 700;
-    color: #1e293b;
-    margin-bottom: 4px;
-    white-space: wrap;
-}
-
-/* META */
-.quiz-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-}
-
-.meta-item {
-    font-size: 0.7rem;
-    color: #64748b;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-}
-
-/* DIFFICULTY */
-.difficulty.beginner {
-    color: #10b981;
-    background: #ecfdf5;
-    padding: 2px 6px;
-    border-radius: 6px;
-}
-
-.difficulty.intermediate {
-    color: #f59e0b;
-    background: #fffbeb;
-    padding: 2px 6px;
-    border-radius: 6px;
-}
-
-.difficulty.advanced {
-    color: #ef4444;
-    background: #fef2f2;
-    padding: 2px 6px;
-    border-radius: 6px;
-}
-
-.empty {
-    text-align: center;
-    padding: 20px;
-    font-size: medium;
-    color: #9ca3af;
-}
-
-/* ARROW */
-.arrow-indicator {
-    margin-left: auto;
-    color: #cbd5f5;
-    transition: 0.2s;
-}
-
-.quiz-card:hover .arrow-indicator {
-    transform: translateX(3px);
-    color: #6366f1;
-}
-
 
 .spinner {
-    width: 35px;
-    height: 35px;
-    border: 4px solid #eee;
-    border-top: 4px solid #6366f1;
+    width: 28px;
+    height: 28px;
+    border: 3px solid var(--border);
+    border-top: 3px solid var(--accent);
     border-radius: 50%;
     animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-    to {
-        transform: rotate(360deg);
-    }
+    to { transform: rotate(360deg); }
 }
 
-@media (max-width: 320px) {
-    .sidebar-shifted {
-        padding: 0;
-        padding-top: 10px;
+/* COC BLOCK */
+.coc-block {
+    margin-bottom: 2rem;
+}
+
+.coc-heading {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 14px;
+}
+
+.coc-tag {
+    font-family: 'IBM Plex Mono', 'SFMono-Regular', monospace;
+    font-size: 0.72rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    color: var(--ink);
+    background: var(--card);
+    border: 1px solid var(--border);
+    padding: 4px 9px;
+    border-radius: 6px;
+    white-space: nowrap;
+}
+
+.coc-line {
+    flex: 1;
+    height: 1px;
+    background: var(--border);
+}
+
+.coc-count {
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+    white-space: nowrap;
+}
+
+/* EMPTY */
+.empty {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 20px;
+    border: 1px dashed var(--border);
+    border-radius: 12px;
+    color: var(--ink-muted);
+    font-size: 0.82rem;
+    background: var(--card);
+}
+
+.empty i {
+    color: var(--border);
+    font-size: 1rem;
+}
+
+/* GRID */
+.quiz-grid {
+    display: grid;
+    gap: 12px;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+}
+
+/* CARD */
+.quiz-card {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    text-decoration: none;
+    color: inherit;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    overflow: hidden;
+    transition: border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
+}
+
+.quiz-card::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 0;
+    width: 3px;
+    background: var(--accent);
+    transform: scaleY(0);
+    transform-origin: bottom;
+    transition: transform 0.18s ease;
+}
+
+.quiz-card:hover {
+    border-color: #cbd5c9;
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px -12px rgba(28, 25, 23, 0.16);
+}
+
+.quiz-card:hover::before {
+    transform: scaleY(1);
+    transform-origin: top;
+}
+
+.card-top {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+}
+
+.icon-wrapper {
+    width: 36px;
+    height: 36px;
+    background: var(--accent-soft);
+    border-radius: 9px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--accent);
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.difficulty {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 0.68rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--ink-muted);
+}
+
+.difficulty-dot {
+    width: 6px;
+    height: 6px;
+    border-radius: 50%;
+    background: currentColor;
+}
+
+.difficulty.easy { color: var(--easy); }
+.difficulty.medium { color: var(--medium); }
+.difficulty.hard { color: var(--hard); }
+
+.quiz-card h3 {
+    font-size: 0.92rem;
+    font-weight: 700;
+    line-height: 1.3;
+    color: var(--ink);
+}
+
+.card-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    font-size: 0.72rem;
+    color: var(--ink-muted);
+}
+
+.meta-item {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+}
+
+.card-foot {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-top: auto;
+    padding-top: 10px;
+    border-top: 1px solid var(--border);
+    font-size: 0.76rem;
+    font-weight: 600;
+    color: var(--ink);
+}
+
+.card-foot i {
+    font-size: 0.7rem;
+    color: var(--accent);
+    transition: transform 0.18s ease;
+}
+
+.quiz-card:hover .card-foot i {
+    transform: translateX(3px);
+}
+
+@media (max-width: 380px) {
+    .dash-quiz {
+        padding: 1rem;
+        border-radius: 0;
     }
 
-    .header-content {
-        justify-content: center;
-        text-align: center;
+    .eyebrow {
+        font-size: 0.62rem;
     }
 
-    .header-content h2 {
-        font-size: 16px;
-    }
-
-    .header-content p {
-        font-size: 10px;
-    }
-
-    .icon-box {
-        width: 45px;
-        height: 45px;
-        font-size: 1.1rem;
+    .quiz-grid {
+        grid-template-columns: 1fr;
     }
 }
 </style>
