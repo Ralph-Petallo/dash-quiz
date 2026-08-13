@@ -47,17 +47,29 @@
     </div>
 
     <div class="podium" v-if="!searchQuery && topThree.length">
-      <div v-for="(entry, i) in podiumOrder" :key="entry.id" class="podium-card"
-        :class="[`podium-${podiumPositions[i]}`, entry.isYou ? 'is-you' : '']">
+      <div v-for="entry in podiumOrder" :key="entry.id" class="podium-card" :class="[
+        `podium-${entry.rank}`,
+        entry.isYou ? 'is-you' : ''
+      ]">
         <div class="podium-avatar-wrap">
-          <img :draggable="false" :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`"
-            class="podium-avatar" alt="user" />
-          <div class="podium-medal">{{ ['🥇', '🥈', '🥉'][podiumPositions[i] - 1] }}</div>
+          <img :draggable="false" :src="photoPath(entry.profile_photo)" class="podium-avatar" alt="user" />
+
+          <div class="podium-medal">
+            {{ ['🥇', '🥈', '🥉'][entry.rank - 1] }}
+          </div>
         </div>
-        <div class="podium-name">{{ entry.displayName }}<span v-if="entry.isYou" class="you-tag">You</span></div>
-        <div class="podium-score">{{ entry.score }}/10</div>
+
+        <div class="podium-name">
+          {{ entry.displayName }}
+          <span v-if="entry.isYou" class="you-tag">You</span>
+        </div>
+
+        <div class="podium-score">
+          {{ entry.score }}/10
+        </div>
+
         <div class="podium-bar-wrap">
-          <div class="podium-bar" :style="{ height: podiumHeights[i] }"></div>
+          <div class="podium-bar" :style="{ height: podiumHeight(entry.rank) }"></div>
         </div>
       </div>
     </div>
@@ -81,8 +93,7 @@
           </div>
 
           <div class="item-avatar-wrap">
-            <img :draggable="false" :src="`/storage/images/profiles/${entry.profile_photo || 'default.png'}`"
-              class="item-avatar" alt="user" />
+            <img :draggable="false" :src="photoPath(entry.profile_photo)" class="item-avatar" alt="user" />
             <span v-if="entry.isYou" class="avatar-ring"></span>
           </div>
 
@@ -134,8 +145,6 @@ const greetMessage = computed(() => {
   return 'Good evening'
 })
 
-const LEADERBOARD_CACHE_KEY = 'dash-quiz_leaderboard_cache'
-const LEADERBOARD_CACHE_TTL = 1000 * 60 * 5 // 5 minutes
 
 const leaderboard = ref([])
 const isLoading = ref(false)
@@ -177,11 +186,11 @@ const availableQuizzes = computed(() => {
 
 // Sorts and filters dataset based on dropdown selection
 const displayedLeaderboard = computed(() => {
-  let list = [...leaderboard.value]
+  let list = [...leaderboard.value];
 
-  // Slice down to only matching selected quiz title if picked
+  // Filter by selected quiz first
   if (selectedQuiz.value) {
-    list = list.filter(item => item.quiz_title === selectedQuiz.value)
+    list = list.filter(item => item.quiz_title === selectedQuiz.value);
   }
 
   // Keep only the highest score per user
@@ -214,12 +223,32 @@ const topThree = computed(() => displayedLeaderboard.value.slice(0, 3))
 // Podium order layout mapping
 const podiumOrder = computed(() => {
   const t = topThree.value
-  if (t.length < 3) return t
-  return [t[1], t[0], t[2]]
+
+  if (t.length === 0) return []
+
+  // Assign actual leaderboard positions
+  const ranked = t.map((user, index) => ({
+    ...user,
+    rank: index + 1
+  }))
+
+  // Arrange visually: 2nd → 1st → 3rd
+  if (ranked.length === 1) {
+    return ranked
+  }
+
+  if (ranked.length === 2) {
+    return [ranked[1], ranked[0]]
+  }
+
+  return [ranked[1], ranked[0], ranked[2]]
 })
 
-const podiumPositions = [2, 1, 3]
-const podiumHeights = ['60px', '80px', '44px']
+const podiumHeight = (rank) => {
+  if (rank === 1) return '80px'
+  if (rank === 2) return '60px'
+  return '44px'
+}
 
 // Final displayed list after overlaying input text filter 
 const filteredList = computed(() => {
@@ -233,6 +262,10 @@ const filteredList = computed(() => {
 
 const formatDate = (date) =>
   date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
+
+const photoPath = function (img) {
+  return `/storage/images/profiles/${img || 'default.png'}`
+}
 
 const getLeaderBoard = async (force = false) => {
   const cached = !force ? getCachedLeaderboard() : null
