@@ -7,6 +7,7 @@ import Profile from './views/UserPages/ProfilePage.vue'
 import Records from './views/UserPages/RecordsPage.vue'
 import QuizPage from './views/UserPages/QuizPage.vue'
 import TakeQuizPage from './views/UserPages/QuizzesPages/TakeQuizPage.vue'
+import AssessmentPage from './views/UserPages/QuizzesPages/AssessmentPage.vue'
 import QuizResult from './views/UserPages/QuizResult.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 
@@ -39,6 +40,7 @@ const routes = [
             { path: '', component: HomePage, meta: { requiresAuth: true, requiresStudent: true } },
             { path: 'records', component: Records, meta: { requiresAuth: true, requiresStudent: true } },
             { path: 'quizzes', component: QuizPage, meta: { requiresAuth: true, requiresStudent: true } },
+            { path: 'quizzes/assessment/:id', component: AssessmentPage, meta: { requiresAuth: true, requiresStudent: true } },
             { path: 'profile', component: Profile, meta: { requiresAuth: true, requiresStudent: true } },
         ]
     },
