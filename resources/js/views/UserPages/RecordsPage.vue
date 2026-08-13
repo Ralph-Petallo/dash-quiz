@@ -300,21 +300,19 @@ const formatTime = (sec) => {
 
   const s = sec % 60
 
-  return `${m}:${s
-    .toString()
-    .padStart(2, '0')}`
+  return `${m}:${s.toString().padStart(2, '0')}`
 }
 
 /* --------------------------------------------------------
 | FILTER
 -------------------------------------------------------- */
 const filteredRecords = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
+  const search = searchQuery.value.toLowerCase().trim()
   const df = dateFilter.value
 
-  return records.value.filter(r => {
-    const matchSearch = !q || (r.quiz_title || '').toLowerCase().includes(q)
-    const matchDate = !df || toDateKey(r.created_at) === df
+  return records.value.filter(datas => {
+    const matchSearch = !search || (datas.quiz_title || '').toLowerCase().includes(search)
+    const matchDate = !df || toDateKey(datas.created_at) === df
 
     return (matchSearch && matchDate)
   })
@@ -329,12 +327,9 @@ const averageScore = computed(() => {
     return 0
   }
 
-  const total = filteredRecords.value.reduce((sum, r) => sum + r.percentage, 0)
+  const total = filteredRecords.value.reduce((sum, datas) => sum + datas.percentage, 0)
 
-  return (
-    total /
-    filteredRecords.value.length
-  ).toFixed(1)
+  return (total / filteredRecords.value.length).toFixed(1)
 })
 
 const maxScore = computed(() => {
@@ -342,15 +337,11 @@ const maxScore = computed(() => {
     return 0
   }
 
-  return Math.max(
-    ...filteredRecords.value.map(
-      r => r.score
-    )
-  )
+  return Math.max(...filteredRecords.value.map(datas => datas.score))
 })
 
 const needsImprovement = computed(() => {
-  return filteredRecords.value.filter(r => r.percentage < 70).length
+  return filteredRecords.value.filter(datas => datas.percentage < 70).length
 })
 
 /* --------------------------------------------------------
@@ -358,30 +349,14 @@ const needsImprovement = computed(() => {
 -------------------------------------------------------- */
 
 const chartData = computed(() => {
-
-  const passed =
-    filteredRecords.value.filter(
-      r => r.percentage >= 70
-    ).length
-
-  const failed =
-    filteredRecords.value.length -
-    passed
+  const passed = filteredRecords.value.filter(datas => datas.percentage >= 70).length
+  const failed = filteredRecords.value.length - passed
 
   return {
-    labels: [
-      'Passed',
-      'Needs Review'
-    ],
+    labels: ['Passed', 'Needs Review'],
     datasets: [{
-      data: [
-        passed,
-        failed
-      ],
-      backgroundColor: [
-        '#6366f1',
-        '#f43f5e'
-      ],
+      data: [passed, failed],
+      backgroundColor: ['#6366f1', '#f43f5e'],
       borderWidth: 0
     }]
   }
@@ -389,31 +364,22 @@ const chartData = computed(() => {
 
 const lineData = computed(() => {
   const sorted = [...filteredRecords.value].sort((a, b) =>
-    new Date(a.created_at) -
-    new Date(b.created_at)
+    new Date(a.created_at) - new Date(b.created_at)
   )
 
   return {
-    labels: sorted.map(r =>
-      new Date(r.created_at)
-        .toLocaleDateString(
-          'en-US',
-          {
-            month: 'short',
-            day: 'numeric'
-          }
-        )
-    ),
+    labels: sorted.map(datas => new Date(datas.created_at).toLocaleDateString('en-US',
+      {
+        month: 'short',
+        day: 'numeric'
+      })),
 
     datasets: [{
       label: 'Score %',
-      data: sorted.map(
-        r => r.percentage
-      ),
+      data: sorted.map(datas => datas.percentage),
       borderColor: '#6366f1',
       borderWidth: 2.5,
-      backgroundColor:
-        'rgba(99,102,241,0.1)',
+      backgroundColor: 'rgba(99,102,241,0.1)',
       fill: true,
       tension: 0.4,
       pointRadius: 2
@@ -429,10 +395,11 @@ const chartOptions = {
   plugins: {
     legend: {
       position: 'bottom',
-
       labels: {
         usePointStyle: true,
-        font: { size: 11 }
+        font: {
+          size: 11
+        }
       }
     }
   }
@@ -477,34 +444,30 @@ const fetchRecords = async (force = false) => {
   try {
     const res = await axios.get('/api/records')
 
-    records.value = (res.data.results || []).map(r => ({
-      id: r.id,
-      quiz_id: r.quiz_id,
+    records.value = (res.data.results || []).map(datas => ({
+      id: datas.id,
+      quiz_id: datas.quiz_id,
       quiz_title:
-        r.quiz_title,
+        datas.quiz_title,
       quiz_description:
-        r.quiz_description,
-      score: r.score,
+        datas.quiz_description,
+      score: datas.score,
       total_questions:
-        r.total_questions,
+        datas.total_questions,
       elapsed_time:
-        r.elapsed_time,
+        datas.elapsed_time,
       percentage:
-        r.percentage,
+        datas.percentage,
       created_at:
-        r.created_at,
+        datas.created_at,
       duration:
         formatTime(
-          r.elapsed_time
+          datas.elapsed_time
         )
     }))
     setRecordsCache(records.value)
   } catch (err) {
-
-    console.error(
-      'Failed to fetch records:',
-      err
-    )
+    console.error('Failed to fetch records:', err)
   } finally {
     loading.value = false
   }
