@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\QuizApiController;
 use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\ProfileApiController;
+use App\Http\Controllers\Api\DragDropController;
 use App\Http\Controllers\Api\PasswordResetController;
 
 /*
@@ -55,6 +56,11 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
             ->middleware('throttle:quiz_submit');
     });
 
+    Route::controller(DragDropController::class)->group(function () {
+        Route::get('/quiz/dragdrop/{id}', 'getDragDropQuiz');
+        Route::post('/quiz/dragdrop/answer', 'submitDragDropAnswer');
+    });
+
     Route::controller(AdminApiController::class)->group(function () {
         Route::post('/heartbeat', 'heartbeat');
         Route::post('/logout',    'logout');
@@ -83,7 +89,7 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
         Route::prefix('/admin/user')->group(function () {
             Route::get('/', 'allUsers');
             Route::put('/update/{id}', 'updateUser');
-            Route::delete('/delete/{id}', 'deleteUser');F
+            Route::delete('/delete/{id}', 'deleteUser');
         });
     });
 
