@@ -211,7 +211,7 @@ class AdminApiController extends Controller
         $valid = $request->validate([
             'first_name' => 'required|string|max:50',
             'last_name' => 'required|string|max:50',
-            'email' => 'required|email|unique:dasher,email',
+            'email' => 'required|email:rf,dns|unique:dasher,email',
             'password' => 'required|string|confirmed|min:6',
         ], [
             'first_name.required' => 'Enter your first name',
@@ -477,6 +477,7 @@ class AdminApiController extends Controller
     ###############################################
     public function updateQuiz(Request $request, int $id)
     {
+        // Validate quiz and question data
         $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -491,8 +492,10 @@ class AdminApiController extends Controller
         ]);
 
         try {
+            // Start database transaction
             DB::beginTransaction();
 
+            // Update quiz details
             DB::update("UPDATE quizzes SET title = ?, description = ?, category = ?, difficulty = ? WHERE id = ?", [
                 $request->title,
                 $request->description,
@@ -501,11 +504,15 @@ class AdminApiController extends Controller
                 $id
             ]);
 
+            // Track submitted question IDs
             $receivedQuestionIds = [];
 
             foreach ($request->questions as $qData) {
+
+                // Update existing question or create a new one
                 if (isset($qData['id'])) {
                     $questionId = $qData['id'];
+
                     DB::update("UPDATE questions SET question_text = ? WHERE id = ?", [
                         $qData['text'],
                         $questionId
@@ -515,58 +522,86 @@ class AdminApiController extends Controller
                         $id,
                         $qData['text']
                     ]);
+
                     $questionId = DB::getPdo()->lastInsertId();
                 }
 
                 $receivedQuestionIds[] = $questionId;
 
-                $existingOptions = DB::select("SELECT id FROM question_options WHERE question_id = ? ORDER BY id ASC", [$questionId]);
+                // Get existing options
+                $existingOptions = DB::select(
+                    "SELECT id FROM question_options WHERE question_id = ? ORDER BY id ASC",
+                    [$questionId]
+                );
 
+                // Remove old answer records
                 DB::delete("DELETE FROM answers WHERE question_id = ?", [$questionId]);
 
                 foreach ($qData['options'] as $index => $optionText) {
+
+                    // Mark the correct option
                     $isCorrect = ($qData['correct_option'] == $index) ? 1 : 0;
 
+                    // Update existing option or create a new one
                     if (isset($existingOptions[$index])) {
                         $optionId = $existingOptions[$index]->id;
-                        DB::update("UPDATE question_options SET option_text = ?, is_correct = ? WHERE id = ?", [
-                            $optionText,
-                            $isCorrect,
-                            $optionId
-                        ]);
+
+                        DB::update(
+                            "UPDATE question_options SET option_text = ?, is_correct = ? WHERE id = ?",
+                            [$optionText, $isCorrect, $optionId]
+                        );
                     } else {
-                        DB::insert("INSERT INTO question_options (question_id, option_text, is_correct) VALUES (?, ?, ?)", [
-                            $questionId,
-                            $optionText,
-                            $isCorrect
-                        ]);
+                        DB::insert(
+                            "INSERT INTO question_options (question_id, option_text, is_correct) VALUES (?, ?, ?)",
+                            [$questionId, $optionText, $isCorrect]
+                        );
+
                         $optionId = DB::getPdo()->lastInsertId();
                     }
 
-                    DB::insert("INSERT INTO answers (question_id, answer_text, is_correct) VALUES (?, ?, ?)", [
-                        $questionId,
-                        $optionText,
-                        $isCorrect
-                    ]);
+                    // Recreate answer record
+                    DB::insert(
+                        "INSERT INTO answers (question_id, answer_text, is_correct) VALUES (?, ?, ?)",
+                        [$questionId, $optionText, $isCorrect]
+                    );
 
+                    // Store correct option ID
                     if ($isCorrect == 1) {
                         $correctOptionIdForQuestionTable = $optionId;
                     }
                 }
             }
+
+            // Delete questions removed from the quiz
             if (!empty($receivedQuestionIds)) {
                 $placeholders = implode(',', array_fill(0, count($receivedQuestionIds), '?'));
                 $deleteParams = array_merge([$id], $receivedQuestionIds);
-                DB::delete("DELETE FROM questions WHERE quiz_id = ? AND id NOT IN ($placeholders)", $deleteParams);
+
+                DB::delete(
+                    "DELETE FROM questions WHERE quiz_id = ? AND id NOT IN ($placeholders)",
+                    $deleteParams
+                );
             }
-            // <-- LOG ACTIVITY HERE (Update)
+
+            // Log quiz update
             $this->logActivity('Edit', "Quiz Title '{$request->title}' was updated");
 
+            // Save all changes
             DB::commit();
-            return response()->json(['status' => 'success', 'message' => 'Quiz updated successfully!'], 200);
+
+            return response()->json([
+                'status' => 'success',
+                'message' => 'Quiz updated successfully!'
+            ], 200);
         } catch (\Exception $e) {
+
+            // Undo changes if an error occurs
             DB::rollBack();
-            return response()->json(['status' => 'error', 'message' => 'Failed to update: ' . $e->getMessage()], 500);
+
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Failed to update: ' . $e->getMessage()
+            ], 500);
         }
     }
     ###############################################

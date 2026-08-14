@@ -45,7 +45,7 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
     });
 
     Route::controller(QuizApiController::class)->group(function () {
-        // ✅ Static before wildcard
+        // Static before wildcard
         Route::get('/quiz/progress',    'getQuizProgress');
         Route::get('/quiz/result/{id}', 'getQuizResult');
         Route::get('/quiz/{quiz_id}',   'getQuiz');
@@ -80,6 +80,14 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
         Route::get('/admin/dashboard', 'dashboard');
         Route::get('/admin/records',   'studentRecords');
 
+        Route::prefix('/admin/user')->group(function () {
+            Route::get('/', 'allUsers');
+            Route::put('/update/{id}', 'updateUser');
+            Route::delete('/delete/{id}', 'deleteUser');F
+        });
+    });
+
+    Route::controller(QuizApiController::class)->group(function () {
         Route::prefix('/admin/quizzes')->group(function () {
             Route::get('/',          'allQuizzes');
             Route::get('/{id}/edit', 'editQuiz');
@@ -87,15 +95,9 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
             Route::put('/{id}',      'updateQuiz');
             Route::delete('/{id}',   'deleteQuiz');
         });
-
-
-        Route::prefix('/admin/user')->group(function () {
-            Route::get('/',           'allUsers');
-            Route::put('/update/{id}', 'updateUser');
-            Route::delete('/delete/{id}', 'deleteUser');
-        });
     });
 
     Route::post('/admin/upload-photo', [ProfileApiController::class, 'uploadPhoto']);
     Route::post('/admin/update-profile', [ProfileApiController::class, 'updateProfile']);
+    Route::post('/admin/create-admin', [AdminApiController::class, 'createNewAdmin']);
 });
