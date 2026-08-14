@@ -7,6 +7,7 @@ import Profile from './views/UserPages/ProfilePage.vue'
 import Records from './views/UserPages/RecordsPage.vue'
 import QuizPage from './views/UserPages/QuizPage.vue'
 import MultipleChoice from './views/UserPages/QuizzesPages/MultipleChoice.vue'
+import DragDrop from './views/UserPages/QuizzesPages/DragDrop.vue'
 import AssessmentPage from './views/UserPages/QuizzesPages/AssessmentPage.vue'
 import QuizResult from './views/UserPages/QuizResult.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
@@ -47,6 +48,7 @@ const routes = [
 
     { path: '/quiz-result/:id', component: QuizResult, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/quiz/:quiz_id', name: 'quiz-start', component: MultipleChoice, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/dragdrop/:id', component: DragDrop, meta: { requiresAuth: true, requiresStudent: true } },
 
     {
         path: '/admin',
