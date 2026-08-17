@@ -48,7 +48,8 @@
                 <h2>{{ question.question_text }}</h2>
 
                 <p class="question-help">
-                    Drag the items into the correct order.
+                    Drag the items into the correct order. It can be changed later before submission. Once you submit,
+                    you cannot change your answer.
                 </p>
 
             </section>
@@ -82,7 +83,7 @@
                             </span>
 
                             <span class="item-number">
-                                {{ item.originalIndex }}
+                                {{ item.number }}
                             </span>
 
                             <span class="item-text">
@@ -119,7 +120,8 @@
                     <div class="drop-zone" @dragover.prevent @drop="dropItem">
 
                         <!-- ANSWER ITEMS -->
-                        <div v-for="(item, index) in answerItems" :key="item.id" class="answer-item" draggable="true"
+                        <div v-for="(item, index) in answerItems" :key="item.id"
+                            :class="{ 'right-answer': item.isCorrect }" class="answer-item" draggable="true"
                             @dragstart="startAnswerDrag(item, index)" @dragover.prevent @drop.stop="moveItem(index)">
 
                             <span class="answer-number">
@@ -172,15 +174,16 @@
                     Reset
                 </button>
 
-                <button class="submit-btn" :disabled="answerItems.length !== items.length" @click="submitAnswer">
+                <button v-if="!isDisabled" class="submit-btn" :disabled="answerItems.length !== items.length || isDisabled"
+                    @click="submitAnswer">
                     Submit Answer
                     <i class="fas fa-arrow-right"></i>
                 </button>
-
+                <button v-else class="submit-btn" @click="router.push(`/user/quizzes/assessment/${quizId}`)">
+                    To Assessments
+                </button>
             </section>
-
         </main>
-
     </div>
 </template>
 
@@ -207,7 +210,6 @@ const items = ref([])
 const currentQuestion = ref(1)
 const totalQuestions = ref(1)
 
-
 /*
 |--------------------------------------------------------------------------
 | DRAG & DROP STATE
@@ -215,10 +217,10 @@ const totalQuestions = ref(1)
 */
 
 const answerItems = ref([])
-
+const isSubmitted = ref(false)
 const draggedItem = ref(null)
+const isDisabled = ref(false)
 const draggedAnswerIndex = ref(null)
-
 
 /*
 |--------------------------------------------------------------------------
@@ -228,33 +230,40 @@ const draggedAnswerIndex = ref(null)
 
 const getQuizData = async () => {
     try {
-
         const { data } = await axios.get(`/api/quiz/dragdrop/${quizId}`)
 
-        question.value = data.question[0]
+        question.value = data.question?.[0] || {}
 
-        items.value = (data.items || []).map(item => ({
+        items.value = (data.items || []).map((item, index) => ({
             id: item.id,
             text: item.item_text,
             image: item.item_image_path,
             questionId: item.question_id,
+            isCorrect: false,
+
+            // Original item order
+            number: index + 1
         }))
 
         totalQuestions.value = data.total_questions || 1
+
+        /*
+         * Correct order should be an array of IDs.
+         *
+         * Example:
+         * [3, 1, 4, 2]
+         */
 
         console.log('Question:', question.value)
         console.log('Items:', items.value)
 
     } catch (error) {
-
         console.error(
             'Error fetching drag & drop quiz:',
             error
         )
-
     }
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -263,7 +272,6 @@ const getQuizData = async () => {
 */
 
 const progress = computed(() => {
-
     if (!totalQuestions.value) {
         return 0
     }
@@ -274,7 +282,6 @@ const progress = computed(() => {
     ) * 100
 })
 
-
 /*
 |--------------------------------------------------------------------------
 | AVAILABLE ITEMS
@@ -282,7 +289,6 @@ const progress = computed(() => {
 */
 
 const availableItems = computed(() => {
-
     const selectedIds = answerItems.value.map(
         item => item.id
     )
@@ -292,7 +298,6 @@ const availableItems = computed(() => {
     )
 })
 
-
 /*
 |--------------------------------------------------------------------------
 | DRAG FROM AVAILABLE ITEMS
@@ -300,12 +305,13 @@ const availableItems = computed(() => {
 */
 
 const startDrag = (item) => {
+    if (isDisabled.value) {
+        return
+    }
 
     draggedItem.value = item
     draggedAnswerIndex.value = null
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -314,12 +320,13 @@ const startDrag = (item) => {
 */
 
 const startAnswerDrag = (item, index) => {
+    if (isDisabled.value) {
+        return
+    }
 
     draggedItem.value = item
     draggedAnswerIndex.value = index
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -328,45 +335,38 @@ const startAnswerDrag = (item, index) => {
 */
 
 const dropItem = () => {
+    if (isDisabled.value) {
+        return
+    }
 
     if (!draggedItem.value) {
         return
     }
 
-
     /*
-     * If this is an existing answer item,
+     * If dragging an existing answer,
      * don't add it again.
      */
     if (draggedAnswerIndex.value !== null) {
-
         draggedItem.value = null
         draggedAnswerIndex.value = null
 
         return
     }
 
-
     /*
      * Add new item to answer.
      */
-
     const alreadyExists = answerItems.value.some(
         item => item.id === draggedItem.value.id
     )
 
     if (!alreadyExists) {
-
-        answerItems.value.push(
-            draggedItem.value
-        )
-
+        answerItems.value.push(draggedItem.value)
     }
-
 
     draggedItem.value = null
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -375,32 +375,27 @@ const dropItem = () => {
 */
 
 const moveItem = (targetIndex) => {
-
     if (
+        isDisabled.value ||
         draggedItem.value === null ||
         draggedAnswerIndex.value === null
     ) {
         return
     }
 
-
     const sourceIndex = draggedAnswerIndex.value
 
-
     if (sourceIndex === targetIndex) {
-
         draggedItem.value = null
         draggedAnswerIndex.value = null
 
         return
     }
 
-
     const movedItem = answerItems.value.splice(
         sourceIndex,
         1
     )[0]
-
 
     answerItems.value.splice(
         targetIndex,
@@ -408,12 +403,9 @@ const moveItem = (targetIndex) => {
         movedItem
     )
 
-
     draggedItem.value = null
     draggedAnswerIndex.value = null
-
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -422,13 +414,40 @@ const moveItem = (targetIndex) => {
 */
 
 const resetAnswer = () => {
+    if (isSubmitted.value) {
+        return
+    }
 
     answerItems.value = []
 
     draggedItem.value = null
     draggedAnswerIndex.value = null
-
 }
+
+/*
+|--------------------------------------------------------------------------
+| CHECK ANSWER
+|--------------------------------------------------------------------------
+|
+| rightAnswer contains the correct IDs in the correct order.
+|
+| Example:
+|
+| rightAnswer = [3, 1, 4, 2]
+|
+| User answer:
+|
+| answerItems = [3, 1, 2, 4]
+|
+| Result:
+|
+| 3 -> correct
+| 1 -> correct
+| 2 -> wrong
+| 4 -> wrong
+|
+|--------------------------------------------------------------------------
+*/
 
 
 /*
@@ -443,26 +462,77 @@ const submitAnswer = async () => {
      * Don't submit until every item
      * has been placed.
      */
-    if (answerItems.value.length !== items.value.length) {
+    if (
+        answerItems.value.length !==
+        items.value.length
+    ) {
         return
     }
 
-    // sample right answer [3, 1, 5, 2, 4]
-    const answer = answerItems.value.map(item => item.id)
+    /*
+     * Don't submit twice.
+     */
+    if (isSubmitted.value) {
+        return
+    }
 
-    console.log('Submitted answer:', answer)
-    await axios.get('/sanctum/csrf-cookie')
-    const { data } = await axios.post('/api/quiz/dragdrop/answer',
-
-        {
-            question_id: question.value.id,
-            answers: answer
-        }
+    /*
+     * Send only IDs to the backend.
+     *
+     * Example:
+     * [3, 1, 4, 2]
+     */
+    const answer = answerItems.value.map(
+        item => item.id
     )
 
+    try {
 
+        await axios.get('/sanctum/csrf-cookie')
+
+        const { data } = await axios.post(
+            '/api/quiz/dragdrop/answer',
+            {
+                question_id: question.value.id,
+                answers: answer
+            }
+        )
+
+        console.log('Server response:', data)
+
+        if (data.status) {
+
+            isSubmitted.value = true
+            isDisabled.value = true
+
+            const correctIds = data.correctList
+
+            answerItems.value.forEach(item => {
+                item.isCorrect = correctIds.includes(item.id)
+            })
+            console.log(
+                'Answer submitted successfully:',
+                data
+            )
+
+            alert(`Score: ${data.score}`)
+
+        } else {
+
+            console.error(
+                'Error submitting answer:',
+                data.message
+            )
+        }
+
+    } catch (error) {
+
+        console.error(
+            'Error submitting answer:',
+            error
+        )
+    }
 }
-
 
 /*
 |--------------------------------------------------------------------------
@@ -632,6 +702,11 @@ onMounted(() => {
 .difficulty.medium {
     background: #fff7ed;
     color: #ea580c;
+}
+
+.right-answer {
+    background: #ecfdf5;
+    color: #059669;
 }
 
 
