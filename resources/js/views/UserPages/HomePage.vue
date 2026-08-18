@@ -137,45 +137,14 @@
 import axios from 'axios'
 import { ref, computed, onMounted } from 'vue'
 import { useUser } from "@/composables/useUser"
+import { useGreetMessages } from '@/composables/useGreetMessages'
 
-const greetMessage = computed(() => {
-  const hour = new Date().getHours()
-  if (hour < 12) return 'Good morning'
-  if (hour < 18) return 'Good afternoon'
-  return 'Good evening'
-})
-
-
+const { user, fetchUser, userFullName } = useUser()
+const { greetMessage } = useGreetMessages()
 const leaderboard = ref([])
 const isLoading = ref(false)
 const searchQuery = ref('')
 const selectedQuiz = ref('') // Tracks active dropdown value
-const { user, fetchUser, userFullName } = useUser()
-
-// Cache getter with validation to prevent stale data usage and reduce server load
-const getCachedLeaderboard = () => {
-  try {
-    const cached = JSON.parse(localStorage.getItem(LEADERBOARD_CACHE_KEY))
-    if (!cached) {
-      return null
-    }
-    if (Date.now() - cached.ts > LEADERBOARD_CACHE_TTL) {
-      return null
-    }
-    return cached.value
-  } catch {
-    return null
-  }
-}
-
-// Cache setter with timestamp to localStorage for quick retrieval and reduced server hits
-const setLeaderboardCache = (value) => {
-  localStorage.setItem(LEADERBOARD_CACHE_KEY, JSON.stringify({
-    ts: Date.now(),
-    value,
-  })
-  )
-}
 
 // Dynamically grab all unique quiz titles from the raw dataset
 const availableQuizzes = computed(() => {
@@ -247,7 +216,7 @@ const podiumOrder = computed(() => {
 const podiumHeight = (rank) => {
   if (rank === 1) return '80px'
   if (rank === 2) return '60px'
-  return '44px'
+  return '40px'
 }
 
 // Final displayed list after overlaying input text filter 
@@ -267,13 +236,6 @@ const photoPath = function (img) {
   return `/storage/images/profiles/${img || 'default.png'}`
 }
 
-const getLeaderBoard = async (force = false) => {
-  const cached = !force ? getCachedLeaderboard() : null
-  if (cached) {
-    leaderboard.value = cached
-    return
-  }
-
   isLoading.value = true
 
   try {
@@ -285,13 +247,12 @@ const getLeaderBoard = async (force = false) => {
       isYou: u.user_id === currentUserId,
       displayName: u.name,
     }))
-    setLeaderboardCache(leaderboard.value)
   } catch (err) {
     console.error(err)
   } finally {
     isLoading.value = false
   }
-}
+
 
 onMounted(async () => {
   await fetchUser()

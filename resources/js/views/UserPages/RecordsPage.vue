@@ -157,79 +157,18 @@ ChartJS.register(
   Filler
 )
 
-const RECORDS_CACHE_KEY = 'dash-quiz_records_cache'
-const RECORDS_CACHE_TTL = 1000 * 60 * 15 // 15 minutes
-const RECORD_DETAIL_CACHE_KEY = 'dash-quiz_record_detail_cache'
-const RECORD_DETAIL_TTL = 1000 * 60 * 15 // 15 minutes
-
 const { fetchUser } = useUser()
-
-const getCachedRecords = () => {
-  try {
-    const cached = JSON.parse(localStorage.getItem(RECORDS_CACHE_KEY))
-    if (!cached || typeof cached !== 'object') return null
-    if (Date.now() - cached.ts > RECORDS_CACHE_TTL) {
-      localStorage.removeItem(RECORDS_CACHE_KEY)
-      return null
-    }
-    return cached.value
-  } catch {
-    return null
-  }
-}
-
-const setRecordsCache = (value) => {
-  try {
-    localStorage.setItem(RECORDS_CACHE_KEY, JSON.stringify({ ts: Date.now(), value }))
-  } catch {
-    // ignore
-  }
-}
-
-const getCachedRecordDetail = (id) => {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RECORD_DETAIL_CACHE_KEY))
-    if (!raw || typeof raw !== 'object') return null
-    const entry = raw[id]
-
-    if (!entry) return null
-
-    if (Date.now() - entry.ts > RECORD_DETAIL_TTL) {
-      delete raw[id]
-      localStorage.setItem(RECORD_DETAIL_CACHE_KEY, JSON.stringify(raw))
-      return null
-    }
-    return entry.value
-  } catch {
-    return null
-  }
-}
-
-const setRecordDetailCache = (id, value) => {
-  try {
-    const raw = JSON.parse(localStorage.getItem(RECORD_DETAIL_CACHE_KEY)) || {}
-    raw[id] = { ts: Date.now(), value }
-    localStorage.setItem(RECORD_DETAIL_CACHE_KEY, JSON.stringify(raw))
-  } catch {
-    // ignore
-  }
-}
 
 /* --------------------------------------------------------
 | STATE
 -------------------------------------------------------- */
 
 const records = ref([])
-
 const loading = ref(true)
-
 const searchQuery = ref("")
 const dateFilter = ref("")
-
 const selectedRecord = ref(null)
-
 const showModal = ref(false)
-
 const loadingModal = ref(false)
 
 /* --------------------------------------------------------
@@ -239,16 +178,6 @@ const openView = async (record) => {
   loadingModal.value = true
 
   try {
-    const cachedDetail = getCachedRecordDetail(record.id)
-    if (cachedDetail) {
-      selectedRecord.value = {
-        ...record,
-        ...cachedDetail,
-        questions: cachedDetail.questions || []
-      }
-      showModal.value = true
-      return
-    }
 
     const res = await axios.get(`/api/quiz/result/${record.id}`)
 
@@ -258,7 +187,6 @@ const openView = async (record) => {
       questions: res.data.questions || []
     }
 
-    setRecordDetailCache(record.id, res.data)
     showModal.value = true
 
   } catch (err) {
@@ -433,12 +361,7 @@ const lineOptions = {
 | FETCH RECORDS
 -------------------------------------------------------- */
 const fetchRecords = async (force = false) => {
-  const cached = !force ? getCachedRecords() : null
-  if (cached) {
-    records.value = cached
-    loading.value = false
-    return
-  }
+
 
   loading.value = true
   try {
@@ -465,7 +388,6 @@ const fetchRecords = async (force = false) => {
           datas.elapsed_time
         )
     }))
-    setRecordsCache(records.value)
   } catch (err) {
     console.error('Failed to fetch records:', err)
   } finally {
