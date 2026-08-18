@@ -139,12 +139,14 @@ import { ref, computed, onMounted } from 'vue'
 import { useUser } from "@/composables/useUser"
 import { useGreetMessages } from '@/composables/useGreetMessages'
 
-const { user, fetchUser, userFullName } = useUser()
 const { greetMessage } = useGreetMessages()
 const leaderboard = ref([])
 const isLoading = ref(false)
 const searchQuery = ref('')
 const selectedQuiz = ref('') // Tracks active dropdown value
+const { user, fetchUser, userFullName } = useUser()
+
+
 
 // Dynamically grab all unique quiz titles from the raw dataset
 const availableQuizzes = computed(() => {
@@ -236,6 +238,8 @@ const photoPath = function (img) {
   return `/storage/images/profiles/${img || 'default.png'}`
 }
 
+const getLeaderBoard = async (force = false) => {
+
   isLoading.value = true
 
   try {
@@ -252,7 +256,7 @@ const photoPath = function (img) {
   } finally {
     isLoading.value = false
   }
-
+}
 
 onMounted(async () => {
   await fetchUser()
