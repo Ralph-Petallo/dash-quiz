@@ -27,17 +27,29 @@ class CreateAdmin extends Command
 
         // this->secret method will not show while typing
         $password = $this->secret('Password for the admin?');
-
         // Confirmation check (optional but helpful)
         if (empty($password)) {
             $this->error('Password cannot be empty!');
+            $this->secret('Password for admin?');
+        }
+
+        $first = $this->ask("First name");
+        if (empty($first)) {
+            $this->error('First Name cannot be empty!');
+            return;
+        }
+
+        $last = $this->ask("Last name");
+
+        if (empty($last)) {
+            $this->error('Last Name cannot be empty!');
             return;
         }
 
         // add news admin
         Dasher::create([
-            'first_name' => 'admin', // depende unsa first name
-            'last_name' => 'admin', // depende unsa last name
+            'first_name' => $first, // depende unsa first name
+            'last_name' => $last, // depende unsa last name
             'email' => $email,
             'password' => Hash::make($password),
             'role' => 'admin', // Ensure 'role' is in your User model's $fillable array!

@@ -3,7 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\Dasher;
-use Hash;
+use Illuminate\Support\Facades\Hash;
 use Illuminate\Console\Command;
 
 class CreateDasher extends Command
