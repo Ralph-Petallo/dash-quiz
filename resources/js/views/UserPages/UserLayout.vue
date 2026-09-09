@@ -71,7 +71,7 @@ const isMobile = computed(() => windowWidth.value <= 1024)
 const pageTitles = {
   '/user': 'Home',
   '/user/': 'Home',
-  '/user/quizzes': 'Quizzes',
+  '/user/quizzes': 'Assessments',
   '/user/records': 'My Records',
   '/user/profile': 'My Profile',
 }
