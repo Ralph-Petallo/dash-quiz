@@ -33,7 +33,7 @@
         </span>
 
         <span class="nav-text">
-          Quizzes
+          Assessments
         </span>
       </router-link>
 
