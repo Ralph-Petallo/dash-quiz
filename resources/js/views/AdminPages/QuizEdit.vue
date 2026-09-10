@@ -1,5 +1,5 @@
 <template>
-    <section class="admin-section">
+    <section>
 
         <!-- HEADER -->
         <div class="header-row">
@@ -41,19 +41,11 @@
                 <div class="form-group">
                     <label>Difficulty</label>
                     <select v-model="form.difficulty" class="difficulty-select">
-                        <option value="" selected disabled>Select</option>
-                        <option :value="'Easy'" :selected="form.difficulty === 'easy'">
-                            Easy
-                        </option>
-                        <option :value="'Medium'" :selected="form.difficulty === 'medium'">
-                            Medium
-                        </option>
-                        <option :value="'Hard'" :selected="form.difficulty === 'hard'">
-                            Hard
-                        </option>
+                        <option value="easy">Easy</option>
+                        <option value="medium">Medium</option>
+                        <option value="hard">Hard</option>
                     </select>
                 </div>
-
 
                 <div class="form-group">
                     <label>Questions</label>
@@ -74,7 +66,7 @@
 
                 <div class="question-meta">
                     <span>Question #{{ index + 1 }}</span>
-                    <button @click="showDeleteModal" class="delete-link">
+                    <button @click="showDeleteModal(index)" class="delete-link">
                         Remove Question
                     </button>
                 </div>
@@ -106,6 +98,8 @@
                 </button>
             </div>
         </div>
+
+
     </section>
 
     <!-- MODAL -->
@@ -119,13 +113,12 @@
                 <button class="cancel-btn" @click="showDeleteConfirm = false">
                     Cancel
                 </button>
-                <button class="btn-danger" @click="confirmDelete">
+                <button class="btn-danger" @click="removeQuestion">
                     Delete
                 </button>
             </div>
         </div>
     </div>
-
 </template>
 
 <script setup>
@@ -148,6 +141,7 @@ const form = ref({
 });
 const imageInputs = ref([]);
 const showDeleteConfirm = ref(false);
+const selectedQuestionIndex = ref(null);
 
 
 const image_path_locator = (image_path) => {
@@ -157,29 +151,30 @@ const image_path_locator = (image_path) => {
 // Fetch data when component loads
 onMounted(async () => {
     try {
-        const response = await axios.get(
-            `/api/admin/quizzes/${route.params.id}/edit`
-        );
-        const data = response.data;
+        // fetch then extracts
+        const { data } = await axios.get(`/api/admin/quizzes/${route.params.id}/edit`);
+        console.log(data)
+        console.log(data.questions)
 
+        // assign all datas to multiple choice assessment 
         form.value.title = data.quiz.title;
         form.value.description = data.quiz.description;
         form.value.category = data.quiz.category;
         form.value.difficulty = data.quiz.difficulty;
 
         // Map the questions and options perfectly!
-        form.value.questions = data.questions.map((q) => {
+        form.value.questions = data.questions.map((question) => {
             // Find which option matches the correct answer text
-            const correctIndex = q.options.findIndex(
-                (opt) => opt.option_text === q.correct_answer_text
+            const correctIndex = question.options.findIndex(
+                (opt) => opt.option_text === question.correct_answer_text
             );
 
             return {
-                id: q.id,
-                text: q.question_text,
-                options: q.options.map((opt) => opt.option_text), // Extract just the text strings
+                id: question.id,
+                text: question.question_text,
+                options: question.options.map((opt) => opt.option_text), // Extract just the text strings
                 correct_option: correctIndex !== -1 ? correctIndex : 0, // Set the radio button!
-                image_path: image_path_locator(q.image_path || 'default.png'),
+                image_path: image_path_locator(question.image_path || 'default.png'),
                 newImage: null,
             };
         });
@@ -217,14 +212,20 @@ const handleImageChange = (event, index) => {
     form.value.questions[index].image_path = URL.createObjectURL(file);
 };
 
-const showDeleteModal = () => showDeleteConfirm.value = true;
-
-const removeQuestion = (index) => {
-    if (form.value.questions.length > 1) {
-        form.value.questions.splice(index, 1);
-    } else {
-        alert("You must have at least one question.");
+const showDeleteModal = (index) => {
+    selectedQuestionIndex.value = index;
+    showDeleteConfirm.value = true;
+};
+const removeQuestion = () => {
+    if (
+        form.value.questions.length > 1 &&
+        selectedQuestionIndex.value !== null
+    ) {
+        form.value.questions.splice(selectedQuestionIndex.value, 1);
     }
+
+    showDeleteConfirm.value = false;
+    selectedQuestionIndex.value = null;
 };
 
 const updateQuiz = async () => {
@@ -236,34 +237,34 @@ const updateQuiz = async () => {
         payload.append("description", form.value.description);
         payload.append("category", form.value.category);
         payload.append("difficulty", form.value.difficulty.toLowerCase());
-        
-        form.value.questions.forEach((q, index) => {
-            payload.append(
-                `questions[${index}][id]`,
-                q.id ?? ""
+
+        form.value.questions.forEach((item, index) => {
+            payload.append(`questions[${index}][id]`,
+                item.id ?? ""
             );
 
             payload.append(
                 `questions[${index}][text]`,
-                q.text
+                item.text
             );
 
             payload.append(
                 `questions[${index}][correct_option]`,
-                q.correct_option
+                item.correct_option
             );
 
-            q.options.forEach((opt, optIndex) => {
+            item.options.forEach((opt, optIndex) => {
                 payload.append(
                     `questions[${index}][options][${optIndex}]`,
                     opt
                 );
             });
 
-            if (q.newImage) {
+            // updates the old image
+            if (item.newImage) {
                 payload.append(
                     `questions[${index}][image]`,
-                    q.newImage
+                    item.newImage
                 );
             }
         });
@@ -297,6 +298,7 @@ const updateQuiz = async () => {
     border-radius: 10px;
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
 }
+
 
 h3 {
     margin-bottom: 12px;
@@ -346,20 +348,6 @@ h3 {
 }
 
 /* ───────────── BUTTONS ───────────── */
-.cancel-btn {
-    padding: 8px 14px;
-    font-size: 12px;
-    color: #fff;
-    background: #111;
-    border: none;
-    border-radius: 10px;
-    cursor: pointer;
-    transition: 0.2s ease;
-}
-
-.cancel-btn:hover {
-    background: #333;
-}
 
 .btn-primary {
     background: #6366f1;
@@ -611,13 +599,12 @@ h3 {
 }
 
 .delete-modal {
-    width: 90%;
-    max-width: 420px;
+    width: 200px;
     background: #fff;
     border-radius: 14px;
     padding: 20px;
     text-align: center;
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.5);
 }
 
 .delete-modal h2 {
@@ -627,7 +614,7 @@ h3 {
 
 .delete-modal p {
     margin-top: 8px;
-    color: #6b7280;
+    color: brown;
     font-size: 12px;
     line-height: 1.5;
 }
@@ -639,32 +626,30 @@ h3 {
 }
 
 .modal-actions button {
-    flex: 1;
+    display: flex;
+    justify-content: space-evenly;
     padding: 10px;
+    width: 100%;
     border-radius: 10px;
-    border: none;
-    font-weight: 600;
     cursor: pointer;
+    font-weight: 600;
 }
 
+
 .cancel-btn {
-    background: black;
-    border: 1px solid;
-    color: white;
-    padding: 8px 14px;
-    border-radius: 10px;
-    cursor: pointer;
+    background: white;
+    border: 1px solid black;
 }
 
 .cancel-btn:hover {
-    background: white;
-    border: 1px solid black;
-    color: black;
+    background: black;
+    color: white;
 }
 
 .btn-danger {
     background: #dc2626;
     color: white;
+    border: none;
 }
 
 .btn-danger:hover {
