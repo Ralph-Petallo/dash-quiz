@@ -31,16 +31,16 @@
                 <div class="title">Quiz Details</div>
 
                 <div class="form-group">
-                    <label>Quiz Name</label>
-                    <input v-model="form.title" type="text" placeholder="e.g. Motherboard" />
+                    <div>Quiz Name</div>
+                    <input v-model="form.title" name="title" type="text" placeholder="e.g. Motherboard" />
                 </div>
                 <div class="form-group">
-                    <label>Category</label>
-                    <input v-model="form.category" type="text" placeholder="e.g. Motherboard" />
+                    <div>Category</div>
+                    <input v-model="form.category" name="category" type="text" placeholder="e.g. Motherboard" />
                 </div>
                 <div class="form-group">
-                    <label>Difficulty</label>
-                    <select v-model="form.difficulty" class="difficulty-select">
+                    <div>Difficulty</div>
+                    <select v-model="form.difficulty" name="difficulty" class="difficulty-select">
                         <option value="easy">Easy</option>
                         <option value="medium">Medium</option>
                         <option value="hard">Hard</option>
@@ -48,41 +48,45 @@
                 </div>
 
                 <div class="form-group">
-                    <label>Questions</label>
+                    <div>Questions</div>
                     <span>{{ form.questions.length }}</span>
                 </div>
 
                 <div class="form-group">
-                    <label>Topic / Description</label>
-                    <textarea v-model="form.description" placeholder="e.g. Parts of the Motherboard" />
+                    <div>Topic / Description</div>
+                    <textarea v-model="form.description" name="description"
+                        placeholder="e.g. Parts of the Motherboard" />
                 </div>
 
             </div>
 
             <!-- QUESTIONS -->
             <h3>Questions</h3>
-
-            <div v-for="(q, index) in form.questions" :key="index" class="question-block">
-
+            <div v-for="(question, index) in form.questions" :key="index" class="question-block">
                 <div class="question-meta">
                     <span>Question #{{ index + 1 }}</span>
                     <button @click="showDeleteModal(index)" class="delete-link">
                         Remove Question
                     </button>
                 </div>
+
                 <input :ref="el => imageInputs[index] = el" type="file" accept="image/*" hidden
                     @change="handleImageChange($event, index)" />
+
                 <!-- QUESTION -->
                 <div class="question-text">
-                    <input v-model="q.text" class="question-input" placeholder="Enter your question here" />
+                    <input v-model="question.text" name="question" class="question-input"
+                        placeholder="Enter your question here" />
                 </div>
 
                 <!-- OPTIONS -->
                 <div class="options-grid">
-                    <div v-for="(opt, optIndex) in ['A', 'B', 'C', 'D']" :key="optIndex" class="option-item">
-                        <input type="radio" :name="'correct_' + index" :value="optIndex" v-model="q.correct_option" />
-                        <div>{{ opt }}.</div>
-                        <input v-model="q.options[optIndex]" type="text" :placeholder="'Option ' + (optIndex + 1)" />
+                    <div v-for="(opt, optIndex) in letterChoices" :key="optIndex" class="option-item">
+                        <input type="radio" :name="'correct_' + index" :value="optIndex"
+                            v-model="question.correct_option" />
+                        <div>{{ opt }}</div>
+                        <input v-model="question.options[optIndex]" name="question" type="text"
+                            :placeholder="'Option ' + (optIndex + 1)" />
                     </div>
                 </div>
                 <p class="help-text">Note: Click radio button to select the correct answer</p>
@@ -98,8 +102,6 @@
                 </button>
             </div>
         </div>
-
-
     </section>
 
     <!-- MODAL -->
@@ -141,7 +143,8 @@ const form = ref({
 });
 const imageInputs = ref([]);
 const showDeleteConfirm = ref(false);
-const selectedQuestionIndex = ref(null);
+const letterChoices = ['A', 'B', 'C', 'D']
+
 
 
 const image_path_locator = (image_path) => {
@@ -212,20 +215,20 @@ const handleImageChange = (event, index) => {
     form.value.questions[index].image_path = URL.createObjectURL(file);
 };
 
+
+const selectedQuestionIndex = ref(null);
 const showDeleteModal = (index) => {
-    selectedQuestionIndex.value = index;
+    selectedQuestionIndex.value = index; // set current question index to be deleted
     showDeleteConfirm.value = true;
 };
+
 const removeQuestion = () => {
-    if (
-        form.value.questions.length > 1 &&
-        selectedQuestionIndex.value !== null
-    ) {
+    if (form.value.questions.length > 1 && selectedQuestionIndex.value !== null) {
         form.value.questions.splice(selectedQuestionIndex.value, 1);
     }
 
-    showDeleteConfirm.value = false;
-    selectedQuestionIndex.value = null;
+    showDeleteConfirm.value = false; // close modal
+    selectedQuestionIndex.value = null; // set to null again
 };
 
 const updateQuiz = async () => {
@@ -269,7 +272,7 @@ const updateQuiz = async () => {
             }
         });
 
-        payload.append("_method", "PUT");
+        payload.append("_method", "PUT"); // telling laravel to treat this request as a put 
 
         await axios.post(`/api/admin/quizzes/${route.params.id}`,
             payload,
@@ -431,7 +434,7 @@ h3 {
     flex-direction: column;
 }
 
-.form-group label {
+.form-group div {
     font-size: 12px;
     font-weight: 600;
     margin-bottom: 5px;
