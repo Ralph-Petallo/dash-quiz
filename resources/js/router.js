@@ -5,14 +5,16 @@ import { useUser } from '@/composables/useUser'
 import HomePage from './views/UserPages/HomePage.vue'
 import Profile from './views/UserPages/ProfilePage.vue'
 import Records from './views/UserPages/RecordsPage.vue'
-import QuizPage from './views/UserPages/QuizPage.vue'
+import AssessmentPage from './views/UserPages/AssessmentPage.vue'
 import MultipleChoice from './views/UserPages/QuizzesPages/MultipleChoice.vue'
 import DragDrop from './views/UserPages/QuizzesPages/DragDrop.vue'
-import AssessmentPage from './views/UserPages/QuizzesPages/AssessmentPage.vue'
-import QuizResult from './views/UserPages/QuizResult.vue'
+import ImageIdentification from './views/UserPages/QuizzesPages/ImageIdentification.vue'
+import RJ45HandsOn from './views/UserPages/QuizzesPages/RJ45HandsOn.vue'
+import ChooseAssessmentPage from './views/UserPages/QuizzesPages/ChooseAssessmentPage.vue'
+import Result from './views/UserPages/ResultPage.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 
-// Auth Pages
+// Public Pages
 import LoginPage from './views/LoginPage.vue'
 import RegisterPage from './views/RegisterPage.vue'
 import ForgotPage from './views/ForgotPage.vue'
@@ -23,10 +25,13 @@ import AdminDashboard from './views/AdminPages/AdminDashboard.vue'
 import UsersTable from './views/AdminPages/UsersTable.vue'
 import Settings from './views/AdminPages/Settings.vue'
 import StudentRecords from './views/AdminPages/StudentRecords.vue'
-import QuizAdd from './views/AdminPages/QuizAdd.vue'
-import QuizEdit from './views/AdminPages/QuizEdit.vue'
 import ManageQuestions from './views/AdminPages/ManageQuiz.vue'
 import AdminLayout from './views/AdminPages/AdminLayout.vue'
+
+//Admin Edit Assessments Pages
+import MultipleAssessmentAdd from './views/AdminPages/MultipleAssessmentAdd.vue'
+import MultipleAssessmentEdit from './views/AdminPages/MultipleAssessmentEdit.vue'
+import RJ45AssessmentEdit from './views/AdminPages/RJ-45AssessmentEdit.vue'
 
 const routes = [
     { path: '/', component: LoginPage },
@@ -40,15 +45,17 @@ const routes = [
         children: [
             { path: '', component: HomePage, meta: { requiresAuth: true, requiresStudent: true } },
             { path: 'records', component: Records, meta: { requiresAuth: true, requiresStudent: true } },
-            { path: 'quizzes', component: QuizPage, meta: { requiresAuth: true, requiresStudent: true } },
-            { path: 'quizzes/assessment/:id', component: AssessmentPage, meta: { requiresAuth: true, requiresStudent: true } },
+            { path: 'quizzes', component: AssessmentPage, meta: { requiresAuth: true, requiresStudent: true } },
+            { path: 'quizzes/assessment/:id', component: ChooseAssessmentPage, meta: { requiresAuth: true, requiresStudent: true } },
             { path: 'profile', component: Profile, meta: { requiresAuth: true, requiresStudent: true } },
         ]
     },
 
-    { path: '/quiz-result/:id', component: QuizResult, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/quiz-result/:id', component: Result, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/quiz/:quiz_id', name: 'quiz-start', component: MultipleChoice, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/dragdrop/:id', component: DragDrop, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/image-identification/:id', component: ImageIdentification, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/rj45-hands-on/:id', component: RJ45HandsOn, meta: { requiresAuth: true, requiresStudent: true } },
 
     {
         path: '/admin',
@@ -58,8 +65,14 @@ const routes = [
             { path: '', component: AdminDashboard },
             { path: 'users', component: UsersTable },
             { path: 'records', component: StudentRecords },
-            { path: 'quizzes/create', component: QuizAdd },
-            { path: 'quizzes/:id/edit', component: QuizEdit },
+            { path: 'quizzes/create', component: MultipleAssessmentAdd },
+            { path: 'quizzes/:id/edit', component: MultipleAssessmentEdit },
+
+            { path: 'quizzes/:id/create', component: MultipleAssessmentAdd },
+            { path: 'quizzes/:id/:type/edit', component: MultipleAssessmentEdit },
+
+            { path: 'quizzes/:id/:type/edit', component: RJ45AssessmentEdit },
+
             { path: 'settings', component: Settings },
             { path: 'manage-quizzes', component: ManageQuestions }
         ]
@@ -77,29 +90,31 @@ const router = createRouter({
     routes
 })
 
-router.beforeEach(async (to, from, next) => {
+router.beforeEach(async (to) => {
     const { user, fetchUser } = useUser()
 
-    // Only fetch when needed — protected routes and guest redirect check
-    const needsUserCheck = to.meta.requiresAuth || ['/', '/register', '/forgot', '/reset'].includes(to.path)
-
-    if (needsUserCheck && !user.value) {
+    // Only fetch user when accessing protected routes
+    if (to.meta.requiresAuth && !user.value) {
         await fetchUser()
     }
 
-    // Protected routes — must be authenticated
-    if (to.meta.requiresAuth) {
-        if (!user.value) return next('/')
-        if (to.meta.requiresAdmin && user.value.role !== 'admin') return next('/user')
-        if (to.meta.requiresStudent && user.value.role === 'admin') return next('/admin')
+    // User is not logged in
+    if (to.meta.requiresAuth && !user.value) {
+        return '/'
     }
 
-    // Redirect already-authenticated users away from guest pages
-    if (['/', '/register', '/forgot', '/reset'].includes(to.path) && user.value) {
-        return next(user.value.role === 'admin' ? '/admin' : '/user')
+    // Non-admin accessing admin page
+    if (to.meta.requiresAdmin && user.value.role !== 'admin') {
+        return '/user'
     }
 
-    next()
+    // Admin accessing student page
+    if (to.meta.requiresStudent && user.value.role === 'admin') {
+        return '/admin'
+    }
+
+    // Allow navigation
+    return true
 })
 
 export default router
