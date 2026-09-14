@@ -81,7 +81,7 @@
                                 <button @click="submitAnswer" class="btn-submit"
                                     :disabled="!selectedAnswer || submitting">
                                     <span>{{ currentIndex + 1 === questions.length ? 'Finish Quiz' : 'Continue'
-                                    }}</span>
+                                        }}</span>
                                     <svg v-if="currentIndex + 1 !== questions.length" xmlns="http://www.w3.org/2000/svg"
                                         width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                                         stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
@@ -107,17 +107,15 @@ const router = useRouter()
 
 const quiz = ref({ title: '', total_questions: 0 })
 const questions = ref([])
+const answers = ref([])
+const timeElapsed = ref(0)
 const submitting = ref(false)
 
 const currentIndex = ref(parseInt(localStorage.getItem('quiz_current_index')) || 0)
 const selectedAnswer = ref(null)
-const score = ref(parseInt(localStorage.getItem('quiz_score')) || 0)
 
 const loading = ref(true)
 const error = ref(null)
-
-const timeElapsed = ref(0)
-const answers = ref([]) // ✅ FIX: store ALL answers properly
 
 let timerInterval = null
 
@@ -129,7 +127,6 @@ const currentQuestion = computed(() => {
         options: []
     }
 })
-// TODO: add a comment explaining this computed property
 
 // PROGRESS
 const progress = computed(() => {
@@ -181,59 +178,37 @@ const fetchQuiz = async () => {
 const submitAnswer = async () => {
     if (!selectedAnswer.value || submitting.value) return
 
-    submitting.value = true
+    answers.value.push({
+        question_id: currentQuestion.value.id,
+        answer_id: selectedAnswer.value
+    })
 
-    try {
-        const { data } = await axios.post('/api/quiz/answer', {
-            question_id: currentQuestion.value.id,
-            answer_id: selectedAnswer.value
-        })
+    selectedAnswer.value = null
 
-        // SAVE ANSWER (IMPORTANT FOR FINAL RESULT)
-        answers.value.push({
-            question_id: currentQuestion.value.id,
-            answer_id: selectedAnswer.value
-        })
+    if (currentIndex.value < questions.value.length - 1) {
+        currentIndex.value++
+        localStorage.setItem('quiz_current_index', currentIndex.value)
+    } else {
+        submitting.value = true // <-- fix: set before the request, not just reset after
 
-        if (data.correct) {
-            score.value++
-            localStorage.setItem('quiz_score', score.value)
+        try {
+            const { data } = await axios.post('/api/quiz/answer', {
+                answers_array: answers.value,
+                quiz_id: route.params.quiz_id,
+                elapsed_time: timeElapsed.value
+            })
+
+            if (data?.record_id) {
+                localStorage.removeItem('quiz_current_index')
+                localStorage.removeItem('quiz_id')
+
+                router.push(`/quiz-result/${data.record_id}`)
+            }
+        } catch (err) {
+            console.error(err)
+        } finally {
+            submitting.value = false
         }
-
-        selectedAnswer.value = null
-
-        if (currentIndex.value < questions.value.length - 1) {
-            currentIndex.value++
-            localStorage.setItem('quiz_current_index', currentIndex.value)
-        } else {
-            await submitQuizResult()
-        }
-
-    } finally {
-        submitting.value = false
-    }
-}
-
-// SUBMIT FINAL RESULT (ALIGNED TO CONTROLLER)
-const submitQuizResult = async () => {
-    try {
-        const { data } = await axios.post('/api/quiz/result', {
-            quiz_id: route.params.quiz_id,
-            score: score.value,
-            elapsed_time: timeElapsed.value,
-            answers: answers.value
-        })
-
-        // cleanup
-        localStorage.removeItem('quiz_current_index')
-        localStorage.removeItem('quiz_score')
-        localStorage.removeItem('quiz_id')
-
-        //change the current url
-        router.replace(`/quiz-result/${data.record_id}`)
-
-    } catch (err) {
-        console.error(err)
     }
 }
 

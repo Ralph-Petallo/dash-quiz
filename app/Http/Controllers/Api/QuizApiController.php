@@ -5,13 +5,26 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Quiz;
 use App\Models\Question;
+use App\Models\AdminLog;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Auth;
 use App\Models\QuizRecord;
 use App\Models\QuizAttempt;
 use Illuminate\Http\Request;
 
 class QuizApiController extends Controller
 {
+
+    public function logActivity(string $action, string $description)
+    {
+        $admin = Auth::guard('dasher')->user();
+        // insert log
+        AdminLog::create([
+            'admin_id' => $admin->id,
+            'action_type' => $action,
+            'description' => $description,
+        ]);
+    }
 
     ###############################################
     # UPDATE QUIZ
@@ -346,47 +359,21 @@ class QuizApiController extends Controller
 
     /*
     |--------------------------------------------------------------------------
-    | CHECK ANSWER (REALTIME)
+    | CHECK ANSWER ALL ANSWERS
     |--------------------------------------------------------------------------
     */
+
+
     public function submitAnswer(Request $request)
     {
         $validated = $request->validate([
-            'question_id' => 'required|exists:questions,id',
-            'answer_id' => 'required|exists:question_options,id',
-        ]);
-
-        $question = Question::with('options')->findOrFail($validated['question_id']);
-
-        $selected = $question->options->firstWhere('id', $validated['answer_id']);
-        $correct = $question->options->firstWhere('is_correct', true);
-
-        $isCorrect = $selected && $correct && $selected->id === $correct->id;
-
-        return response()->json([
-            'status' => 'success',
-            'correct' => $isCorrect
-        ]);
-    }
-
-    /*
-    |--------------------------------------------------------------------------
-    | SAVE QUIZ RESULT + ATTEMPTS (FIXED)
-    |--------------------------------------------------------------------------
-    */
-    public function submitQuizResult(Request $request)
-    {
-        // FIX #2: Proper nested validation for answers array
-        $validated = $request->validate([
+            'answers_array' => 'required|array|min:1',
+            'answers_array.*.question_id' => 'required|exists:questions,id',
+            'answers_array.*.answer_id' => 'required|exists:question_options,id',
             'quiz_id' => 'required|exists:quizzes,id',
-            'score' => 'required|integer|min:0',
             'elapsed_time' => 'required|integer|min:0',
-            'answers' => 'required|array',
-            'answers.*.question_id' => 'required|exists:questions,id',
-            'answers.*.answer_id' => 'required|exists:question_options,id',
         ]);
 
-        // FIX #1: Consistent auth usage
         $user = auth('sanctum')->user();
 
         if (!$user) {
@@ -396,60 +383,107 @@ class QuizApiController extends Controller
             ], 401);
         }
 
-        /*
-        |---------------------------------------
-        | 1. CREATE QUIZ RECORD
-        |---------------------------------------
-        */
+        $SCORE = 0;
+
+        // create the record first so we have an id to attach attempts to
         $record = QuizRecord::create([
             'user_id' => $user->id,
             'quiz_id' => $validated['quiz_id'],
-            'score' => $validated['score'],
+            'score' => 0, // will update after loop
             'elapsed_time' => $validated['elapsed_time'],
         ]);
 
-        /*
-        |---------------------------------------
-        | 2. SAVE EACH QUESTION ATTEMPT
-        |---------------------------------------
-        */
-        foreach ($validated['answers'] as $answer) {
+        foreach ($validated['answers_array'] as $item) {
+            $question = Question::with('options')->find($item['question_id']);
 
-            $question = Question::with('options')->find($answer['question_id']);
+            if (!$question) {
+                continue;
+            }
 
-            if (!$question) continue;
-
-            $selected = $question->options->firstWhere('id', $answer['answer_id']);
+            $selected = $question->options->firstWhere('id', $item['answer_id']);
             $correct = $question->options->firstWhere('is_correct', true);
+            $isCorrect = $selected && $correct && $selected->id === $correct->id;
+
+            if ($isCorrect) {
+                $SCORE++;
+            }
 
             QuizAttempt::create([
                 'quiz_record_id' => $record->id,
                 'question_id' => $question->id,
                 'selected_option_id' => $selected?->id,
-
-                // is_correct will be remove (it has no use)
-                'is_correct' => $selected && $correct
-                    ? $selected->id === $correct->id
-                    : false,
+                'is_correct' => $isCorrect,
             ]);
         }
+
+        // update the record with the final score
+        $record->update(['score' => $SCORE]);
+
+        return response()->json([
+            'status' => 'success',
+            'checked_score' => $SCORE,
+            'elapsed_time' => $validated['elapsed_time'],
+            'quiz_id' => $validated['quiz_id'],
+            'record_id' => $record->id,
+        ]);
+    }
+
+    /*
+    |--------------------------------------------------------------------------
+    | SAVE QUIZ RESULT + ATTEMPTS (FIXED)
+    |--------------------------------------------------------------------------
+    */
+    public function MultipleChoiceResult($id)
+    {
+        $user = auth('sanctum')->user();
+
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated'
+            ], 401);
+        }
+
+        $record = QuizRecord::with(['attempts.question.options'])
+            ->where('id', $id)
+            ->where('user_id', $user->id) // prevents viewing other users' records
+            ->first();
+
+        if (!$record) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Result not found'
+            ], 404);
+        }
+
+        $questions = $record->attempts->map(function ($attempt) {
+            return [
+                'question_id' => $attempt->question_id,
+                'question_text' => $attempt->question->text ?? null,
+                'selected_option_id' => $attempt->selected_option_id,
+                'is_correct' => $attempt->is_correct,
+                'correct_option_id' => optional(
+                    $attempt->question->options->firstWhere('is_correct', true)
+                )->id,
+            ];
+        });
 
         return response()->json([
             'status' => 'success',
             'record_id' => $record->id,
             'score' => $record->score,
             'elapsed_time' => $record->elapsed_time,
-            'total_questions' => count($validated['answers']),
-            'message' => 'Quiz result saved successfully'
+            'quiz_id' => $record->quiz_id,
+            'total_questions' => $questions->count(),
         ]);
     }
 
     /*
     |--------------------------------------------------------------------------
-    | GET QUIZ RESULT (REVIEW PAGE)
+    | GET QUIZ RESULT (DETAIL PREVIEW)
     |--------------------------------------------------------------------------
     */
-    public function getQuizResult(int $id)
+    public function getRecordPreview(int $id)
     {
         $record = QuizRecord::with([
             'quiz',
