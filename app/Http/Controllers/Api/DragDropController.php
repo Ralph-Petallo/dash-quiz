@@ -10,11 +10,10 @@ use App\Models\DragDrop;
 
 class DragDropController extends Controller
 {
-    public function getDragDropQuiz()
+    public function getDragDropQuiz(int $id)
     {
         $question = Question::where('question_type', 'drag_drop')->get()->toArray();
-
-
+        
         if (!$question) {
             return response()->json([
                 'message' => 'Drag & Drop question not found'

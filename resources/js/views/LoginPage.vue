@@ -4,8 +4,8 @@
     <header class="auth-header">
       <div class="header-inner">
         <div class="brand">
-          <img src="/public/bolt.png" alt="Logo" width="32" height="32">
-          <span class="brand-name">Dash<span>Quiz</span></span>
+          <img src="/public/lightning.png" alt="Logo" width="32" height="32">
+          <span class="brand-name">CSS<span> Prep</span></span>
         </div>
       </div>
     </header>
@@ -17,17 +17,17 @@
           Learning is <span>better</span><br />
           when we do it <span>together</span>
         </h1>
-        <p>Practice, learn, and improve your skills with Dash Quiz.</p>
+        <p>Practice, learn, and improve your skills with CSS Prep.</p>
       </section>
 
       <section class="form-section">
-        <form class="card" @submit.prevent="handleLogin">
+        <form class="card" @submit.prevent="submitLogin">
           <h2>Welcome{{ visited ? ' Back!' : '!' }}</h2>
           <p class="subtitle">Sign in to your account</p>
 
           <div class="field">
             <label for="email">Email address</label>
-            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="..."
+            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="yourname@email.com"
               :class="{ error: errors.email }" autocomplete="off" />
             <small v-if="errors.email">{{ errors.email[0] }}</small>
           </div>
@@ -61,7 +61,7 @@
             </div>
             <router-link to="/register" class="btn-register"><i class="fas fa-user-plus"></i>
               &nbsp;Sign Up</router-link>
-            <a class="btn-google" @click="toGoogle">
+            <a class="btn-google" @click="authGoogle">
               <img class="google-logo" src="/public/google logo.png" alt="Google Logo" width="20" height="20">
               Sign up with Google
             </a>
@@ -72,32 +72,37 @@
     </main>
 
     <footer class="auth-footer">
-      © {{ new Date().getFullYear() }} Dash Quiz • SNSU Capstone Project
+      © {{ new Date().getFullYear() }} CSS Prep • SNSU Capstone Project
     </footer>
 
   </div>
 </template>
 
 <script setup>
-import { reactive, ref } from 'vue'
-import { useRouter } from 'vue-router'
-import { useUser } from '@/composables/useUser'
-import axios from 'axios'
+import { reactive, ref, onMounted } from 'vue'
+import { useHandleLogin } from '@/composables/useHandleLogin.js'
 
-const visited = ref(false) // check if user has visited the page before to prevent multiple login attempts on page reload
+const visited = ref(false)
 
-const router = useRouter()
-const { fetchUser } = useUser()
+const form = reactive({
+  email: '',
+  password: ''
+})
 
-const form = reactive({ email: '', password: '' })
-const loading = ref(false)
-const errors = ref({})
-const generalError = ref('')
+const {
+  loading,
+  errors,
+  generalError,
+  isLocked,
+  showPassword,
+  handleLogin,
+  togglePassword,
+  authGoogle
+} = useHandleLogin()
 
-const maxAttempts = 3
-const attempts = ref(0)
-const isLocked = ref(false)
-const showPassword = ref(false)
+const submitLogin = async () => {
+  await handleLogin(form.email, form.password)
+}
 
 function newVisitorCheck() {
   if (localStorage.getItem('visited')) {
@@ -106,315 +111,496 @@ function newVisitorCheck() {
     localStorage.setItem('visited', 'true')
   }
 }
-newVisitorCheck()
 
-function isValidEmail(email) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
-}
 
-function toGoogle() { window.location.href = "auth/google" }
 
-function timeout(seconds) {
-  setTimeout(() => {
-    attempts.value = 0
-    isLocked.value = false
-  }, seconds * 1000)
-}
+onMounted(() => {
+  newVisitorCheck()
 
-const togglePassword = () => {
-  showPassword.value = !showPassword.value
-}
-
-const handleLogin = async () => {
-  if (loading.value || isLocked.value) return
-
-  errors.value = {}
-  generalError.value = ''
-
-  // Validate BEFORE setting loading — so early returns don't leave button stuck
-  form.email = form.email.trim()
-
-  if (!form.email || !form.password) {
-    generalError.value = 'Please enter your email and password.'
-    return
-  }
-
-  if (!isValidEmail(form.email)) {
-    generalError.value = 'Please enter a valid email address.'
-    return
-  }
-
-  loading.value = true
-
-  try {
-    await axios.get('/sanctum/csrf-cookie')
-    const { data } = await axios.post('/api/login', form)
-
-    attempts.value = 0
-
-    // Force refresh user from session — don't trust localStorage for role
-    await fetchUser(true)
-
-    router.push(data.role === 'admin' ? '/admin' : '/user')
-  } catch (error) {
-    const response = error?.response
-    const status = response?.status
-    const responseData = response?.data
-    let shouldIncrementAttempts = false
-
-    if (status === 422 && responseData?.errors) {
-      errors.value = responseData.errors
-      generalError.value = responseData.message || 'Please fix the highlighted fields.'
-    } else if (status === 401) {
-      shouldIncrementAttempts = true
-      generalError.value = responseData?.message || 'Invalid email or password.'
-    } else if (status === 429) {
-      shouldIncrementAttempts = true
-      const retryAfter = parseInt(response?.headers?.['retry-after'], 10)
-      if (retryAfter > 0) {
-        generalError.value = `Too many login attempts. Please wait ${retryAfter} seconds and try again.`
-      } else {
-        generalError.value = responseData?.message || 'Too many login attempts. Please try again later.'
-      }
-    } else {
-      generalError.value = responseData?.message || 'Unable to login right now. Please try again later.'
+  // Clear quiz-related caches when opening login page
+  Object.keys(localStorage).forEach(key => {
+    if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
+      localStorage.removeItem(key)
     }
-
-    if (shouldIncrementAttempts) {
-      attempts.value++
-    }
-
-    if (attempts.value >= maxAttempts) {
-      isLocked.value = true
-      generalError.value = 'Too many failed attempts. Please wait 30 seconds.'
-      timeout(30) // 30 seconds
-    }
-  } finally {
-    loading.value = false
-  }
-}
-
-// Clear any quiz-related caches on mount to prevent stale data if user tries to login with different account on same device
-Object.keys(localStorage).forEach(key => {
-  if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
-    localStorage.removeItem(key)
-  }
+  })
 })
 </script>
 
 <style scoped>
+/* =========================================================
+   DASHQUIZ — FROSTED NOIR
+   #FFFFFF  White
+   #000000  Black
+   #A9A9A9  Gray
+   #D3D3D3  Light Gray
+   #696969  Dim Gray
+   ========================================================= */
+
 * {
   box-sizing: border-box;
 }
 
 .auth-wrapper {
+  --white: #ffffff;
+  --black: #000000;
+  --gray: #a9a9a9;
+  --light-gray: #d3d3d3;
+  --dark-gray: #696969;
+
+  --page-bg: #f7f7f7;
+  --soft-bg: #eeeeee;
+  --border: #d3d3d3;
+
+  --text-primary: #000000;
+  --text-secondary: #696969;
+  --text-muted: #a9a9a9;
+
   min-height: 100vh;
+
   display: flex;
   flex-direction: column;
-  background: #ffffff;
+
+  background: var(--page-bg);
+
+  color: var(--text-primary);
+
+  font-family:
+    "Inter",
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
+:root.dark-mode .auth-wrapper {
+  --white: #1a1a1a;
+  --black: #e5e5e5;
+  --gray: #555555;
+  --light-gray: #2a2a2a;
+  --dark-gray: #888888;
+
+  --page-bg: #0f0f0f;
+  --soft-bg: #2a2a2a;
+  --border: #2a2a2a;
+
+  --text-primary: #e5e5e5;
+  --text-secondary: #888888;
+  --text-muted: #666666;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .auth-header {
-  border-bottom: 1px solid #e5e7eb;
-  background: #ffffff;
+  width: 100%;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  border-bottom: 1px solid var(--border);
+
+  position: sticky;
+  top: 0;
+  z-index: 100;
+
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+:root.dark-mode .auth-header {
+  background: rgba(26, 26, 26, 0.94);
 }
 
 .header-inner {
+  width: 100%;
   max-width: 1100px;
+
   margin: 0 auto;
-  padding: 16px 20px;
+
+  padding: 15px 20px;
+
   display: flex;
-  justify-content: space-between;
   align-items: center;
+  justify-content: space-between;
 }
 
-.field .eyeButton {
-  position: absolute;
-  right: 15px;
-  top: 68.5%;
-  transform: translateY(-50%);
-  cursor: pointer;
-  color: #9ca3af;
-  z-index: 2;
-}
+
+/* =========================================================
+   BRAND
+   ========================================================= */
 
 .brand {
   display: flex;
   align-items: center;
+
   gap: 10px;
 }
 
+.brand img {
+  width: 32px;
+  height: 32px;
+
+  object-fit: contain;
+}
+
 .brand-name {
+  color: var(--black);
+
+  font-size: 1rem;
   font-weight: 800;
-  color: #111827;
+
+  letter-spacing: 0.04em;
 }
 
 .brand-name span {
-  color: #6366f1;
+  color: var(--dark-gray);
 }
 
-.portal {
-  font-size: 12px;
-  color: #6b7280;
-  background: #f3f4f6;
-  padding: 4px 10px;
-  border-radius: 20px;
-}
+
+/* =========================================================
+   MAIN LAYOUT
+   ========================================================= */
 
 .container {
   flex: 1;
+
+  width: 100%;
   max-width: 1100px;
-  margin: auto;
-  padding: 40px 20px;
+
+  margin: 0 auto;
+
+  padding: 3rem 20px;
+
   display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 60px;
+
+  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
+
+  gap: clamp(40px, 7vw, 90px);
+
   align-items: center;
 }
 
-.hero-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  background: #eef2ff;
-  color: #6366f1;
-  font-size: 12px;
-  font-weight: 600;
-  padding: 5px 12px;
-  border-radius: 20px;
-  margin-bottom: 16px;
+
+/* =========================================================
+   HERO
+   ========================================================= */
+
+.hero {
+  max-width: 540px;
 }
 
 .hero h1 {
-  font-size: 2.6rem;
+  margin: 0;
+
+  color: var(--black);
+
+  font-size: clamp(2.1rem, 4vw, 3.2rem);
+
   font-weight: 800;
-  color: #111827;
-  line-height: 1.2;
+
+  line-height: 1.12;
+
+  letter-spacing: -0.045em;
 }
 
-.hero span {
-  color: #6366f1;
+.hero h1 span {
+  color: var(--dark-gray);
 }
 
 .hero p {
-  margin-top: 14px;
-  color: #6b7280;
-  font-size: 15px;
-  line-height: 1.6;
+  max-width: 460px;
+
+  margin: 1.1rem 0 0;
+
+  color: var(--dark-gray);
+
+  font-size: 0.95rem;
+
+  line-height: 1.7;
 }
 
+
+/* =========================================================
+   FORM SECTION
+   ========================================================= */
+
 .form-section {
+  width: 100%;
+
   display: flex;
   align-items: center;
   justify-content: center;
 }
+
+
+/* =========================================================
+   LOGIN CARD
+   ========================================================= */
 
 .card {
   width: 100%;
   max-width: 380px;
-  padding: 32px;
-  border-radius: 20px;
-  border: 1px solid #e5e7eb;
-  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 20px 40px rgba(0, 0, 0, 0.06);
+
+  padding: 2rem;
+
+  background: var(--white);
+
+  border: 1px solid var(--border);
+
+  border-radius: 16px;
+
   display: flex;
   flex-direction: column;
-  gap: 16px;
+
+  gap: 15px;
+
+  box-shadow:
+    0 8px 30px rgba(0, 0, 0, 0.05);
+
+  animation: cardEnter 0.35s ease-out both;
 }
 
 .card h2 {
   margin: 0;
-  color: #111827;
-  font-size: 1.4rem;
+
+  color: var(--black);
+
+  font-size: 1.35rem;
+
+  font-weight: 800;
+
+  letter-spacing: -0.025em;
 }
 
 .subtitle {
-  color: #9ca3af;
-  font-size: 13px;
-  margin-top: -8px;
+  margin: -8px 0 3px;
+
+  color: var(--dark-gray);
+
+  font-size: 0.8rem;
 }
 
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+
 .field {
-  position:relative;
+  position: relative;
+
   display: flex;
   flex-direction: column;
-  gap: 5px;
+
+  gap: 6px;
 }
 
 .field label {
-  font-size: 12px;
-  font-weight: 600;
-  color: #374151;
+  color: var(--dark-gray);
+
+  font-size: 0.72rem;
+
+  font-weight: 700;
+
+  letter-spacing: 0.01em;
 }
 
 .field input {
   width: 100%;
-  padding: 11px 14px;
-  border-radius: 10px;
-  border: 1.5px solid #e5e7eb;
-  font-size: 14px;
-  color: #111827;
-  background: #fafafa;
-  transition: all 0.15s;
+
+  min-height: 44px;
+
+  padding: 11px 42px 11px 13px;
+
+  background: var(--page-bg);
+
+  border: 1px solid var(--border);
+
+  border-radius: 9px;
+
+  color: var(--black);
+
+  font-family: inherit;
+
+  font-size: 0.84rem;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.field input::placeholder {
+  color: var(--gray);
+}
+
+.field input:hover {
+  border-color: var(--gray);
 }
 
 .field input:focus {
   outline: none;
-  border-color: #6366f1;
-  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  background: #fff;
+
+  background: var(--white);
+
+  border-color: var(--dark-gray);
+
+  box-shadow:
+    0 0 0 3px rgba(105, 105, 105, 0.12);
 }
 
 .field input.error {
-  border-color: #ef4444;
+  border-color: #696969;
+  box-shadow:
+    0 0 0 3px rgba(105, 105, 105, 0.1);
 }
 
 .field small {
-  font-size: 11px;
-  color: #ef4444;
+  color: #696969;
+
+  font-size: 0.68rem;
+
+  line-height: 1.4;
 }
 
-.alert {
-  background: #fef2f2;
-  color: #b91c1c;
-  padding: 10px 14px;
-  border-radius: 10px;
-  font-size: 10px;
-}
 
-.btn {
-  padding: 12px;
-  border-radius: 10px;
-  border: none;
-  background: #4f46e5;
-  color: white;
-  font-weight: 600;
-  cursor: pointer;
+/* =========================================================
+   PASSWORD TOGGLE
+   ========================================================= */
+
+.field .eyeButton {
+  position: absolute;
+
+  right: 12px;
+  bottom: 11px;
+
+  width: 24px;
+  height: 24px;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 14px;
-  transition: all 0.15s;
-  letter-spacing: 0.01em;
+
+  color: var(--gray);
+
+  cursor: pointer;
+
+  z-index: 2;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
 }
 
-.btn:hover {
-  background: #4338ca;
+.field .eyeButton:hover {
+  color: var(--black);
+
+  transform: scale(1.05);
+}
+
+
+/* =========================================================
+   ALERT
+   ========================================================= */
+
+.alert {
+  padding: 10px 12px;
+
+  background: var(--soft-bg);
+
+  border: 1px solid var(--border);
+
+  border-radius: 8px;
+
+  color: var(--dark-gray);
+
+  font-size: 0.7rem;
+
+  line-height: 1.45;
+}
+
+
+/* =========================================================
+   LOGIN BUTTON
+   ========================================================= */
+
+.btn {
+  width: 100%;
+
+  min-height: 44px;
+
+  padding: 11px 14px;
+
+  border: 1px solid var(--black);
+
+  border-radius: 9px;
+
+  background: var(--black);
+
+  color: var(--white);
+
+  font-family: inherit;
+
+  font-size: 0.84rem;
+
+  font-weight: 700;
+
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  transition:
+    background 0.2s ease,
+    transform 0.15s ease,
+    box-shadow 0.2s ease;
+}
+
+:root.dark-mode .btn {
+  background: #e5e5e5;
+  color: #000000;
+  border-color: #e5e5e5;
+}
+
+.btn:hover:not(:disabled) {
+  background: var(--dark-gray);
+
+  box-shadow:
+    0 5px 15px rgba(0, 0, 0, 0.12);
+}
+
+:root.dark-mode .btn:hover:not(:disabled) {
+  background: #888888;
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active:not(:disabled) {
+  transform: scale(0.98);
 }
 
 .btn:disabled {
-  opacity: 0.6;
+  opacity: 0.55;
+
   cursor: not-allowed;
-  transform: none;
-  box-shadow: none;
 }
 
+
+/* =========================================================
+   LOADER
+   ========================================================= */
+
 .loader {
-  width: 18px;
-  height: 18px;
-  border: 3px solid rgba(255, 255, 255, 0.4);
-  border-top-color: white;
+  width: 17px;
+  height: 17px;
+
+  border: 2px solid rgba(255, 255, 255, 0.35);
+
+  border-top-color: var(--white);
+
   border-radius: 50%;
-  animation: spin 0.8s linear infinite;
+
+  animation: spin 0.75s linear infinite;
 }
 
 @keyframes spin {
@@ -423,109 +609,396 @@ Object.keys(localStorage).forEach(key => {
   }
 }
 
+
+/* =========================================================
+   FOOTER LINKS
+   ========================================================= */
+
 .footer-links {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+
+  gap: 11px;
 }
+
+
+/* =========================================================
+   FORGOT PASSWORD
+   ========================================================= */
 
 .forgot-link {
   display: flex;
-  text-decoration: none;
-  color: #6366f1;
+
   justify-content: center;
-  font-size: 13px;
+
+  font-size: 0.76rem;
 }
 
 .forgot-link a {
+  color: var(--dark-gray);
+
   text-decoration: none;
+
+  font-weight: 600;
+
+  transition: color 0.2s ease;
 }
 
 .forgot-link a:hover {
+  color: var(--black);
+
   text-decoration: underline;
 }
 
-.forgot-link a:visited {
-  text-decoration: none;
-}
 
-.forgot-link a:visited:hover {
-  text-decoration: underline;
-}
+/* =========================================================
+   DIVIDER
+   ========================================================= */
 
 .divider {
-  color: #d1d5db;
-  font-size: 12px;
   display: flex;
-  justify-content: center;
+
   align-items: center;
+
+  justify-content: center;
+
   gap: 10px;
+
+  color: var(--gray);
+
+  font-size: 0.68rem;
+
+  text-transform: uppercase;
+
+  letter-spacing: 0.05em;
 }
 
 .line {
-  width: 100%;
-  background-color: #e5e7eb;
+  flex: 1;
+
   height: 1px;
+
+  background: var(--border);
 }
 
+
+/* =========================================================
+   REGISTER
+   ========================================================= */
+
 .btn-register {
-  padding: 11px 13px;
+  width: 100%;
+
+  min-height: 43px;
+
+  padding: 10px 13px;
+
   display: flex;
-  justify-content: center;
+
   align-items: center;
+  justify-content: center;
+
+  gap: 5px;
+
+  background: var(--white);
+
+  color: var(--black);
+
+  border: 1px solid var(--dark-gray);
+
+  border-radius: 9px;
+
   text-decoration: none;
-  color: #fff;
-  border-radius: 10px;
-  background: #16a34a;
+
+  font-size: 0.82rem;
+
+  font-weight: 700;
+
   cursor: pointer;
-  font-weight: 600;
-  font-size: 14px;
-  transition: all 0.15s;
+
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease;
 }
 
 .btn-register:hover {
-  background: #15803d;
+  background: var(--black);
+
+  color: var(--white);
+
+  transform: translateY(-1px);
 }
 
+
+/* =========================================================
+   GOOGLE
+   ========================================================= */
+
 .btn-google {
-  padding: 11px;
+  width: 100%;
+
+  min-height: 43px;
+
+  padding: 10px 13px;
+
   display: flex;
-  justify-content: center;
+
   align-items: center;
+  justify-content: center;
+
+  gap: 7px;
+
+  background: var(--white);
+
+  color: var(--black);
+
+  border: 1px solid var(--border);
+
+  border-radius: 9px;
+
   text-decoration: none;
-  color: black;
-  background: #f3f4f6;
-  border-radius: 10px;
-  cursor: pointer;
+
+  font-size: 0.82rem;
+
   font-weight: 600;
-  font-size: 14px;
-  transition: all 0.15s;
+
+  cursor: pointer;
+
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    transform 0.15s ease;
+}
+
+.btn-google:hover {
+  background: var(--page-bg);
+
+  border-color: var(--gray);
+
+  transform: translateY(-1px);
 }
 
 .google-logo {
-  margin-right: 5px;
+  width: 18px;
+  height: 18px;
+
+  object-fit: contain;
+
+  margin: 0;
 }
+
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
 
 .auth-footer {
+  width: 100%;
+
+  padding: 13px 20px;
+
+  background: var(--black);
+
+  color: var(--gray);
+
   text-align: center;
-  padding: 12px;
-  background-color: #6366f1;
-  font-size: 12px;
-  color: rgba(255, 255, 255, 0.8);
+
+  font-size: 0.68rem;
+
+  line-height: 1.5;
 }
 
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
+
+.btn:focus-visible,
+.btn-register:focus-visible,
+.btn-google:focus-visible,
+.forgot-link a:focus-visible,
+.eyeButton:focus-visible {
+  outline: 2px solid var(--black);
+
+  outline-offset: 3px;
+}
+
+
+/* =========================================================
+   CARD ANIMATION
+   ========================================================= */
+
+@keyframes cardEnter {
+  from {
+    opacity: 0;
+
+    transform: translateY(12px);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0);
+  }
+}
+
+
+/* =========================================================
+   TABLET
+   ========================================================= */
+
+@media (max-width: 900px) {
+  .container {
+    grid-template-columns: 1fr 360px;
+
+    gap: 35px;
+
+    padding: 2.5rem 20px;
+  }
+
+  .hero h1 {
+    font-size: 2.3rem;
+  }
+}
+
+
+/* =========================================================
+   MOBILE
+   ========================================================= */
+
 @media (max-width: 768px) {
+  .header-inner {
+    padding: 13px 16px;
+  }
+
   .container {
     grid-template-columns: 1fr;
-    gap: 32px;
+
+    gap: 2rem;
+
+    padding: 2rem 16px 2.5rem;
   }
 
   .hero {
+    width: 100%;
+
+    max-width: 600px;
+
+    margin: 0 auto;
+
     text-align: center;
   }
 
   .hero h1 {
-    font-size: 2rem;
+    font-size: clamp(2rem, 8vw, 2.5rem);
+  }
+
+  .hero p {
+    margin-left: auto;
+    margin-right: auto;
+
+    font-size: 0.88rem;
+  }
+
+  .form-section {
+    width: 100%;
+  }
+
+  .card {
+    max-width: 430px;
+  }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+  .header-inner {
+    padding: 12px 14px;
+  }
+
+  .brand-name {
+    font-size: 0.9rem;
+  }
+
+  .brand img {
+    width: 29px;
+    height: 29px;
+  }
+
+  .container {
+    padding: 1.5rem 12px 2rem;
+
+    gap: 1.5rem;
+  }
+
+  .hero h1 {
+    font-size: 1.8rem;
+
+    letter-spacing: -0.035em;
+  }
+
+  .hero p {
+    margin-top: 0.8rem;
+
+    font-size: 0.8rem;
+  }
+
+  .card {
+    padding: 1.5rem;
+
+    border-radius: 14px;
+
+    gap: 14px;
+  }
+
+  .card h2 {
+    font-size: 1.2rem;
+  }
+
+  .subtitle {
+    font-size: 0.76rem;
+  }
+
+  .field input {
+    min-height: 43px;
+
+    font-size: 0.82rem;
+  }
+
+  .btn,
+  .btn-register,
+  .btn-google {
+    min-height: 42px;
+  }
+
+  .auth-footer {
+    padding: 11px 12px;
+
+    font-size: 0.62rem;
+  }
+}
+
+
+/* =========================================================
+   VERY SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 340px) {
+  .container {
+    padding-left: 8px;
+    padding-right: 8px;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .hero h1 {
+    font-size: 1.6rem;
   }
 }
 </style>

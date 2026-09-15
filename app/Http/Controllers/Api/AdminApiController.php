@@ -16,7 +16,7 @@ use Illuminate\Support\Facades\Cache;
 class AdminApiController extends Controller
 {
     ###############################################
-    # Logging API
+    # Logging APIx
     ###############################################
     public function logActivity(string $action, string $description)
     {

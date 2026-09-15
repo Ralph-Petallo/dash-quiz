@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <h1>Just practice site</h1>
+    <input id="email" type="text" placeholder="Email">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="handleLogin()">Login</button>
+
+    <script>
+        const database = [{
+            email: 'ralph@test.com',
+            password: 'ralph'
+        }, {
+            email: 'petallo@test.com',
+            password: 'petallo'
+        }]
+
+        for (let i = 0; i < database.length; i++) {
+            database[i].password += '_hashed'
+        }
+
+        // user inputs
+
+        //check if it's also hashed
+        function checkPassword(value, hash_pass) {
+            return `${value}_hashed` === hash_pass ? true : false
+        }
+
+        function checkEmail(target) {
+            return database.filter((user) => {
+                if (target === user.email) {
+                    return user
+                }
+            })
+        }
+
+        function isValidEmail(email) {
+            const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+            return regex.test(email)
+        }
+
+        function handleLogin() {
+            const input_email = document.querySelector('#email').value
+            const input_password = document.querySelector('#password').value // not hashed yet
+
+            if (input_email === '' || input_password === '') {
+                console.log('Invalid email or password')
+                return
+            }
+
+            // EMAIL FORMAT VALIDATION
+            if (!isValidEmail(input_email)) {
+                console.log('Invalid email format')
+                return
+            }
+
+            // check email if it's in the db
+            const account = checkEmail(input_email)[0]
+
+            // check if account exists FIRST to avoid error
+            if (!account) {
+                console.log('Invalid email or password')
+                return
+            }
+
+            const password = checkPassword(input_password, account.password)
+
+            if (password) {
+                console.log(account)
+                console.log('Welcome user!')
+            } else {
+                console.log('Invalid email or password')
+            }
+        }
+    </script>
+</body>
+
+</html>

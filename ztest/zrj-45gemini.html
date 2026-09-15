@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>RJ-45 Cable Termination & Tester</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f8;
+            --card-bg: #ffffff;
+            --border-color: #e2e8f0;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --accent-green: #22c55e;
+            --accent-green-dark: #16a34a;
+            --accent-green-bg: #f0fdf4;
+            --accent-green-border: #bbf7d0;
+            --accent-blue: #0284c7;
+            --gray-inactive: #e2e8f0;
+            --dark-hardware: #1e2228;
+            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            user-select: none;
+        }
+
+        body {
+            font-family: var(--font-family);
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            padding: 24px;
+            display: flex;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .app-container {
+            max-width: 1200px;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        /* Top Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: var(--card-bg);
+            padding: 16px 24px;
+            border-radius: 12px;
+            border: 1px solid var(--border-color);
+        }
+
+        .header-title h1 {
+            font-size: 1.35rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .header-title p {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 12px;
+        }
+
+        .btn-secondary {
+            background: #fff;
+            border: 1px solid var(--border-color);
+            padding: 8px 16px;
+            border-radius: 6px;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+        }
+
+        .btn-secondary:hover {
+            background: #f8fafc;
+            border-color: #cbd5e1;
+        }
+
+        /* Stepper Bar */
+        .stepper {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .step-tab {
+            background: #e2e8f0;
+            color: var(--text-muted);
+            padding: 12px 16px;
+            border-radius: 8px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .step-tab.active {
+            background: var(--accent-green);
+            color: #ffffff;
+            box-shadow: 0 4px 12px rgba(34, 197, 94, 0.25);
+        }
+
+        .step-tab.completed {
+            background: #dcfce7;
+            color: var(--accent-green-dark);
+        }
+
+        /* Workspace Columns */
+        .workspace {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+        }
+
+        .step-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            min-height: 480px;
+            position: relative;
+        }
+
+        .step-card.disabled {
+            opacity: 0.5;
+            pointer-events: none;
+        }
+
+        .instruction-box {
+            background: #f8fafc;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            font-size: 0.88rem;
+            text-align: center;
+            color: var(--text-main);
+        }
+
+        .stage-area {
+            flex: 1;
+            border: 1px dashed var(--border-color);
+            border-radius: 8px;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #fafafa;
+            overflow: hidden;
+        }
+
+        /* Step 1 Visuals */
+        .cut-target {
+            position: absolute;
+            top: 20%;
+            bottom: 20%;
+            left: 45%;
+            width: 2px;
+            border-left: 2px dashed #333;
+            z-index: 2;
+        }
+
+        .cutter-tool {
+            width: 90px;
+            height: 120px;
+            cursor: grab;
+            position: absolute;
+            z-index: 10;
+            transition: transform 0.1s;
+        }
+
+        .cutter-tool:active {
+            cursor: grabbing;
+        }
+
+        /* Step 2 Dropzone */
+        .drop-zone {
+            width: 140px;
+            height: 140px;
+            border: 2px dashed #cbd5e1;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            background: #ffffff;
+            transition: all 0.2s;
+        }
+
+        .drop-zone.hovered {
+            border-color: var(--accent-blue);
+            background: #f0f9ff;
+        }
+
+        .rj45-draggable {
+            width: 160px;
+            height: 90px;
+            background: rgba(240, 244, 248, 0.9);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Step 3 Tester */
+        .tester-device {
+            width: 200px;
+            background: var(--dark-hardware);
+            border-radius: 12px;
+            padding: 20px;
+            color: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 16px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+
+        .tester-title {
+            font-size: 0.75rem;
+            font-weight: 800;
+            letter-spacing: 1px;
+            color: #94a3b8;
+        }
+
+        .led-grid {
+            display: flex;
+            gap: 6px;
+        }
+
+        .led-item {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: #94a3b8;
+        }
+
+        .led-light {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            background: #334155;
+            transition: background 0.1s, box-shadow 0.1s;
+        }
+
+        .led-light.active {
+            background: #22c55e;
+            box-shadow: 0 0 10px #22c55e;
+        }
+
+        .tester-port {
+            width: 100px;
+            height: 40px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 4px;
+            position: relative;
+        }
+
+        .btn-test {
+            width: 100%;
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            font-size: 0.9rem;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(34, 197, 94, 0.3);
+            transition: all 0.2s;
+        }
+
+        .btn-test:hover {
+            background: var(--accent-green-dark);
+        }
+
+        /* Feedback Banner */
+        .status-banner {
+            background: var(--accent-green-bg);
+            border: 1px solid var(--accent-green-border);
+            border-radius: 8px;
+            padding: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+            font-size: 0.85rem;
+            color: #14532d;
+            font-weight: 600;
+        }
+
+        .status-banner button {
+            background: var(--accent-green);
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        /* Footer Reference Panels */
+        .bottom-panels {
+            display: grid;
+            grid-template-columns: 2fr 1fr;
+            gap: 20px;
+        }
+
+        .info-card {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 16px 20px;
+        }
+
+        .info-card h3 {
+            font-size: 0.85rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+        }
+
+        .procedure-steps {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+        }
+
+        .proc-step {
+            display: flex;
+            gap: 8px;
+            font-size: 0.8rem;
+        }
+
+        .proc-num {
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .proc-desc {
+            color: var(--text-muted);
+        }
+
+        /* Pinout Legend */
+        .pinout-chips {
+            display: flex;
+            gap: 4px;
+        }
+
+        .pin-chip {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .pin-num {
+            font-size: 0.7rem;
+            font-weight: 700;
+            color: var(--text-muted);
+        }
+
+        .pin-color {
+            width: 100%;
+            height: 24px;
+            border-radius: 4px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: white;
+            text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+        }
+
+        .c-ow {
+            background: linear-gradient(135deg, #ff9800 50%, #ffffff 50%);
+            color: #000;
+        }
+
+        .c-o {
+            background: #ff9800;
+        }
+
+        .c-gw {
+            background: linear-gradient(135deg, #4caf50 50%, #ffffff 50%);
+            color: #000;
+        }
+
+        .c-b {
+            background: #2196f3;
+        }
+
+        .c-bw {
+            background: linear-gradient(135deg, #2196f3 50%, #ffffff 50%);
+            color: #000;
+        }
+
+        .c-g {
+            background: #4caf50;
+        }
+
+        .c-brw {
+            background: linear-gradient(135deg, #795548 50%, #ffffff 50%);
+            color: #000;
+        }
+
+        .c-br {
+            background: #795548;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-container">
+
+        <!-- Header -->
+        <header>
+            <div class="header-title">
+                <h1>RJ-45 Cable Termination & Tester</h1>
+                <p>Virtual Hands-On Lab Activity</p>
+            </div>
+            <div class="header-actions">
+                <button class="btn-secondary"
+                    onclick="alert('Instructions:\n1. Drag the cutter over the dashed line to prep the cable.\n2. Drag the prepared RJ-45 connector onto the exposed wires.\n3. Click TEST to evaluate pinout continuity.')">📖
+                    Instructions</button>
+                <button class="btn-secondary" onclick="resetActivity()">🔄 Reset Activity</button>
+            </div>
+        </header>
+
+        <!-- Procedure Stepper -->
+        <nav class="stepper">
+            <div class="step-tab active" id="tab-1">✂️ 1 CUT THE CABLE</div>
+            <div class="step-tab" id="tab-2">🔌 2 CONNECT THE RJ-45</div>
+            <div class="step-tab" id="tab-3">🧪 3 TEST THE CABLE</div>
+        </nav>
+
+        <!-- Main Activity Workspace -->
+        <main class="workspace">
+
+            <!-- STEP 1: Cut Cable -->
+            <section class="step-card" id="step-1-card">
+                <div class="instruction-box">
+                    Use the cutter to cut the network cable.<br>Drag or click the cutter onto the marked cut area.
+                </div>
+
+                <div class="stage-area" id="stage-1">
+                    <div class="cut-target" id="cut-line"></div>
+
+                    <!-- Cable Visual -->
+                    <svg width="220" height="80" viewBox="0 0 220 80">
+                        <!-- Blue Outer Jacket -->
+                        <rect id="cable-jacket" x="0" y="25" width="100" height="30" rx="4" fill="#0284c7" />
+                        <!-- Exposed Wires -->
+                        <g id="exposed-wires">
+                            <line x1="100" y1="28" x2="180" y2="28" stroke="#ff9800" stroke-width="2.5" />
+                            <line x1="100" y1="32" x2="180" y2="32" stroke="#ff9800" stroke-dasharray="3 2"
+                                stroke-width="2.5" />
+                            <line x1="100" y1="36" x2="180" y2="36" stroke="#4caf50" stroke-dasharray="3 2"
+                                stroke-width="2.5" />
+                            <line x1="100" y1="40" x2="180" y2="40" stroke="#2196f3" stroke-width="2.5" />
+                            <line x1="100" y1="44" x2="180" y2="44" stroke="#2196f3" stroke-dasharray="3 2"
+                                stroke-width="2.5" />
+                            <line x1="100" y1="48" x2="180" y2="48" stroke="#4caf50" stroke-width="2.5" />
+                            <line x1="100" y1="52" x2="180" y2="52" stroke="#795548" stroke-dasharray="3 2"
+                                stroke-width="2.5" />
+                            <line x1="100" y1="56" x2="180" y2="56" stroke="#795548" stroke-width="2.5" />
+                        </g>
+                    </svg>
+
+                    <!-- Cutter Tool Visual -->
+                    <div class="cutter-tool" id="cutter" style="bottom: 20px; right: 20px;">
+                        <svg width="80" height="100" viewBox="0 0 80 100">
+                            <path d="M20 90 Q 25 50 35 40 L 45 40 Q 55 50 60 90" fill="none" stroke="#eab308"
+                                stroke-width="12" stroke-linecap="round" />
+                            <path d="M30 40 L 40 10 L 50 40 Z" fill="#64748b" />
+                            <circle cx="40" cy="40" r="4" fill="#334155" />
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="status-banner" id="status-1" style="display:none;">
+                    <span>✅ Good! Cable is cut.</span>
+                    <button onclick="goToStep(2)">Next: Connect →</button>
+                </div>
+            </section>
+
+            <!-- STEP 2: Connect RJ-45 -->
+            <section class="step-card disabled" id="step-2-card">
+                <div class="instruction-box">
+                    Drag the prepared RJ-45 connector to the correct drop zone (clip facing down).
+                </div>
+
+                <div class="stage-area" id="stage-2">
+                    <div class="drop-zone" id="drop-zone-2">
+                        <span>Drop RJ-45 Here<br>(Clip Down)</span>
+                    </div>
+                </div>
+
+                <div class="rj45-container" style="display:flex; justify-content:center;">
+                    <div class="rj45-draggable" id="rj45-item" draggable="true">
+                        <!-- RJ45 SVG Graphic -->
+                        <svg width="120" height="60" viewBox="0 0 120 60">
+                            <rect x="10" y="10" width="90" height="40" rx="4" fill="rgba(203, 213, 225, 0.5)"
+                                stroke="#94a3b8" stroke-width="2" />
+                            <rect x="70" y="15" width="25" height="30" fill="#e2e8f0" stroke="#cbd5e1" />
+                            <!-- Gold Pins -->
+                            <g fill="#d97706">
+                                <rect x="75" y="18" width="12" height="2" />
+                                <rect x="75" y="22" width="12" height="2" />
+                                <rect x="75" y="26" width="12" height="2" />
+                                <rect x="75" y="30" width="12" height="2" />
+                                <rect x="75" y="34" width="12" height="2" />
+                                <rect x="75" y="38" width="12" height="2" />
+                            </g>
+                        </svg>
+                    </div>
+                </div>
+
+                <div class="status-banner" id="status-2" style="display:none;">
+                    <span>✅ RJ-45 Connected!</span>
+                    <button onclick="goToStep(3)">Next: Test →</button>
+                </div>
+            </section>
+
+            <!-- STEP 3: Test Cable -->
+            <section class="step-card disabled" id="step-3-card">
+                <div class="instruction-box">
+                    Insert the RJ-45 connector into the tester, then click the TEST button.
+                </div>
+
+                <div class="stage-area" id="stage-3">
+                    <div class="tester-device">
+                        <div class="tester-title">RJ-45 CABLE TESTER</div>
+                        <div class="led-grid">
+                            <div class="led-item">1<div class="led-light" id="led-1"></div>
+                            </div>
+                            <div class="led-item">2<div class="led-light" id="led-2"></div>
+                            </div>
+                            <div class="led-item">3<div class="led-light" id="led-3"></div>
+                            </div>
+                            <div class="led-item">4<div class="led-light" id="led-4"></div>
+                            </div>
+                            <div class="led-item">5<div class="led-light" id="led-5"></div>
+                            </div>
+                            <div class="led-item">6<div class="led-light" id="led-6"></div>
+                            </div>
+                            <div class="led-item">7<div class="led-light" id="led-7"></div>
+                            </div>
+                            <div class="led-item">8<div class="led-light" id="led-8"></div>
+                            </div>
+                        </div>
+                        <div class="tester-port" id="tester-port"></div>
+                        <button class="btn-test" onclick="runCableTest()">TEST</button>
+                    </div>
+                </div>
+
+                <div class="status-banner" id="status-3"
+                    style="display:none; flex-direction:column; align-items:flex-start;">
+                    <div>✅ <strong>Test Result: PASS</strong></div>
+                    <div style="font-weight:400; font-size:0.8rem;">All 8 wires are connected correctly (T568B
+                        Straight-Through).</div>
+                </div>
+            </section>
+
+        </main>
+
+        <!-- Bottom Info Panels -->
+        <footer class="bottom-panels">
+
+            <!-- Procedure Steps Breakdown -->
+            <div class="info-card">
+                <h3>💡 Procedure</h3>
+                <div class="procedure-steps">
+                    <div class="proc-step">
+                        <span class="proc-num">1. Cut Cable</span>
+                        <span class="proc-desc">Trim the jacket to expose internal pairs.</span>
+                    </div>
+                    <div class="proc-step">
+                        <span class="proc-num">2. Connect RJ-45</span>
+                        <span class="proc-desc">Align clip down and seat pinout sequence.</span>
+                    </div>
+                    <div class="proc-step">
+                        <span class="proc-num">3. Test Cable</span>
+                        <span class="proc-desc">Verify 1-8 continuity sequence.</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Wiring Standard Legend -->
+            <div class="info-card">
+                <h3>Wiring Standard (T568B)</h3>
+                <div class="pinout-chips">
+                    <div class="pin-chip"><span class="pin-num">1</span>
+                        <div class="pin-color c-ow">O/W</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">2</span>
+                        <div class="pin-color c-o">O</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">3</span>
+                        <div class="pin-color c-gw">G/W</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">4</span>
+                        <div class="pin-color c-b">B</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">5</span>
+                        <div class="pin-color c-bw">B/W</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">6</span>
+                        <div class="pin-color c-g">G</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">7</span>
+                        <div class="pin-color c-brw">Br/W</div>
+                    </div>
+                    <div class="pin-chip"><span class="pin-num">8</span>
+                        <div class="pin-color c-br">Br</div>
+                    </div>
+                </div>
+            </div>
+
+        </footer>
+
+    </div>
+
+    <script>
+        let currentStep = 1;
+        let isCut = false;
+        let isConnected = false;
+
+        // Step Navigation Logic
+        function goToStep(stepNum) {
+            currentStep = stepNum;
+
+            // Update Tabs
+            for (let i = 1; i <= 3; i++) {
+                const tab = document.getElementById(`tab-${i}`);
+                const card = document.getElementById(`step-${i}-card`);
+
+                tab.classList.remove('active', 'completed');
+                if (i < currentStep) {
+                    tab.classList.add('completed');
+                } else if (i === currentStep) {
+                    tab.classList.add('active');
+                }
+
+                if (i <= currentStep) {
+                    card.classList.remove('disabled');
+                }
+            }
+        }
+
+        // Step 1: Cutter Interaction (Click or Drag simulation)
+        const cutter = document.getElementById('cutter');
+        cutter.addEventListener('click', performCut);
+
+        function performCut() {
+            if (isCut) return;
+            isCut = true;
+
+            // Animate Cutter
+            cutter.style.transform = 'translate(-80px, -40px) rotate(-20deg)';
+            setTimeout(() => {
+                cutter.style.transform = 'translate(-80px, -40px) rotate(0deg)';
+                document.getElementById('status-1').style.display = 'flex';
+                document.getElementById('tab-1').classList.add('completed');
+            }, 300);
+        }
+
+        // Step 2: Drag and Drop RJ45
+        const rj45Item = document.getElementById('rj45-item');
+        const dropZone = document.getElementById('drop-zone-2');
+
+        rj45Item.addEventListener('dragstart', (e) => {
+            e.dataTransfer.setData('text/plain', 'rj45');
+        });
+
+        dropZone.addEventListener('dragover', (e) => {
+            e.preventDefault();
+            dropZone.classList.add('hovered');
+        });
+
+        dropZone.addEventListener('dragleave', () => {
+            dropZone.classList.remove('hovered');
+        });
+
+        dropZone.addEventListener('drop', (e) => {
+            e.preventDefault();
+            dropZone.classList.remove('hovered');
+            if (isCut && !isConnected) {
+                isConnected = true;
+                dropZone.innerHTML = '🔌 Connector Attached';
+                dropZone.style.borderColor = 'var(--accent-green)';
+                dropZone.style.background = 'var(--accent-green-bg)';
+                rj45Item.style.visibility = 'hidden';
+                document.getElementById('status-2').style.display = 'flex';
+                document.getElementById('tab-2').classList.add('completed');
+            }
+        });
+
+        // Step 3: Run Sequential Cable LED Test
+        function runCableTest() {
+            if (!isConnected) return;
+
+            // Clear LEDs
+            for (let i = 1; i <= 8; i++) {
+                document.getElementById(`led-${i}`).classList.remove('active');
+            }
+
+            // Sequence LEDs 1 -> 8
+            let currentLed = 1;
+            const interval = setInterval(() => {
+                if (currentLed > 1) {
+                    document.getElementById(`led-${currentLed - 1}`).classList.remove('active');
+                }
+                document.getElementById(`led-${currentLed}`).classList.add('active');
+
+                currentLed++;
+                if (currentLed > 8) {
+                    clearInterval(interval);
+                    setTimeout(() => {
+                        // Keep all green on pass
+                        for (let i = 1; i <= 8; i++) {
+                            document.getElementById(`led-${i}`).classList.add('active');
+                        }
+                        document.getElementById('status-3').style.display = 'flex';
+                        document.getElementById('tab-3').classList.add('completed');
+                    }, 200);
+                }
+            }, 150);
+        }
+
+        // Reset Application State
+        function resetActivity() {
+            isCut = false;
+            isConnected = false;
+            currentStep = 1;
+
+            cutter.style.transform = 'none';
+            document.getElementById('status-1').style.display = 'none';
+            document.getElementById('status-2').style.display = 'none';
+            document.getElementById('status-3').style.display = 'none';
+
+            dropZone.innerHTML = '<span>Drop RJ-45 Here<br>(Clip Down)</span>';
+            dropZone.style.borderColor = '#cbd5e1';
+            dropZone.style.background = '#ffffff';
+            rj45Item.style.visibility = 'visible';
+
+            for (let i = 1; i <= 8; i++) {
+                document.getElementById(`led-${i}`).classList.remove('active');
+            }
+
+            goToStep(1);
+            document.getElementById('step-2-card').classList.add('disabled');
+            document.getElementById('step-3-card').classList.add('disabled');
+        }
+    </script>
+
+</body>
+
+</html>

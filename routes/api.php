@@ -5,6 +5,7 @@ use App\Http\Controllers\Api\QuizApiController;
 use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\ProfileApiController;
+use App\Http\Controllers\Api\ImageIdentificationAssessmentController;
 use App\Http\Controllers\Api\DragDropController;
 use App\Http\Controllers\Api\PasswordResetController;
 
@@ -18,14 +19,14 @@ Route::middleware('throttle:auth')->group(function () {
     Route::get('/test', fn() => response()->json(['ok' => true]));
 
     Route::controller(AdminApiController::class)->group(function () {
-        Route::post('/login',        'login');
+        Route::post('/login', 'login');
         Route::post('/mobile/login', 'mobileLogin');
-        Route::post('/register',     'register');
+        Route::post('/register', 'register');
     });
 
     Route::controller(PasswordResetController::class)->group(function () {
         Route::post('/forgot-password', 'sendResetLink');
-        Route::post('/reset-password',  'resetPassword');
+        Route::post('/reset-password', 'resetPassword');
     });
 });
 
@@ -38,22 +39,26 @@ Route::middleware('throttle:auth')->group(function () {
 Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(function () {
 
     Route::controller(UserApiController::class)->group(function () {
-        Route::get('/me',                    'profile');
+        Route::get('/me', 'profile');
         Route::get('/dashboard/leaderboard', 'leaderboard');
-        Route::get('/quizzes',               'quizzes');
-        Route::get('/records',               'records');
-        Route::get('/stats',                 'stats');
+        Route::get('/quizzes', 'quizzes');
+        Route::get('/records', 'records');
+        Route::get('/stats', 'stats');
     });
 
     Route::controller(QuizApiController::class)->group(function () {
         // Static before wildcard
-        Route::get('/quiz/progress',    'getQuizProgress');
-        Route::get('/quiz/result/{id}', 'getQuizResult');
-        Route::get('/quiz/{quiz_id}',   'getQuiz');
+        Route::get('/quiz/progress', 'getQuizProgress');
+        Route::get('/quiz/result/{id}', 'getRecordPreview');
+        Route::get('/quiz/{quiz_id}', 'getQuiz');
 
         Route::post('/quiz/answer', 'submitAnswer');
-        Route::post('/quiz/result', 'submitQuizResult')
+        Route::get('/quiz/multi-result/{id}', 'MultipleChoiceResult')
             ->middleware('throttle:quiz_submit');
+    });
+
+    Route::controller(ImageIdentificationAssessmentController::class)->group(function () {
+        Route::get('/assessments/image-identification/{id}', 'show');
     });
 
     Route::controller(DragDropController::class)->group(function () {
@@ -63,13 +68,13 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
 
     Route::controller(AdminApiController::class)->group(function () {
         Route::post('/heartbeat', 'heartbeat');
-        Route::post('/logout',    'logout');
+        Route::post('/logout', 'logout');
     });
 
     Route::controller(ProfileApiController::class)->group(function () {
-        Route::get('/profile',          'getProfile');
-        Route::put('/profile/update',   'updateProfile');
-        Route::post('/profile/photo',   'uploadPhoto');
+        Route::get('/profile', 'getProfile');
+        Route::put('/profile/update', 'updateProfile');
+        Route::post('/profile/photo', 'uploadPhoto');
         Route::delete('/profile/delete', 'selfDeleteAccount');
     });
 });
@@ -84,7 +89,7 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
 
     Route::controller(AdminApiController::class)->group(function () {
         Route::get('/admin/dashboard', 'dashboard');
-        Route::get('/admin/records',   'studentRecords');
+        Route::get('/admin/records', 'studentRecords');
 
         Route::prefix('/admin/user')->group(function () {
             Route::get('/', 'allUsers');
@@ -95,11 +100,11 @@ Route::middleware(['auth:sanctum', 'role:admin', 'throttle:api'])->group(functio
 
     Route::controller(QuizApiController::class)->group(function () {
         Route::prefix('/admin/quizzes')->group(function () {
-            Route::get('/',          'allQuizzes');
+            Route::get('/', 'allQuizzes');
             Route::get('/{id}/edit', 'editQuiz');
-            Route::post('/create',   'createQuiz');
-            Route::put('/{id}',      'updateQuiz');
-            Route::delete('/{id}',   'deleteQuiz');
+            Route::post('/create', 'createQuiz');
+            Route::put('/{id}', 'updateQuiz');
+            Route::delete('/{id}', 'deleteQuiz');
         });
     });
 

@@ -30,7 +30,7 @@
             </button>
           </div>
 
-          <button @click="goToAddQuiz" class="add-btn">
+          <button @click="router.push('/admin/quizzes/create')" class="add-btn">
             <i class="fas fa-plus"></i> New Quiz
           </button>
         </div>
@@ -70,7 +70,8 @@
             </div>
 
             <div class="action-btn">
-              <button class="icon-btn edit" title="Edit quiz" aria-label="Edit quiz" @click="goToEditQuiz(quiz.id)">
+              <button class="icon-btn edit" title="Edit quiz" aria-label="Edit quiz"
+                @click="router.push(`/admin/quizzes/${quiz.id}/edit`)">
                 <i class="fas fa-pen"></i>
               </button>
 
@@ -88,7 +89,7 @@
       <div v-else class="empty-state">
         <i class="fas fa-inbox"></i>
         <p>No quizzes yet.</p>
-        <button @click="goToAddQuiz" class="add-btn subtle">
+        <button @click="router.push('/admin/quizzes/create')" class="add-btn subtle">
           <i class="fas fa-plus"></i> Create your first quiz
         </button>
       </div>
@@ -120,7 +121,8 @@ const sortOptions = [
 const fetchQuizzes = async (retry = 0) => {
   try {
     const { data } = await axios.get('/api/admin/quizzes')
-    quizzes.value = data.data || data
+
+    quizzes.value = data.result || data
   } catch (e) {
     if (e.response?.status === 429 && retry < 3) {
       setTimeout(() => fetchQuizzes(retry + 1), 1000)
@@ -161,8 +163,6 @@ const difficultyClass = (difficulty) => {
   return 'level-default'
 }
 
-const goToAddQuiz = () => router.push('/admin/quizzes/create')
-const goToEditQuiz = (id) => router.push(`/admin/quizzes/${id}/edit`)
 
 const deleteQuiz = async (id, title) => {
   if (!confirm(`Are you sure you want to delete "${title}"?`)) return
@@ -181,19 +181,16 @@ onMounted(fetchQuizzes)
 </script>
 
 <style scoped>
-:root {
-  
-}
 
 * {
   box-sizing: border-box;
   --ink: #16162a;
-    --muted: #71718a;
-    --line: #eceef4;
-    --surface: #ffffff;
-    --bg: #f6f7fb;
-    --accent: #5b5bd6;
-    --accent-soft: #eeeeff;
+  --muted: #71718a;
+  --line: #eceef4;
+  --surface: #ffffff;
+  --bg: #f6f7fb;
+  --accent: #5b5bd6;
+  --accent-soft: #eeeeff;
 }
 
 
@@ -375,7 +372,7 @@ onMounted(fetchQuizzes)
 
 .action-btn {
   display: flex;
-  width:70px;
+  width: 70px;
   justify-content: space-between;
 }
 
@@ -414,6 +411,7 @@ onMounted(fetchQuizzes)
   margin: 0;
   display: -webkit-box;
   -webkit-line-clamp: 2;
+  line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
   flex: 1;

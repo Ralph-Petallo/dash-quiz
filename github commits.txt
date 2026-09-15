@@ -1,0 +1,10 @@
+feat:     new feature
+fix:      bug fix
+refactor: code restructuring without changing behavior
+chore:    maintenance / tooling
+docs:     documentation
+style:    formatting, CSS, whitespace, etc.
+test:     adding or changing tests
+perf:     performance improvement
+build:    build system / dependencies
+ci:       CI/CD changes

@@ -1,0 +1,152 @@
+/* =========================================================
+   DARK MODE COLOR SCHEME
+   Applies when .dark-mode class is added to document root
+========================================================= */
+
+:root.dark-mode {
+    /* Base Colors */
+    --white: #1a1a1a;
+    --black: #ffffff;
+
+    /* Grayscale - Inverted for dark mode */
+    --gray-100: #0f0f0f;
+    --gray-200: #1a1a1a;
+    --gray-300: #2a2a2a;
+    --gray-400: #555555;
+    --gray-500: #888888;
+
+    /* Text Colors */
+    --text: #e5e5e5;
+    --text-secondary: #a0a0a0;
+    --text-muted: #6a6a6a;
+
+    /* Background Colors */
+    --background: #0f0f0f;
+    --surface: #1a1a1a;
+    --surface-variant: #2a2a2a;
+
+    /* Error States */
+    --error: #ff6b6b;
+    --error-bg: #2a0a0a;
+    --error-border: #5a2a2a;
+
+    /* Border Colors */
+    --border: #2a2a2a;
+    --border-light: #1a1a1a;
+
+    /* Additional UI Colors */
+    --overlay: rgba(0, 0, 0, 0.7);
+    --shadow: rgba(0, 0, 0, 0.3);
+}
+
+/* Light gray variants for dark mode */
+:root.dark-mode {
+    --gray-light: #2a2a2a;
+    --gray-dark: #888888;
+}
+
+/* Smooth transitions when switching modes */
+* {
+    transition: background-color 0.3s ease, color 0.3s ease, border-color 0.3s ease,
+        box-shadow 0.3s ease, background 0.3s ease;
+}
+
+/* Preserve instant transitions for certain elements to avoid flashing */
+.no-transition {
+    transition: none !important;
+}
+
+/* =========================================================
+   DARK MODE - HARDCODED HEX COLOR OVERRIDES
+   For components using hardcoded colors instead of CSS vars
+========================================================= */
+
+/* Backgrounds */
+:root.dark-mode {
+    color-scheme: dark;
+}
+
+body.dark-mode,
+html.dark-mode {
+    background: #0f0f0f;
+    color: #e5e5e5;
+}
+
+/* Common element overrides */
+:root.dark-mode input,
+:root.dark-mode textarea,
+:root.dark-mode select {
+    background: #1a1a1a;
+    color: #e5e5e5;
+    border-color: #2a2a2a;
+}
+
+:root.dark-mode input::placeholder,
+:root.dark-mode textarea::placeholder {
+    color: #666666;
+}
+
+:root.dark-mode button:not([class*="danger"]):not([class*="error"]) {
+    color: #e5e5e5;
+}
+
+:root.dark-mode a {
+    color: #88ccff;
+}
+
+:root.dark-mode a:visited {
+    color: #bb88ff;
+}
+
+/* Modal overlays */
+:root.dark-mode .overlay {
+    background: rgba(0, 0, 0, 0.7) !important;
+}
+
+/* Cards and containers */
+:root.dark-mode .card,
+:root.dark-mode .sheet,
+:root.dark-mode .modal,
+:root.dark-mode [class*="container"] {
+    background: #1a1a1a;
+    color: #e5e5e5;
+}
+
+/* Borders */
+:root.dark-mode [class*="border"] {
+    border-color: #2a2a2a !important;
+}
+
+/* Shadows - darker in dark mode */
+:root.dark-mode [class*="shadow"] {
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
+}
+
+/* Scrollbars */
+:root.dark-mode ::-webkit-scrollbar {
+    background: #1a1a1a;
+}
+
+:root.dark-mode ::-webkit-scrollbar-track {
+    background: #0f0f0f;
+}
+
+:root.dark-mode ::-webkit-scrollbar-thumb {
+    background: #444444;
+    border-radius: 999px;
+}
+
+:root.dark-mode ::-webkit-scrollbar-thumb:hover {
+    background: #555555;
+}
+
+/* Focus states */
+:root.dark-mode *:focus {
+    outline-color: #88ccff;
+}
+
+/* Selection highlight */
+:root.dark-mode ::selection {
+    background: #2a5f99;
+    color: #e5e5e5;
+}

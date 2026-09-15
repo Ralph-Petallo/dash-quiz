@@ -1,0 +1,1290 @@
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Virtual RJ-45 Cable Tester</title>
+
+<style>
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #f4f4f4;
+    --panel: #ffffff;
+    --border: #d3d3d3;
+    --dark: #111111;
+    --gray: #696969;
+    --light-gray: #e9e9e9;
+    --success: #2e7d32;
+    --danger: #c62828;
+    --warning: #ef6c00;
+}
+
+body {
+    font-family: Arial, sans-serif;
+    background: var(--bg);
+    color: var(--dark);
+    min-height: 100vh;
+}
+
+/* =========================
+   HEADER
+========================= */
+
+.header {
+    background: #111;
+    color: white;
+    padding: 18px 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header h1 {
+    font-size: 20px;
+}
+
+.header span {
+    color: #aaa;
+    font-size: 13px;
+}
+
+/* =========================
+   MAIN
+========================= */
+
+.container {
+    max-width: 1250px;
+    margin: auto;
+    padding: 25px;
+}
+
+.instructions {
+    background: white;
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+    margin-bottom: 20px;
+}
+
+.instructions h2 {
+    margin-bottom: 8px;
+}
+
+.instructions p {
+    color: var(--gray);
+    line-height: 1.6;
+}
+
+/* =========================
+   TYPE SELECTOR
+========================= */
+
+.type-selector {
+    display: flex;
+    gap: 12px;
+    margin-top: 15px;
+}
+
+.type-btn {
+    border: 1px solid #aaa;
+    background: white;
+    padding: 12px 22px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: .2s;
+}
+
+.type-btn:hover {
+    background: #eee;
+}
+
+.type-btn.active {
+    background: #111;
+    color: white;
+}
+
+/* =========================
+   WORKSPACE
+========================= */
+
+.workspace {
+    display: grid;
+    grid-template-columns: 1fr 1.3fr 1fr;
+    gap: 20px;
+    align-items: start;
+}
+
+.panel {
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 20px;
+}
+
+.panel h3 {
+    margin-bottom: 15px;
+}
+
+.panel-description {
+    color: var(--gray);
+    font-size: 13px;
+    margin-bottom: 15px;
+}
+
+/* =========================
+   WIRES
+========================= */
+
+.wire-list {
+    display: flex;
+    flex-direction: column;
+    gap: 9px;
+}
+
+.wire {
+    height: 45px;
+    border-radius: 7px;
+    border: 2px solid #aaa;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px;
+    cursor: grab;
+    user-select: none;
+    background: white;
+}
+
+.wire:active {
+    cursor: grabbing;
+}
+
+.wire-number {
+    width: 25px;
+    text-align: center;
+    font-weight: bold;
+    color: #555;
+}
+
+.wire-color {
+    height: 28px;
+    flex: 1;
+    border-radius: 4px;
+    border: 1px solid #999;
+}
+
+/* Actual T568 wire colors */
+
+.orange-white {
+    background:
+        repeating-linear-gradient(
+            0deg,
+            white 0px,
+            white 5px,
+            #f28c28 5px,
+            #f28c28 9px
+        );
+}
+
+.orange {
+    background: #f28c28;
+}
+
+.green-white {
+    background:
+        repeating-linear-gradient(
+            0deg,
+            white 0px,
+            white 5px,
+            #4caf50 5px,
+            #4caf50 9px
+        );
+}
+
+.green {
+    background: #4caf50;
+}
+
+.blue-white {
+    background:
+        repeating-linear-gradient(
+            0deg,
+            white 0px,
+            white 5px,
+            #2196f3 5px,
+            #2196f3 9px
+        );
+}
+
+.blue {
+    background: #2196f3;
+}
+
+.brown-white {
+    background:
+        repeating-linear-gradient(
+            0deg,
+            white 0px,
+            white 5px,
+            #795548 5px,
+            #795548 9px
+        );
+}
+
+.brown {
+    background: #795548;
+}
+
+/* =========================
+   RJ45 PLUG
+========================= */
+
+.rj45-area {
+    text-align: center;
+}
+
+.rj45-plug {
+    position: relative;
+    width: 270px;
+    height: 190px;
+    margin: 35px auto 20px;
+    background: #e7e7e7;
+    border: 3px solid #999;
+    border-radius: 12px 12px 5px 5px;
+    padding: 35px 15px 15px;
+}
+
+/* Plug clip */
+
+.clip {
+    position: absolute;
+    top: -30px;
+    left: 70px;
+    width: 130px;
+    height: 45px;
+    background: #ddd;
+    border: 3px solid #999;
+    border-bottom: none;
+    border-radius: 10px 10px 0 0;
+}
+
+/* Gold contacts */
+
+.pins {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 5px;
+    height: 115px;
+}
+
+.pin {
+    border-radius: 3px;
+    border: 1px solid #777;
+    background: #c7a643;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    padding-bottom: 7px;
+    font-size: 11px;
+    font-weight: bold;
+}
+
+.pin.filled {
+    border: 3px solid #111;
+}
+
+.drop-message {
+    margin-top: 10px;
+    color: #696969;
+    font-size: 13px;
+}
+
+.rj45-plug.drag-over {
+    border-color: #111;
+    box-shadow: 0 0 0 4px rgba(0,0,0,.1);
+}
+
+/* =========================
+   TESTER
+========================= */
+
+.tester {
+    background: #222;
+    color: white;
+    border-radius: 14px;
+    padding: 20px;
+    margin-top: 30px;
+}
+
+.tester h3 {
+    color: white;
+}
+
+.tester-port {
+    height: 60px;
+    background: #090909;
+    border: 3px solid #555;
+    border-radius: 7px;
+    margin: 20px 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #777;
+    font-size: 13px;
+}
+
+.leds {
+    display: grid;
+    grid-template-columns: repeat(8, 1fr);
+    gap: 7px;
+}
+
+.led {
+    text-align: center;
+    font-size: 10px;
+}
+
+.led-light {
+    width: 20px;
+    height: 20px;
+    margin: auto auto 5px;
+    border-radius: 50%;
+    background: #333;
+    border: 1px solid #555;
+}
+
+.led-light.on {
+    background: #39ff14;
+    box-shadow: 0 0 12px #39ff14;
+}
+
+.led-light.error {
+    background: #ff2b2b;
+    box-shadow: 0 0 12px #ff2b2b;
+}
+
+/* =========================
+   CONTROLS
+========================= */
+
+.controls {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+button {
+    font-family: inherit;
+}
+
+.action-btn {
+    border: none;
+    padding: 12px 18px;
+    border-radius: 7px;
+    cursor: pointer;
+    font-weight: bold;
+    background: #111;
+    color: white;
+}
+
+.action-btn:hover {
+    opacity: .85;
+}
+
+.action-btn.secondary {
+    background: #ddd;
+    color: #111;
+}
+
+.action-btn.success {
+    background: #2e7d32;
+}
+
+.action-btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* =========================
+   RESULT
+========================= */
+
+.result {
+    margin-top: 20px;
+    padding: 15px;
+    border-radius: 8px;
+    background: #eee;
+    display: none;
+}
+
+.result.show {
+    display: block;
+}
+
+.result.success {
+    background: #e8f5e9;
+    border: 1px solid #81c784;
+    color: #2e7d32;
+}
+
+.result.error {
+    background: #ffebee;
+    border: 1px solid #ef9a9a;
+    color: #c62828;
+}
+
+.progress {
+    margin-top: 15px;
+}
+
+.progress-bar {
+    height: 8px;
+    background: #ddd;
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    background: #111;
+    transition: .3s;
+}
+
+/* =========================
+   MOBILE
+========================= */
+
+@media (max-width: 900px) {
+
+    .workspace {
+        grid-template-columns: 1fr;
+    }
+
+    .rj45-plug {
+        width: 250px;
+    }
+}
+
+@media (max-width: 500px) {
+
+    .container {
+        padding: 12px;
+    }
+
+    .header {
+        padding: 15px;
+    }
+
+    .header h1 {
+        font-size: 16px;
+    }
+
+    .type-selector {
+        flex-direction: column;
+    }
+
+    .type-btn {
+        width: 100%;
+    }
+}
+</style>
+</head>
+
+<body>
+
+<header class="header">
+    <h1>RJ-45 Cable Assembly & Tester</h1>
+    <span>Virtual Hands-On Activity</span>
+</header>
+
+<main class="container">
+
+    <section class="instructions">
+
+        <h2>Build the Ethernet Cable</h2>
+
+        <p>
+            Select the wiring standard, then drag each colored wire into
+            the correct position of the RJ-45 connector. After completing
+            the wiring, insert the connector into the cable tester and
+            perform the test.
+        </p>
+
+        <div class="type-selector">
+
+            <button
+                class="type-btn active"
+                data-type="B"
+                onclick="selectType('B')">
+                T568B
+            </button>
+
+            <button
+                class="type-btn"
+                data-type="A"
+                onclick="selectType('A')">
+                T568A
+            </button>
+
+        </div>
+
+    </section>
+
+
+    <section class="workspace">
+
+        <!-- WIRES -->
+
+        <div class="panel">
+
+            <h3>1. Wire Materials</h3>
+
+            <p class="panel-description">
+                Drag a wire and place it into the correct RJ-45 pin.
+            </p>
+
+            <div class="wire-list" id="wireList"></div>
+
+        </div>
+
+
+        <!-- RJ45 -->
+
+        <div class="panel rj45-area">
+
+            <h3>2. RJ-45 Connector</h3>
+
+            <p class="panel-description">
+                Arrange wires from Pin 1 → Pin 8.
+            </p>
+
+            <div
+                class="rj45-plug"
+                id="rj45Plug"
+                ondragover="allowDrop(event)"
+                ondrop="dropWire(event)"
+            >
+
+                <div class="clip"></div>
+
+                <div class="pins" id="pins"></div>
+
+            </div>
+
+            <div class="drop-message">
+                Drag wires into the connector
+            </div>
+
+            <div class="progress">
+
+                <small>
+                    Wiring Progress:
+                    <strong id="progressText">0 / 8</strong>
+                </small>
+
+                <div class="progress-bar">
+                    <div
+                        class="progress-fill"
+                        id="progressFill">
+                    </div>
+                </div>
+
+            </div>
+
+            <div class="controls">
+
+                <button
+                    class="action-btn success"
+                    id="insertBtn"
+                    onclick="insertCable()"
+                    disabled>
+                    Insert into Tester
+                </button>
+
+                <button
+                    class="action-btn secondary"
+                    onclick="resetActivity()">
+                    Reset
+                </button>
+
+            </div>
+
+            <div
+                class="result"
+                id="wiringResult">
+            </div>
+
+        </div>
+
+
+        <!-- TESTER -->
+
+        <div class="panel">
+
+            <h3>3. Cable Tester</h3>
+
+            <p class="panel-description">
+                Test the finished RJ-45 cable.
+            </p>
+
+            <div class="tester">
+
+                <h3>LAN Cable Tester</h3>
+
+                <div
+                    class="tester-port"
+                    id="testerPort">
+                    RJ-45 TEST PORT
+                </div>
+
+                <div class="leds" id="leds"></div>
+
+                <div class="controls">
+
+                    <button
+                        class="action-btn"
+                        id="testBtn"
+                        onclick="runTest()"
+                        disabled>
+                        Run Test
+                    </button>
+
+                </div>
+
+            </div>
+
+            <div
+                class="result"
+                id="testResult">
+            </div>
+
+        </div>
+
+    </section>
+
+</main>
+
+
+<script>
+
+/* ==========================================
+   T568A / T568B WIRING STANDARDS
+========================================== */
+
+const wiring = {
+
+    A: [
+        "green-white",
+        "green",
+        "orange-white",
+        "blue",
+        "blue-white",
+        "orange",
+        "brown-white",
+        "brown"
+    ],
+
+    B: [
+        "orange-white",
+        "orange",
+        "green-white",
+        "blue",
+        "blue-white",
+        "green",
+        "brown-white",
+        "brown"
+    ]
+
+};
+
+
+/* ==========================================
+   FRIENDLY WIRE NAMES
+========================================== */
+
+const wireNames = {
+
+    "orange-white": "Orange / White",
+    "orange": "Orange",
+    "green-white": "Green / White",
+    "green": "Green",
+    "blue-white": "Blue / White",
+    "blue": "Blue",
+    "brown-white": "Brown / White",
+    "brown": "Brown"
+
+};
+
+
+/* ==========================================
+   STATE
+========================================== */
+
+let selectedType = "B";
+
+let placedWires = [
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null,
+    null
+];
+
+let cableInserted = false;
+
+
+/* ==========================================
+   INITIALIZE
+========================================== */
+
+function initialize() {
+
+    renderWires();
+    renderPins();
+    renderLEDs();
+
+}
+
+initialize();
+
+
+/* ==========================================
+   SELECT T568A / T568B
+========================================== */
+
+function selectType(type) {
+
+    selectedType = type;
+
+    document.querySelectorAll(".type-btn")
+        .forEach(btn => {
+
+            btn.classList.toggle(
+                "active",
+                btn.dataset.type === type
+            );
+
+        });
+
+    resetActivity();
+
+}
+
+
+/* ==========================================
+   RENDER WIRES
+========================================== */
+
+function renderWires() {
+
+    const container =
+        document.getElementById("wireList");
+
+    container.innerHTML = "";
+
+    wiring[selectedType].forEach((color, index) => {
+
+        const wire = document.createElement("div");
+
+        wire.className = "wire";
+
+        wire.draggable = true;
+
+        wire.dataset.color = color;
+
+        wire.innerHTML = `
+            <div class="wire-number">
+                ${index + 1}
+            </div>
+
+            <div class="wire-color ${color}">
+            </div>
+        `;
+
+        wire.addEventListener(
+            "dragstart",
+            dragStart
+        );
+
+        container.appendChild(wire);
+
+    });
+
+}
+
+
+/* ==========================================
+   RENDER RJ45 PINS
+========================================== */
+
+function renderPins() {
+
+    const container =
+        document.getElementById("pins");
+
+    container.innerHTML = "";
+
+    for (let i = 0; i < 8; i++) {
+
+        const pin =
+            document.createElement("div");
+
+        pin.className = "pin";
+
+        pin.dataset.pin = i;
+
+        if (placedWires[i]) {
+
+            pin.classList.add("filled");
+
+            pin.innerHTML = `
+                <div
+                    class="wire-color ${placedWires[i]}"
+                    style="width:100%;height:100%;">
+                </div>
+            `;
+
+        } else {
+
+            pin.textContent = i + 1;
+
+        }
+
+        container.appendChild(pin);
+
+    }
+
+    updateProgress();
+
+}
+
+
+/* ==========================================
+   DRAG WIRE
+========================================== */
+
+function dragStart(event) {
+
+    event.dataTransfer.setData(
+        "wire",
+        event.currentTarget.dataset.color
+    );
+
+}
+
+
+/* ==========================================
+   ALLOW DROP
+========================================== */
+
+function allowDrop(event) {
+
+    event.preventDefault();
+
+    document
+        .getElementById("rj45Plug")
+        .classList.add("drag-over");
+
+}
+
+
+/* ==========================================
+   DROP WIRE
+========================================== */
+
+function dropWire(event) {
+
+    event.preventDefault();
+
+    const plug =
+        document.getElementById("rj45Plug");
+
+    plug.classList.remove("drag-over");
+
+    const color =
+        event.dataTransfer.getData("wire");
+
+    if (!color) return;
+
+    /*
+        Determine which pin was targeted.
+
+        The cursor position is compared
+        against the connector pin positions.
+    */
+
+    const pins =
+        document.querySelectorAll(".pin");
+
+    let closestPin = null;
+
+    let smallestDistance = Infinity;
+
+    pins.forEach(pin => {
+
+        const rect =
+            pin.getBoundingClientRect();
+
+        const center =
+            rect.left + rect.width / 2;
+
+        const distance =
+            Math.abs(event.clientX - center);
+
+        if (distance < smallestDistance) {
+
+            smallestDistance = distance;
+
+            closestPin = pin;
+
+        }
+
+    });
+
+    if (!closestPin) return;
+
+    const pinIndex =
+        Number(closestPin.dataset.pin);
+
+    placedWires[pinIndex] = color;
+
+    renderPins();
+
+    checkWiringComplete();
+
+}
+
+
+/* ==========================================
+   CHECK WIRING
+========================================== */
+
+function checkWiringComplete() {
+
+    const complete =
+        placedWires.every(
+            wire => wire !== null
+        );
+
+    const button =
+        document.getElementById("insertBtn");
+
+    button.disabled = !complete;
+
+    if (complete) {
+
+        const result =
+            document.getElementById(
+                "wiringResult"
+            );
+
+        result.className =
+            "result show";
+
+        result.innerHTML =
+            "All 8 positions are filled. Check the wire sequence before inserting the cable.";
+
+    }
+
+}
+
+
+/* ==========================================
+   UPDATE PROGRESS
+========================================== */
+
+function updateProgress() {
+
+    const count =
+        placedWires.filter(
+            wire => wire !== null
+        ).length;
+
+    document.getElementById(
+        "progressText"
+    ).textContent = `${count} / 8`;
+
+    document.getElementById(
+        "progressFill"
+    ).style.width =
+        `${count / 8 * 100}%`;
+
+}
+
+
+/* ==========================================
+   INSERT CABLE
+========================================== */
+
+function insertCable() {
+
+    const expected =
+        wiring[selectedType];
+
+    const correct =
+        placedWires.every(
+            (wire, index) =>
+                wire === expected[index]
+        );
+
+    const result =
+        document.getElementById(
+            "wiringResult"
+        );
+
+    if (!correct) {
+
+        result.className =
+            "result show error";
+
+        result.innerHTML = `
+            <strong>Incorrect wiring.</strong><br>
+            The wire arrangement does not match
+            the T568${selectedType} standard.
+            Review Pins 1–8 and try again.
+        `;
+
+        return;
+
+    }
+
+    cableInserted = true;
+
+    result.className =
+        "result show success";
+
+    result.innerHTML = `
+        <strong>Correct wiring!</strong><br>
+        T568${selectedType} sequence is correct.
+        The RJ-45 connector is ready for testing.
+    `;
+
+    document.getElementById(
+        "testerPort"
+    ).textContent =
+        "RJ-45 CABLE INSERTED ✓";
+
+    document.getElementById(
+        "testBtn"
+    ).disabled = false;
+
+}
+
+
+/* ==========================================
+   RENDER LEDS
+========================================== */
+
+function renderLEDs() {
+
+    const container =
+        document.getElementById("leds");
+
+    container.innerHTML = "";
+
+    for (let i = 1; i <= 8; i++) {
+
+        const led =
+            document.createElement("div");
+
+        led.className = "led";
+
+        led.innerHTML = `
+            <div
+                class="led-light"
+                id="led-${i}">
+            </div>
+
+            ${i}
+        `;
+
+        container.appendChild(led);
+
+    }
+
+}
+
+
+/* ==========================================
+   RUN TEST
+========================================== */
+
+function runTest() {
+
+    if (!cableInserted) return;
+
+    const expected =
+        wiring[selectedType];
+
+    const correct =
+        placedWires.every(
+            (wire, index) =>
+                wire === expected[index]
+        );
+
+    const result =
+        document.getElementById(
+            "testResult"
+        );
+
+    /*
+        Reset LEDs
+    */
+
+    document
+        .querySelectorAll(".led-light")
+        .forEach(led => {
+
+            led.classList.remove(
+                "on",
+                "error"
+            );
+
+        });
+
+    let current = 0;
+
+    /*
+        Simulate tester scanning
+        Pins 1 → 8
+    */
+
+    const interval =
+        setInterval(() => {
+
+            current++;
+
+            const led =
+                document.getElementById(
+                    `led-${current}`
+                );
+
+            if (correct) {
+
+                led.classList.add("on");
+
+            } else {
+
+                /*
+                    For incorrect cable,
+                    determine whether this pin
+                    contains the expected wire.
+                */
+
+                if (
+                    placedWires[current - 1]
+                    === expected[current - 1]
+                ) {
+
+                    led.classList.add("on");
+
+                } else {
+
+                    led.classList.add("error");
+
+                }
+
+            }
+
+            if (current === 8) {
+
+                clearInterval(interval);
+
+                setTimeout(() => {
+
+                    if (correct) {
+
+                        result.className =
+                            "result show success";
+
+                        result.innerHTML = `
+                            <strong>TEST PASSED ✓</strong><br>
+                            Pins 1–8 are correctly connected.
+                            The T568${selectedType} cable is ready.
+                        `;
+
+                    } else {
+
+                        result.className =
+                            "result show error";
+
+                        result.innerHTML = `
+                            <strong>TEST FAILED ✕</strong><br>
+                            One or more wires are incorrectly arranged.
+                            Return to the connector and correct the sequence.
+                        `;
+
+                    }
+
+                }, 300);
+
+            }
+
+        }, 450);
+
+}
+
+
+/* ==========================================
+   RESET
+========================================== */
+
+function resetActivity() {
+
+    placedWires = [
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null,
+        null
+    ];
+
+    cableInserted = false;
+
+    renderWires();
+    renderPins();
+    renderLEDs();
+
+    document.getElementById(
+        "insertBtn"
+    ).disabled = true;
+
+    document.getElementById(
+        "testBtn"
+    ).disabled = true;
+
+    document.getElementById(
+        "testerPort"
+    ).textContent =
+        "RJ-45 TEST PORT";
+
+    document.getElementById(
+        "wiringResult"
+    ).className =
+        "result";
+
+    document.getElementById(
+        "testResult"
+    ).className =
+        "result";
+
+}
+
+</script>
+
+</body>
+</html>

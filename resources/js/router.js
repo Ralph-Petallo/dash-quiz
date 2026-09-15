@@ -11,7 +11,7 @@ import DragDrop from './views/UserPages/QuizzesPages/DragDrop.vue'
 import ImageIdentification from './views/UserPages/QuizzesPages/ImageIdentification.vue'
 import RJ45HandsOn from './views/UserPages/QuizzesPages/RJ45HandsOn.vue'
 import ChooseAssessmentPage from './views/UserPages/QuizzesPages/ChooseAssessmentPage.vue'
-import Result from './views/UserPages/ResultPage.vue'
+import ResultPage from './views/UserPages/ResultPage.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 
 // Public Pages
@@ -51,7 +51,7 @@ const routes = [
         ]
     },
 
-    { path: '/quiz-result/:id', component: Result, meta: { requiresAuth: true, requiresStudent: true } },
+    { path: '/quiz-result/:id', component: ResultPage, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/quiz/:quiz_id', name: 'quiz-start', component: MultipleChoice, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/dragdrop/:id', component: DragDrop, meta: { requiresAuth: true, requiresStudent: true } },
     { path: '/image-identification/:id', component: ImageIdentification, meta: { requiresAuth: true, requiresStudent: true } },

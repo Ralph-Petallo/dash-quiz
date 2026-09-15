@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS Computer System Services Quiz</title>
+    <style>
+        :root {
+            --bg-color: #f4f6f9;
+            --card-bg: #ffffff;
+            --text-main: #2d3748;
+            --text-muted: #718096;
+            --primary: #3182ce;
+            --primary-hover: #2b6cb0;
+            --success: #38a169;
+            --error: #e53e3e;
+            --border: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .quiz-container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 700px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+            padding: 30px;
+            border: 1px solid var(--border);
+        }
+
+        /* Header & Progress */
+        .quiz-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .quiz-title {
+            font-size: 1.2rem;
+            font-weight: 700;
+            color: var(--primary);
+        }
+
+        .timer {
+            font-weight: 600;
+            background: #edf2f7;
+            padding: 6px 12px;
+            border-radius: 20px;
+            font-size: 0.9rem;
+        }
+
+        .progress-container {
+            width: 100%;
+            background: var(--border);
+            height: 8px;
+            border-radius: 4px;
+            margin-bottom: 30px;
+            overflow: hidden;
+        }
+
+        .progress-bar {
+            height: 100%;
+            width: 5%; /* Updates dynamically */
+            background: var(--primary);
+            transition: width 0.3s ease;
+        }
+
+        /* Question & Options */
+        .question-section {
+            margin-bottom: 30px;
+        }
+
+        .question-number {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 8px;
+        }
+
+        .question-text {
+            font-size: 1.3rem;
+            font-weight: 600;
+            line-height: 1.5;
+        }
+
+        .options-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .option-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--border);
+            padding: 16px 20px;
+            border-radius: 8px;
+            text-align: left;
+            font-size: 1rem;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            align-items: center;
+        }
+
+        .option-btn:hover {
+            border-color: var(--primary);
+            background-color: #f7fafc;
+        }
+
+        .option-btn.selected {
+            border-color: var(--primary);
+            background-color: #ebf8ff;
+            color: var(--primary);
+            font-weight: 600;
+        }
+
+        /* Footer Navigation */
+        .quiz-footer {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            border-top: 1px solid var(--border);
+            padding-top: 20px;
+        }
+
+        .btn {
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            border: none;
+        }
+
+        .btn-secondary {
+            background: transparent;
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover {
+            background: #edf2f7;
+            color: var(--text-main);
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--primary-hover);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+    </style>
+</head>
+<body>
+
+<div class="quiz-container">
+    <div class="quiz-header">
+        <div class="quiz-title">CSS NC II Practice Exam</div>
+        <div class="timer" id="timer">Time: 30:00</div>
+    </div>
+
+    <div class="progress-container">
+        <div class="progress-bar" id="progressBar"></div>
+    </div>
+
+    <div class="question-section">
+        <div class="question-number" id="qNumber">Question 1 of 20</div>
+        <div class="question-text" id="qText">Which of the following is the most important tool used to prevent Electrostatic Discharge (ESD) when handling sensitive computer hardware?</div>
+    </div>
+
+    <div class="options-list" id="optionsContainer">
+        <button class="option-btn" onclick="selectOption(this)">A) Rubber gloves</button>
+        <button class="option-btn" onclick="selectOption(this)">B) Anti-static wrist strap</button>
+        <button class="option-btn" onclick="selectOption(this)">C) Philips screwdriver</button>
+        <button class="option-btn" onclick="selectOption(this)">D) Magnetic mat</button>
+    </div>
+
+    <div class="quiz-footer">
+        <button class="btn btn-secondary" id="prevBtn" disabled>Previous</button>
+        <button class="btn btn-primary" id="nextBtn">Next Question</button>
+    </div>
+</div>
+
+<script>
+    // Sample functionality for selecting options
+    function selectOption(element) {
+        // Clear previous selection
+        const buttons = document.querySelectorAll('.option-btn');
+        buttons.forEach(btn => btn.classList.remove('selected'));
+        
+        // Add selected class to clicked button
+        element.classList.add('selected');
+    }
+
+    // Quick structural logic demo
+    let currentQuestion = 1;
+    const totalQuestions = 20;
+    const progressBar = document.getElementById('progressBar');
+    const qNumber = document.getElementById('qNumber');
+    const nextBtn = document.getElementById('nextBtn');
+
+    nextBtn.addEventListener('click', () => {
+        if (currentQuestion < totalQuestions) {
+            currentQuestion++;
+            qNumber.innerText = `Question ${currentQuestion} of ${totalQuestions}`;
+            progressBar.style.width = `${(currentQuestion / totalQuestions) * 100}%`;
+            document.getElementById('prevBtn').disabled = false;
+            
+            // Clear selections for demo purposes
+            const buttons = document.querySelectorAll('.option-btn');
+            buttons.forEach(btn => btn.classList.remove('selected'));
+            
+            if(currentQuestion === totalQuestions) {
+                nextBtn.innerText = "Submit Quiz";
+                nextBtn.style.background = "#38a169";
+            }
+        } else {
+            alert("Quiz Completed! Processing your CSS certification score...");
+        }
+    });
+</script>
+
+</body>
+</html>

@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSS NC II - Assembly & Disassembly Assessment Portal</title>
+    <style>
+        :root {
+            --primary-color: #003366;
+            --secondary-color: #ffcc00;
+            --light-bg: #f4f7f6;
+            --card-bg: #ffffff;
+            --text-color: #333333;
+            --success-color: #28a745;
+            --danger-color: #dc3545;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--light-bg);
+            color: var(--text-color);
+            margin: 0;
+            padding: 0;
+            line-height: 1.6;
+        }
+
+        header {
+            background-color: var(--primary-color);
+            color: white;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 5px solid var(--secondary-color);
+        }
+
+        header h1 {
+            margin: 0;
+            font-size: 1.8rem;
+        }
+
+        header p {
+            margin: 5px 0 0;
+            color: var(--secondary-color);
+            font-weight: bold;
+        }
+
+        .container {
+            max-width: 900px;
+            margin: 20px auto;
+            padding: 20px;
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 25px;
+            margin-bottom: 20px;
+            border-radius: 8px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            color: var(--primary-color);
+            border-bottom: 2px solid var(--secondary-color);
+            padding-bottom: 8px;
+            margin-top: 0;
+        }
+
+        .instruction-box {
+            background: #eef2f7;
+            border-left: 4px solid var(--primary-color);
+            padding: 12px 15px;
+            margin-bottom: 15px;
+            font-size: 0.95rem;
+        }
+
+        /* Checklist Styles */
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid #eee;
+        }
+
+        .checklist-item:last-child {
+            border-bottom: none;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            transform: scale(1.3);
+            margin-right: 15px;
+            cursor: pointer;
+        }
+
+        .checklist-item label {
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        /* Quiz Styles */
+        .quiz-question {
+            margin-bottom: 20px;
+            font-weight: 600;
+        }
+
+        .quiz-options label {
+            display: block;
+            background: #f9f9f9;
+            padding: 10px 15px;
+            margin: 8px 0;
+            border-radius: 5px;
+            border: 1px solid #ddd;
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .quiz-options label:hover {
+            background: #f1f1f1;
+            border-color: var(--primary-color);
+        }
+
+        .quiz-options input {
+            margin-right: 10px;
+        }
+
+        button.btn {
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            padding: 12px 20px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 5px;
+            cursor: pointer;
+            transition: background 0.3s;
+            display: block;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        button.btn:hover {
+            background-color: #002244;
+        }
+
+        #result-display {
+            margin-top: 15px;
+            font-weight: bold;
+            text-align: center;
+            font-size: 1.1rem;
+        }
+
+        footer {
+            text-align: center;
+            padding: 15px;
+            color: #666;
+            font-size: 0.85rem;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header>
+        <h1>Computer Systems Servicing (CSS) NC II</h1>
+        <p>Core Competency: Install and Configure Computer Systems (Hardware Assembly & Disassembly)</p>
+    </header>
+
+    <div class="container">
+
+        <!-- Section 1: Overview -->
+        <div class="card">
+            <h2>About This Assessment Module</h2>
+            <p>Welcome to the institutional self-assessment web tool for TESDA CSS NC II candidates. This platform
+                evaluates your foundational knowledge and readiness regarding hardware procedures, standard tools
+                handling, and sequence logic for system unit assembly and disassembly.</p>
+        </div>
+
+        <!-- Section 2: Disassembly Checklist -->
+        <div class="card">
+            <h2>Part 1: Systematic Disassembly Procedure Checklist</h2>
+            <div class="instruction-box">
+                Check off each step in the correct chronological sequence required during a practical laboratory
+                assessment.
+            </div>
+
+            <div class="checklist-item">
+                <input type="checkbox" id="d1"><label for="d1">1. Plan and prepare work following OHS (Occupational
+                    Health and Safety) policies.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d2"><label for="d2">2. Power off the computer system and unplug the power
+                    cord from the wall outlet.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d3"><label for="d3">3. Disconnect all external peripherals (Monitor,
+                    keyboard, mouse, LAN cables).</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d4"><label for="d4">4. Remove the computer system unit casing side panels
+                    (screws properly stored in a container).</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d5"><label for="d5">5. Discharge static electricity using an anti-static
+                    wrist strap or touching grounded metal.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d6"><label for="d6">6. Unplug internal power connectors (ATX 24-pin and
+                    4/8-pin 12V) and data cables (SATA).</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="d7"><label for="d7">7. Remove internal components (RAM modules, expansion
+                    cards, Power Supply Unit, and Motherboard).</label>
+            </div>
+        </div>
+
+        <!-- Section 3: Assembly Checklist -->
+        <div class="card">
+            <h2>Part 2: Systematic Assembly Procedure Checklist</h2>
+            <div class="instruction-box">
+                Ensure proper placement and secure mounting of hardware parts.
+            </div>
+
+            <div class="checklist-item">
+                <input type="checkbox" id="a1"><label for="a1">1. Prepare empty chassis and mount the Power Supply Unit
+                    (PSU) securely.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="a2"><label for="a2">2. Install the processor (CPU) and CPU heatsink/fan onto
+                    the motherboard <em>outside</em> the chassis first (Board preparation).</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="a3"><label for="a3">3. Install RAM memory modules into the correct DIMM
+                    slots.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="a4"><label for="a4">4. Attach the I/O shield plate to the chassis back panel
+                    and mount the motherboard carefully.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="a5"><label for="a5">5. Mount storage drives (HDD/SSD) into their respective
+                    drive bays.</label>
+            </div>
+            <div class="checklist-item">
+                <input type="checkbox" id="a6"><label for="a6">6. Connect all internal power leads, front panel
+                    connectors (Power switch, reset, LEDs), and data lines neatly.</label>
+            </div>
+        </div>
+
+        <!-- Section 4: Interactive Quiz -->
+        <div class="card">
+            <h2>Part 3: CSS NC II Knowledge Quiz</h2>
+            <form id="quizForm">
+                <!-- Question 1 -->
+                <div class="quiz-question">1. What safety device must a technician wear to prevent electrostatic
+                    discharge (ESD) damage to sensitive microchips?</div>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q1" value="wrong"> Rubber boots</label>
+                    <label><input type="radio" name="q1" value="correct"> Anti-static wrist strap</label>
+                    <label><input type="radio" name="q1" value="wrong"> Safety glasses</label>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+                <!-- Question 2 -->
+                <div class="quiz-question">2. When installing a CPU onto an LGA motherboard socket, what key detail must
+                    you look closely at to avoid bending pins?</div>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q2" value="wrong"> The manufacturing brand label</label>
+                    <label><input type="radio" name="q2" value="wrong"> The weight of the processor</label>
+                    <label><input type="radio" name="q2" value="correct"> The gold triangle/pin 1 alignment
+                        marker</label>
+                </div>
+
+                <hr style="border:0; border-top:1px solid #eee; margin:20px 0;">
+
+                <!-- Question 3 -->
+                <div class="quiz-question">3. Which tool is primarily required to open standard computer casing and
+                    secure motherboard standoffs?</div>
+                <div class="quiz-options">
+                    <label><input type="radio" name="q3" value="correct"> Philips head screwdriver</label>
+                    <label><input type="radio" name="q3" value="wrong"> Long-nose pliers</label>
+                    <label><input type="radio" name="q3" value="wrong"> Wire stripper</label>
+                </div>
+
+                <button type="button" class="btn" onclick="gradeQuiz()">Submit Assessment</button>
+            </form>
+            <div id="result-display"></div>
+        </div>
+
+    </div>
+
+    <footer>
+        <p>&copy; 2026 CSS NC II Training Resource Web Page. Designed for Technical-Vocational Competency Practice.</p>
+    </footer>
+
+    <script>
+        function gradeQuiz() {
+            const q1 = document.querySelector('input[name="q1"]:checked');
+            const q2 = document.querySelector('input[name="q2"]:checked');
+            const q3 = document.querySelector('input[name="q3"]:checked');
+            const resultDisplay = document.getElementById('result-display');
+
+            if (!q1 || !q2 || !q3) {
+                resultDisplay.style.color = "var(--danger-color)";
+                resultDisplay.textContent = "Please answer all questions before submitting.";
+                return;
+            }
+
+            let score = 0;
+            if (q1.value === "correct") score++;
+            if (q2.value === "correct") score++;
+            if (q3.value === "correct") score++;
+
+            if (score === 3) {
+                resultDisplay.style.color = "var(--success-color)";
+                resultDisplay.textContent = `Score: 3/3 - Competent! Excellent grasp of CSS hardware fundamentals.`;
+            } else {
+                resultDisplay.style.color = "var(--danger-color)";
+                resultDisplay.textContent = `Score: ${score}/3 - Needs Improvement. Review your CBLM (Competency-Based Learning Materials) on hardware assembly.`;
+            }
+        }
+    </script>
+</body>
+
+</html>

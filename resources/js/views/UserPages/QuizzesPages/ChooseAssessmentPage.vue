@@ -29,362 +29,127 @@
         </div>
 
         <div class="assessment-grid">
-
-            <!-- Multiple Choice -->
-            <div class="assessment-card active">
+            <div v-for="assessment in assessments" :key="assessment.type" class="assessment-card"
+                :class="{ active: assessment.available, locked: !assessment.available }">
 
                 <div class="card-top">
                     <div class="type-icon">
-                        <i class="fas fa-list-check"></i>
+                        <i :class="assessment.icon"></i>
                     </div>
 
-                    <span class="available">
-                        Available
+                    <span :class="assessment.available ? 'available' : 'coming'">
+                        {{ assessment.available ? 'Available' : 'Coming Soon' }}
                     </span>
                 </div>
 
-                <h3>Multiple Choice</h3>
+                <h3>{{ assessment.title }}</h3>
 
                 <p class="card-description">
-                    Test your knowledge of computer systems and basic troubleshooting.
+                    {{ assessment.description }}
                 </p>
 
                 <!-- Tags -->
                 <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Hardware
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Easy
-                    </span>
+                    <span class="tag category"><i class="fas fa-layer-group"></i>{{ assessment.category }}</span>
+                    <span class="tag difficulty"><i class="fas fa-signal"></i>{{ assessment.difficulty }}</span>
                 </div>
-
                 <div class="card-footer">
-                    <span>
-                        <i class="fas fa-question-circle"></i>
-                        10 Questions
-                    </span>
-
-                    <button @click="multipleChoiceQuiz">
-                        Start
-                        <i class="fas fa-arrow-right"></i>
+                    <span><i class="fas fa-question-circle"></i>{{ assessment.meta }}</span>
+                    <button v-if="assessment.available" type="button" @click="startAssessment(assessment)">
+                        Start <i class="fas fa-arrow-right"></i>
                     </button>
                 </div>
-
             </div>
-
-
-            <!-- Image Identification -->
-            <div class="assessment-card active">
-
-                <div class="card-top">
-                    <div class="type-icon">
-                        <i class="fas fa-image"></i>
-                    </div>
-
-                    <span class="available">
-                        Available
-                    </span>
-                </div>
-
-                <h3>Image Identification</h3>
-
-                <p class="card-description">
-                    Identify computer components, tools, ports, and equipment.
-                </p>
-
-                <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Components
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Medium
-                    </span>
-                </div>
-
-                <div class="card-footer">
-                    <span>
-                        <i class="fas fa-microscope"></i>
-                        Practical lab
-                    </span>
-                    <button @click="imageIdentificationQuiz">
-                        Start
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-            </div>
-
-
-            <!-- Drag & Drop -->
-            <div class="assessment-card active">
-
-                <div class="card-top">
-                    <div class="type-icon">
-                        <i class="fas fa-arrows-up-down-left-right"></i>
-                    </div>
-
-                    <span class="available">
-                        Available
-                    </span>
-                </div>
-
-                <h3>Drag & Drop</h3>
-
-                <p class="card-description">
-                    Arrange computer components and installation procedures correctly.
-                </p>
-
-                <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Installation
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Medium
-                    </span>
-                </div>
-
-                <div class="card-footer">
-                    <span>
-                        <span>
-                            <i class="fas fa-question-circle"></i>
-                            10 Questions
-                        </span>
-
-                    </span>
-                    <button @click="dragDropQuiz">
-                        Start
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-            </div>
-
-
-            <!-- Scenario Based -->
-            <div class="assessment-card locked">
-
-                <div class="card-top">
-                    <div class="type-icon">
-                        <i class="fas fa-comments"></i>
-                    </div>
-
-                    <span class="available">
-                        Available
-                    </span>
-                </div>
-
-                <h3>Scenario-Based</h3>
-
-                <p class="card-description">
-                    Solve realistic computer problems using troubleshooting knowledge.
-                </p>
-
-                <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Troubleshooting
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Hard
-                    </span>
-                </div>
-
-                <div class="card-footer">
-                    <span>
-                        <i class="fas fa-bolt"></i>
-                        Hands-on scenario
-                    </span>
-                    <button @click="scenarioQuiz">
-                        Start
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-            </div>
-
-
-            <!-- Virtual Hands-On -->
-            <div class="assessment-card locked">
-
-                <div class="card-top">
-                    <div class="type-icon">
-                        <i class="fas fa-screwdriver-wrench"></i>
-                    </div>
-
-                    <span class="coming">
-                        Coming Soon
-                    </span>
-                </div>
-
-                <h3>Virtual Hands-On</h3>
-
-                <p class="card-description">
-                    Perform computer installation and configuration tasks virtually.
-                </p>
-
-                <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Practical
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Hard
-                    </span>
-                </div>
-
-                <div class="card-footer">
-                    <span>
-                        <i class="fas fa-lock"></i>
-                        Not Available
-                    </span>
-                </div>
-
-            </div>
-
-
-            <!-- RJ-45 Hands-On -->
-            <div class="assessment-card active">
-
-                <div class="card-top">
-                    <div class="type-icon">
-                        <i class="fas fa-ethernet"></i>
-                    </div>
-
-                    <span class="available">
-                        Available
-                    </span>
-                </div>
-
-                <h3>RJ-45 Cable Activity</h3>
-
-                <p class="card-description">
-                    Cut, arrange, connect, crimp, and test a network cable using the T568B standard.
-                </p>
-
-                <div class="tags">
-                    <span class="tag category">
-                        <i class="fas fa-layer-group"></i>
-                        Networking
-                    </span>
-
-                    <span class="tag difficulty">
-                        <i class="fas fa-signal"></i>
-                        Hard
-                    </span>
-                </div>
-
-                <div class="card-footer">
-                    <span>
-                        <i class="fas fa-flask"></i>
-                        4 practical stages
-                    </span>
-                    <button @click="rj45HandsOn">
-                        Start
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </div>
-
-            </div>
-
         </div>
-
     </div>
 </template>
 
-
 <script setup>
-import { useRouter, useRoute } from 'vue-router'
 import { onMounted, ref } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import axios from 'axios'
 
 const router = useRouter()
 const route = useRoute()
-const assessmentObject = ref({});
+const assessmentObject = ref({})
+const assessments = ref([])
 
+const assessmentDefaults = {
+    multiple_choice: {
+        title: 'Multiple Choice',
+        icon: 'fas fa-list-check',
+        description: 'Test your knowledge of computer systems and basic troubleshooting.',
+        category: 'Hardware',
+        difficulty: 'Easy',
+        meta: 'Questions',
+        path: 'quiz'
+    },
+    image_identification: {
+        title: 'Image Identification',
+        icon: 'fas fa-image',
+        description: 'Identify computer components, tools, ports, and equipment.',
+        category: 'Components',
+        difficulty: 'Medium',
+        meta: 'Practical lab',
+        path: 'image-identification'
+    },
+    drag_drop: {
+        title: 'Drag & Drop',
+        icon: 'fas fa-arrows-up-down-left-right',
+        description: 'Arrange computer components and installation procedures correctly.',
+        category: 'Installation',
+        difficulty: 'Medium',
+        meta: 'Questions',
+        path: 'dragdrop'
+    },
+    rj45: {
+        title: 'RJ-45 Cable Activity',
+        icon: 'fas fa-ethernet',
+        description: 'Cut, arrange, connect, crimp, and test a network cable.',
+        category: 'Networking',
+        difficulty: 'Hard',
+        meta: '4 practical stages',
+        path: 'rj45-hands-on'
+    },
+}
 
+// get all assessments for the given COC ID and filter them based on availability
 const fetchAssessmentData = async () => {
-    const quizId = route.params.id;
+    try {
+        const response = await axios.get('/api/quizzes')
 
-    const { data } = await axios.get('/api/quizzes')
-    assessmentObject.value = data.data[quizId - 1] || {};
-    console.log(assessmentObject)
-}
+        const quizzes = response.data.data || response.data
 
-const multipleChoiceQuiz = () => {
-    // Change this route to your actual quiz 
-    // const quizId = route.params.quiz_id
-    const quizId = route.params.id
-    console.log(quizId)
+        // Find the selected assessment
+        for (let i = 0; i < quizzes.length; i++) {
+            if (quizzes[i].id == route.params.id) {
+                assessmentObject.value = quizzes[i]
+                break
+            }
+        }
 
-    if (!quizId) {
-        router.push('/user/quizzes')
-        return
+        // Add all available assessment types
+        assessments.value = []
+
+        for (const type in assessmentDefaults) {
+            assessments.value.push({
+                type: type,
+                ...assessmentDefaults[type],
+                available: true
+            })
+        }
+
+    } catch (error) {
+        console.error(error)
     }
-    router.push(`/quiz/${quizId}`)
 }
 
-const dragDropQuiz = () => {
+const startAssessment = (assessment) => {
     const quizId = route.params.id
-    console.log(quizId)
-
-    if (!quizId) {
-        router.push('/user/quizzes')
-        return
-    }
-    router.push(`/dragdrop/${quizId}`)
+    if (quizId) router.push(`/${assessment.path}/${quizId}`)
 }
 
-const scenarioQuiz = () => {
-    const quizId = route.params.id
-
-    if (!quizId) {
-        router.push('/user/quizzes')
-        return
-    }
-
-    router.push(`/dragdrop/${quizId}`)
-}
-
-const imageIdentificationQuiz = () => {
-    const quizId = route.params.id
-
-    if (!quizId) {
-        router.push('/user/quizzes')
-        return
-    }
-
-    router.push(`/image-identification/${quizId}`)
-}
-
-const rj45HandsOn = () => {
-    const quizId = route.params.id
-
-    if (!quizId) {
-        router.push('/user/quizzes')
-        return
-    }
-
-    router.push(`/rj45-hands-on/${quizId}`)
-}
-
-onMounted(() => {
-    fetchAssessmentData()
-})
-
+onMounted(fetchAssessmentData)
 </script>
 
 
@@ -420,7 +185,7 @@ onMounted(() => {
 
     background: var(--background);
     color: var(--black);
-
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.06); 
     box-sizing: border-box;
     overflow-x: hidden;
 }

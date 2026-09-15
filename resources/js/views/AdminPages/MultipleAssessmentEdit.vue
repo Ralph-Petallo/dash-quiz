@@ -41,9 +41,9 @@
                 <div class="form-group">
                     <div>Difficulty</div>
                     <select v-model="form.difficulty" name="difficulty" class="difficulty-select">
-                        <option value="easy">Easy</option>
-                        <option value="medium">Medium</option>
-                        <option value="hard">Hard</option>
+                        <option value="Easy">Easy</option>
+                        <option value="Medium">Medium</option>
+                        <option value="Hard">Hard</option>
                     </select>
                 </div>
 
@@ -284,7 +284,7 @@ const updateQuiz = async () => {
         );
 
         alert("Quiz updated successfully!");
-        router.push("/admin/manage-quizzes");
+        router.push("/admin/manage-quizzes"); // push back after editting
     } catch (e) {
         console.error(e.response?.data || e);
     } finally {

@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dash Quiz — Drag & Drop Activities</title>
+  <style>
+    *{box-sizing:border-box}html,body{margin:0;min-height:100%;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:#111;background:#f7f7f7}body{font-size:14px}.app{display:flex;min-height:100vh}.sidebar{width:246px;background:#fff;border-right:1px solid #ddd;position:fixed;inset:0 auto 0 0;padding:20px 18px;display:flex;flex-direction:column;z-index:10}.brand{display:flex;align-items:center;gap:10px;font-size:22px;font-weight:800;color:#000;margin:0 8px 30px}.brand-mark{width:30px;height:30px;border-radius:9px;background:#000;color:#fff;display:grid;place-items:center;font-size:15px}.sidebar nav{display:flex;flex-direction:column;gap:3px}.sidebar small{font-size:9px;letter-spacing:.12em;color:#a9a9a9;font-weight:800;margin:16px 9px 6px}.nav-item{display:flex;align-items:center;gap:12px;text-decoration:none;color:#696969;padding:10px 11px;border-radius:9px;font-size:13px}.nav-item span{width:18px;text-align:center;color:#a9a9a9}.nav-item:hover,.nav-item.active{background:#f1f1f1;color:#000}.nav-item.active{font-weight:700}.nav-item.active span{color:#000}.progress-card{margin-top:auto;border:1px solid #d3d3d3;background:#fafafa;border-radius:13px;padding:15px}.progress-card .trophy{font-size:18px;margin-bottom:8px}.progress-card strong,.progress-card span{display:block}.progress-card strong{font-size:14px}.progress-card>span{font-size:11px;color:#696969;margin-top:2px}.xp-row{display:flex;justify-content:space-between;margin-top:18px;font-size:10px}.xp-row b:last-child{color:#696969}.xp{height:6px;background:#d3d3d3;border-radius:99px;margin-top:7px;overflow:hidden}.xp i{display:block;width:68%;height:100%;background:#000}.topbar{height:64px;background:rgba(255,255,255,.94);backdrop-filter:blur(16px);border-bottom:1px solid #ddd;position:sticky;top:0;z-index:5;display:flex;align-items:center;padding:0 28px;margin-left:246px}.topbar h2{font-size:17px;margin:0;font-weight:750}.menu{display:none;border:1px solid #d3d3d3;background:#fff;border-radius:8px;padding:7px 9px;margin-right:10px}.profile{margin-left:auto;display:flex;align-items:center;gap:11px}.profile img{width:34px;height:34px;border-radius:50%;object-fit:cover;border:1px solid #d3d3d3}.profile div{display:flex;flex-direction:column}.profile strong{font-size:12px}.profile small,.help{font-size:10px;color:#696969}.bell{position:relative;color:#696969}.bell em{position:absolute;top:-8px;right:-8px;width:15px;height:15px;border-radius:50%;background:#000;color:#fff;font-style:normal;font-size:8px;display:grid;place-items:center}.content{margin-left:246px;padding:27px 40px 45px;max-width:1500px}.intro h1{font-size:23px;margin:0 0 4px;letter-spacing:-.03em}.intro p{margin:0;color:#696969;font-size:12px}.filters{display:flex;gap:8px;flex-wrap:wrap;margin:20px 0 17px}.filter{border:1px solid #d3d3d3;background:#fff;color:#696969;border-radius:8px;padding:8px 13px;font-size:11px;cursor:pointer}.filter:hover,.filter.active{background:#000;color:#fff;border-color:#000}.activity-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}.activity-card{background:#fff;border:1px solid #d3d3d3;border-radius:13px;overflow:hidden}.card-head{padding:15px 18px;display:flex;gap:12px;align-items:center;border-bottom:1px solid #e5e5e5}.type-icon{width:31px;height:31px;border-radius:50%;display:grid;place-items:center;background:#000;color:#fff;font-weight:800;font-size:12px;flex:none}.card-head h3{margin:0;font-size:14px}.card-head p{margin:3px 0 0;font-size:10px;color:#696969}.activity-body{padding:16px 18px}.prompt{font-size:12px;font-weight:650;margin:0 0 13px;line-height:1.45}label{display:block;font-size:9px;letter-spacing:.08em;font-weight:800;color:#a9a9a9;margin-bottom:7px}.ordering-layout{display:grid;grid-template-columns:1fr 1fr;gap:14px}.stack,.drop-list{display:flex;flex-direction:column;gap:6px}.drag-chip,.slot,.match-item,.match-target,.sort-chip,.label-chip,.position-chip{border:1px solid #d3d3d3;background:#fff;border-radius:7px;min-height:34px;padding:8px 10px;font-size:10px;display:flex;align-items:center}.drag-chip{cursor:grab;gap:7px}.drag-chip:hover,.sort-chip:hover,.label-chip:hover,.position-chip:hover,.match-item:hover{border-color:#696969;background:#fafafa}.slot{border-style:dashed;color:#a9a9a9;gap:8px}.slot b{color:#696969}.slot.filled{border-style:solid;color:#111;background:#f4f4f4}.slot.filled span{color:#111}.card-actions{display:flex;justify-content:space-between;gap:8px;margin-top:13px}.ghost,.primary{border-radius:7px;padding:8px 12px;font-size:10px;font-weight:700;cursor:pointer}.ghost{background:#fff;border:1px solid #d3d3d3;color:#696969}.ghost:hover{background:#f4f4f4;color:#000}.primary{background:#000;color:#fff;border:1px solid #000}.primary:hover{background:#333}.feedback{min-height:18px;margin-top:8px;font-size:10px;font-weight:700}.feedback.good{color:#000}.feedback.bad{color:#696969}.matching{display:grid;grid-template-columns:1fr 22px 1fr;gap:7px;align-items:center}.match-col{display:flex;flex-direction:column;gap:6px}.match-item{cursor:grab}.match-item.selected{background:#000;color:#fff;border-color:#000}.match-target{cursor:pointer}.match-target.matched{background:#eee;border-color:#696969}.match-lines{display:flex;flex-direction:column;gap:17px;align-items:center;color:#a9a9a9}.sort-bank{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:11px}.sort-chip{cursor:grab}.sort-targets{display:grid;grid-template-columns:1fr 1fr;gap:8px}.sort-target{min-height:78px;border:1.5px dashed #a9a9a9;border-radius:8px;padding:10px;display:flex;flex-wrap:wrap;gap:5px;align-content:flex-start}.sort-target strong{width:100%;font-size:10px}.sort-target span{width:100%;font-size:9px;color:#a9a9a9}.sort-target .sort-chip{background:#f3f3f3}.component-image{height:105px;border:1px solid #d3d3d3;border-radius:8px;display:grid;place-items:center;background:#fafafa;margin-bottom:10px}.ram-visual{width:210px;height:48px;border:3px solid #696969;border-radius:4px;background:#d3d3d3;display:flex;align-items:center;justify-content:space-around;padding:4px}.ram-visual span{width:21px;height:27px;background:#696969;border-radius:2px}.label-bank{display:flex;flex-wrap:wrap;gap:6px}.label-chip{cursor:grab;flex:1;justify-content:center;min-width:70px}.identify-drop{margin-top:8px;border:1.5px dashed #a9a9a9;border-radius:8px;padding:9px;text-align:center;color:#a9a9a9;font-size:10px;min-height:35px}.identify-drop.filled{border-style:solid;background:#f1f1f1;color:#000;font-weight:700}.motherboard-stage{min-height:210px;border:1px solid #d3d3d3;border-radius:8px;background:#fafafa;display:flex;gap:14px;align-items:center;justify-content:center;padding:12px}.motherboard{width:210px;height:180px;background:#ddd;border:4px solid #696969;border-radius:6px;position:relative}.cpu-socket,.ram-slots,.pcie,.battery{position:absolute;border:2px solid #696969;background:#fff;font-size:7px;display:grid;place-items:center}.cpu-socket{width:60px;height:48px;top:27px;left:70px}.ram-slots{width:17px;height:88px;right:27px;top:22px}.pcie{width:100px;height:12px;left:22px;bottom:35px}.battery{width:18px;height:18px;border-radius:50%;left:28px;top:90px}.position-labels{display:flex;flex-direction:column;gap:8px;width:115px}.position-slot{min-height:34px;border:1.5px dashed #a9a9a9;border-radius:7px;padding:8px;font-size:9px;color:#a9a9a9}.position-slot.filled{border-style:solid;background:#eee;color:#000;font-weight:700}.position-bank{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px}.position-chip{cursor:grab}.info{margin-top:17px;border:1px solid #d3d3d3;border-radius:12px;background:#fff;padding:17px;display:grid;grid-template-columns:auto 1fr 1fr;gap:14px;align-items:center}.info-icon{width:35px;height:35px;border:1px solid #d3d3d3;border-radius:50%;display:grid;place-items:center}.info h3{font-size:12px;margin:0 0 3px}.info p{font-size:10px;color:#696969;margin:0;line-height:1.5}.tips{border-left:1px solid #d3d3d3;padding-left:20px;display:flex;flex-direction:column;gap:3px;font-size:9px;color:#696969}.tips strong{font-size:10px;color:#000}.dragging{opacity:.45}.hidden{display:none!important}@media(max-width:1100px){.sidebar{width:210px}.topbar,.content{margin-left:210px}.content{padding-left:24px;padding-right:24px}.activity-grid{grid-template-columns:1fr}}@media(max-width:760px){.sidebar{transform:translateX(-100%);transition:.2s}.sidebar.open{transform:none}.topbar,.content{margin-left:0}.menu{display:block}.help,.profile div,.profile>span:last-child{display:none}.content{padding:20px 14px}.activity-grid{grid-template-columns:1fr}.info{grid-template-columns:auto 1fr}.tips{grid-column:1/-1;border-left:0;border-top:1px solid #d3d3d3;padding:12px 0 0}.ordering-layout{grid-template-columns:1fr}.matching{grid-template-columns:1fr}.match-lines{display:none}.motherboard-stage{flex-direction:column}.sort-targets{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand"><span class="brand-mark">D</span><span>Dash Quiz</span></div>
+      <nav>
+        <small>MAIN</small>
+        <a href="#" class="nav-item"><span>⌂</span> Dashboard</a>
+        <a href="#" class="nav-item"><span>▣</span> Quizzes</a>
+        <a href="#" class="nav-item active"><span>◈</span> Activities</a>
+        <a href="#" class="nav-item"><span>▤</span> My Results</a>
+        <a href="#" class="nav-item"><span>◇</span> Certificates</a>
+        <small>PRACTICE</small>
+        <a href="#" class="nav-item"><span>◉</span> Subjects</a>
+        <a href="#" class="nav-item"><span>▧</span> Lessons</a>
+        <a href="#" class="nav-item"><span>☆</span> Flashcards</a>
+        <small>ACCOUNT</small>
+        <a href="#" class="nav-item"><span>♙</span> Profile</a>
+        <a href="#" class="nav-item"><span>⚙</span> Settings</a>
+        <a href="#" class="nav-item"><span>↪</span> Logout</a>
+      </nav>
+      <div class="progress-card">
+        <div class="trophy">★</div>
+        <strong>Keep going!</strong>
+        <span>You're doing great.</span>
+        <div class="xp-row"><b>Level 4</b><b>680 / 1000 XP</b></div>
+        <div class="xp"><i></i></div>
+      </div>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <button class="menu" id="menuBtn">☰</button>
+        <h2>Drag & Drop Activities</h2>
+        <div class="profile">
+          <span class="help">? Help</span>
+          <span class="bell">♧<em>3</em></span>
+          <img src="https://i.pravatar.cc/80?img=12" alt="Profile">
+          <div><strong>Juan Dela Cruz</strong><small>Student</small></div>
+          <span>⌄</span>
+        </div>
+      </header>
+
+      <section class="content">
+        <div class="intro">
+          <h1>Drag & Drop Activities</h1>
+          <p>Different types of interactive activities to test your knowledge.</p>
+        </div>
+
+        <div class="filters" id="filters">
+          <button class="filter active" data-filter="all">All Activities</button>
+          <button class="filter" data-filter="ordering">Ordering</button>
+          <button class="filter" data-filter="matching">Matching</button>
+          <button class="filter" data-filter="sorting">Sorting</button>
+          <button class="filter" data-filter="identification">Image Identification</button>
+          <button class="filter" data-filter="positioning">Image Positioning</button>
+        </div>
+
+        <div class="activity-grid">
+          <!-- ORDERING -->
+          <article class="activity-card blue" data-type="ordering">
+            <div class="card-head">
+              <div class="type-icon">1</div>
+              <div><h3>Ordering / Sequence</h3><p>Arrange the steps in the correct order.</p></div>
+            </div>
+            <div class="activity-body">
+              <p class="prompt">Arrange the steps for shutting down a computer properly.</p>
+              <div class="ordering-layout">
+                <div>
+                  <label>AVAILABLE STEPS</label>
+                  <div id="orderBank" class="stack">
+                    <div class="drag-chip" draggable="true" data-id="close">⠿ <span>Close all programs</span></div>
+                    <div class="drag-chip" draggable="true" data-id="power">⠿ <span>Click Start &gt; Power</span></div>
+                    <div class="drag-chip" draggable="true" data-id="shutdown">⠿ <span>Select Shut down</span></div>
+                    <div class="drag-chip" draggable="true" data-id="monitor">⠿ <span>Turn off the monitor</span></div>
+                  </div>
+                </div>
+                <div>
+                  <label>YOUR PROCEDURE</label>
+                  <div id="orderDrop" class="drop-list">
+                    <div class="slot" data-index="0"><b>1</b><span>Drop here</span></div>
+                    <div class="slot" data-index="1"><b>2</b><span>Drop here</span></div>
+                    <div class="slot" data-index="2"><b>3</b><span>Drop here</span></div>
+                    <div class="slot" data-index="3"><b>4</b><span>Drop here</span></div>
+                  </div>
+                </div>
+              </div>
+              <div class="card-actions"><button class="ghost" data-reset="ordering">Reset</button><button class="primary" data-check="ordering">Check Answer</button></div>
+              <div class="feedback" id="feedback-ordering"></div>
+            </div>
+          </article>
+
+          <!-- MATCHING -->
+          <article class="activity-card green" data-type="matching">
+            <div class="card-head">
+              <div class="type-icon">2</div>
+              <div><h3>Matching</h3><p>Match each item with the correct description.</p></div>
+            </div>
+            <div class="activity-body">
+              <p class="prompt">Match each computer component with its function.</p>
+              <div class="matching">
+                <div class="match-col" id="matchLeft">
+                  <div class="match-item" draggable="true" data-match="cpu">CPU</div>
+                  <div class="match-item" draggable="true" data-match="ram">RAM</div>
+                  <div class="match-item" draggable="true" data-match="hdd">HDD</div>
+                  <div class="match-item" draggable="true" data-match="board">Motherboard</div>
+                </div>
+                <div class="match-lines">
+                  <span>•</span><span>•</span><span>•</span><span>•</span>
+                </div>
+                <div class="match-col">
+                  <div class="match-target" data-match="board">Main circuit board</div>
+                  <div class="match-target" data-match="cpu">Processes instructions</div>
+                  <div class="match-target" data-match="hdd">Stores permanent data</div>
+                  <div class="match-target" data-match="ram">Temporary memory</div>
+                </div>
+              </div>
+              <div class="card-actions"><button class="ghost" data-reset="matching">Reset</button><button class="primary" data-check="matching">Check Answer</button></div>
+              <div class="feedback" id="feedback-matching"></div>
+            </div>
+          </article>
+
+          <!-- SORTING -->
+          <article class="activity-card orange" data-type="sorting">
+            <div class="card-head">
+              <div class="type-icon">3</div>
+              <div><h3>Categorization / Sorting</h3><p>Drag the items into the correct category.</p></div>
+            </div>
+            <div class="activity-body">
+              <p class="prompt">Classify each device as an input or output device.</p>
+              <div class="sort-bank" id="sortBank">
+                <div class="sort-chip" draggable="true" data-category="input">Keyboard</div>
+                <div class="sort-chip" draggable="true" data-category="output">Monitor</div>
+                <div class="sort-chip" draggable="true" data-category="input">Mouse</div>
+                <div class="sort-chip" draggable="true" data-category="output">Printer</div>
+                <div class="sort-chip" draggable="true" data-category="input">Scanner</div>
+                <div class="sort-chip" draggable="true" data-category="output">Speakers</div>
+              </div>
+              <div class="sort-targets">
+                <div class="sort-target" data-category="input"><strong>Input Devices</strong><span>Drag items here</span></div>
+                <div class="sort-target" data-category="output"><strong>Output Devices</strong><span>Drag items here</span></div>
+              </div>
+              <div class="card-actions"><button class="ghost" data-reset="sorting">Reset</button><button class="primary" data-check="sorting">Check Answer</button></div>
+              <div class="feedback" id="feedback-sorting"></div>
+            </div>
+          </article>
+
+          <!-- IDENTIFICATION -->
+          <article class="activity-card violet" data-type="identification">
+            <div class="card-head">
+              <div class="type-icon">4</div>
+              <div><h3>Image Identification</h3><p>Drag the correct label to the image.</p></div>
+            </div>
+            <div class="activity-body">
+              <p class="prompt">Identify the computer component shown in the image.</p>
+              <div class="component-image">
+                <div class="ram-visual">
+                  <span></span><span></span><span></span><span></span><span></span><span></span><span></span>
+                </div>
+              </div>
+              <div class="label-bank" id="identifyBank">
+                <div class="label-chip" draggable="true" data-answer="CPU">CPU</div>
+                <div class="label-chip" draggable="true" data-answer="RAM">RAM</div>
+                <div class="label-chip" draggable="true" data-answer="Power Supply">Power Supply</div>
+                <div class="label-chip" draggable="true" data-answer="Motherboard">Motherboard</div>
+              </div>
+              <div class="identify-drop" id="identifyDrop">Drop the correct label here</div>
+              <div class="card-actions"><button class="ghost" data-reset="identification">Reset</button><button class="primary" data-check="identification">Check Answer</button></div>
+              <div class="feedback" id="feedback-identification"></div>
+            </div>
+          </article>
+
+          <!-- POSITIONING -->
+          <article class="activity-card blue positioning" data-type="positioning">
+            <div class="card-head">
+              <div class="type-icon">5</div>
+              <div><h3>Image Positioning</h3><p>Drag labels to the correct part of the image.</p></div>
+            </div>
+            <div class="activity-body">
+              <p class="prompt">Label the important parts of the motherboard.</p>
+              <div class="motherboard-stage">
+                <div class="motherboard">
+                  <div class="cpu-socket">CPU</div>
+                  <div class="ram-slots">RAM</div>
+                  <div class="pcie">PCIe</div>
+                  <div class="battery">●</div>
+                </div>
+                <div class="position-labels">
+                  <div class="position-slot" data-position="cpu">CPU Socket</div>
+                  <div class="position-slot" data-position="ram">RAM Slots</div>
+                  <div class="position-slot" data-position="pcie">PCIe Slot</div>
+                </div>
+              </div>
+              <div class="position-bank" id="positionBank">
+                <div class="position-chip" draggable="true" data-position="cpu">CPU Socket</div>
+                <div class="position-chip" draggable="true" data-position="ram">RAM Slots</div>
+                <div class="position-chip" draggable="true" data-position="pcie">PCIe Slot</div>
+              </div>
+              <div class="card-actions"><button class="ghost" data-reset="positioning">Reset</button><button class="primary" data-check="positioning">Check Answer</button></div>
+              <div class="feedback" id="feedback-positioning"></div>
+            </div>
+          </article>
+        </div>
+
+        <section class="info">
+          <div class="info-icon">☆</div>
+          <div><h3>About Drag & Drop Activities</h3><p>Interactive activities help students practice real-world concepts through ordering, matching, sorting, and visual identification.</p></div>
+          <div class="tips"><strong>Tips for Success</strong><span>✓ Read the instructions carefully.</span><span>✓ Think before you drag.</span><span>✓ Review your answers before submitting.</span></div>
+        </section>
+      </section>
+    </main>
+  </div>
+  <script src="script.js"></script>
+</body>
+</html>

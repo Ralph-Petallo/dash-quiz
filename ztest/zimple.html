@@ -1,0 +1,669 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assemble a Computer</title>
+    <style>
+        :root {
+            --orange-main: #f36c21;
+            --orange-border: #f36c21;
+            --check-red: #b04334;
+            --check-red-hover: #963527;
+            --header-bg: #ecece8;
+            --sidebar-bg: #000000;
+            --zone-border: #e86c28;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: Arial, Helvetica, sans-serif;
+            user-select: none;
+        }
+
+        body {
+            background-color: #222;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+        /* Top Navigation Header */
+        header {
+            background-color: var(--header-bg);
+            height: 60px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 20px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+            z-index: 30;
+            position: relative;
+        }
+
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .icon-btn {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background-color: var(--orange-main);
+            color: white;
+            border: 2px solid #fff;
+            font-weight: bold;
+            font-size: 1.2rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: transform 0.1s;
+        }
+
+        .icon-btn:active {
+            transform: scale(0.95);
+        }
+
+        .header-title {
+            font-size: 1.6rem;
+            font-weight: bold;
+            color: #111;
+            letter-spacing: -0.5px;
+        }
+
+        .btn-check {
+            background-color: var(--check-red);
+            color: white;
+            border: none;
+            padding: 9px 26px;
+            font-size: 1rem;
+            font-weight: bold;
+            border-radius: 6px;
+            cursor: pointer;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+            transition: background-color 0.2s;
+        }
+
+        .btn-check:hover {
+            background-color: var(--check-red-hover);
+        }
+
+        /* Main Container */
+        .app-container {
+            display: flex;
+            flex: 1;
+            position: relative;
+            overflow: hidden;
+            justify-content: center;
+            align-items: center;
+            background-color: #181818;
+        }
+
+        /* Left Sidebar Overlay Drawer */
+        .sidebar {
+            position: absolute;
+            top: 0;
+            left: 0;
+            bottom: 0;
+            width: 210px;
+            background-color: var(--sidebar-bg);
+            padding: 15px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+            overflow-y: auto;
+            z-index: 20;
+            box-shadow: 4px 0 10px rgba(0, 0, 0, 0.5);
+            transition: transform 0.3s ease;
+        }
+
+        .sidebar.closed {
+            transform: translateX(-210px);
+        }
+
+        /* Sidebar Toggle Tab */
+        .sidebar-toggle {
+            position: absolute;
+            right: -24px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 24px;
+            height: 48px;
+            background-color: var(--orange-main);
+            color: white;
+            border-radius: 0 8px 8px 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 0.9rem;
+            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        /* Component Card Style */
+        .component-card {
+            background: #ffffff;
+            border-radius: 8px;
+            padding: 10px 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            cursor: grab;
+            box-shadow: 0 3px 6px rgba(0, 0, 0, 0.3);
+            border: 2px solid transparent;
+            transition: transform 0.15s, border-color 0.15s;
+        }
+
+        .component-card:hover {
+            border-color: var(--orange-main);
+            transform: translateY(-2px);
+        }
+
+        .component-card.dragging {
+            opacity: 0.4;
+        }
+
+        .component-card.placed {
+            opacity: 0.25;
+            pointer-events: none;
+        }
+
+        .card-img {
+            width: 100px;
+            height: 75px;
+            object-fit: contain;
+            pointer-events: none;
+        }
+
+        .card-label {
+            margin-top: 6px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #111;
+            text-align: center;
+        }
+
+        /* PC Canvas Area */
+        .workspace {
+            width: 100%;
+            height: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            position: relative;
+        }
+
+        .pc-chassis {
+            position: relative;
+            width: 820px;
+            height: 560px;
+            background: #7a8288;
+            border: 12px solid #333639;
+            border-radius: 4px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.7);
+            background-image:
+                linear-gradient(90deg, #4d5256 0%, #70777d 40%, #505559 100%);
+            overflow: hidden;
+        }
+
+        /* Simulated Chassis Visual Details */
+        .mobo-tray {
+            position: absolute;
+            top: 30px;
+            left: 120px;
+            width: 480px;
+            height: 480px;
+            background: #2a2d32;
+            border: 2px solid #1a1b1d;
+        }
+
+        .drive-bay-rack {
+            position: absolute;
+            top: 30px;
+            right: 20px;
+            width: 160px;
+            height: 300px;
+            background: #41464b;
+            border: 2px solid #2b2e31;
+        }
+
+        .bay-slot {
+            height: 40px;
+            border-bottom: 2px solid #2b2e31;
+            margin: 10px;
+            background: #282a2d;
+        }
+
+        .vent-holes {
+            position: absolute;
+            top: 20px;
+            right: 200px;
+            display: grid;
+            grid-template-columns: repeat(6, 12px);
+            gap: 6px;
+        }
+
+        .vent-dot {
+            width: 8px;
+            height: 8px;
+            background: #1e2022;
+            border-radius: 50%;
+        }
+
+        /* Target Drop Zones */
+        .drop-zone {
+            position: absolute;
+            border: 3px solid var(--zone-border);
+            border-radius: 4px;
+            background: rgba(255, 255, 255, 0.95);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            color: #111;
+            text-align: center;
+            box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+            transition: background-color 0.2s, border-color 0.2s;
+        }
+
+        .drop-zone.drag-over {
+            background: #ffe3d1;
+        }
+
+        .drop-zone.correct {
+            border-color: #2e7d32;
+            background: #e8f5e9;
+        }
+
+        .drop-zone.incorrect {
+            border-color: #c62828;
+            background: #ffebee;
+        }
+
+        /* Placement Positions matching image */
+        #zone-psu {
+            top: 35px;
+            left: 180px;
+            width: 220px;
+            height: 120px;
+            font-size: 2.2rem;
+        }
+
+        #zone-ram {
+            top: 175px;
+            left: 140px;
+            width: 70px;
+            height: 180px;
+            font-size: 1.5rem;
+        }
+
+        #zone-cpu {
+            top: 220px;
+            left: 230px;
+            width: 110px;
+            height: 110px;
+            background: #f18d4f;
+            color: white;
+            font-size: 1.2rem;
+            line-height: 1.2;
+        }
+
+        /* Center Stacked Black Boxes */
+        .center-stack {
+            position: absolute;
+            top: 175px;
+            left: 360px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .stack-box {
+            width: 120px;
+            height: 38px;
+            background: #000000;
+            border: 2px solid var(--zone-border);
+            border-radius: 3px;
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.95rem;
+            font-weight: bold;
+        }
+
+        #zone-hdd {
+            top: 200px;
+            right: 40px;
+            width: 160px;
+            height: 60px;
+            font-size: 1.5rem;
+        }
+
+        #zone-sata {
+            bottom: 30px;
+            left: 310px;
+            width: 100px;
+            height: 45px;
+            font-size: 1.2rem;
+        }
+
+        #zone-case-fan {
+            bottom: 25px;
+            right: 50px;
+            width: 150px;
+            height: 150px;
+            font-size: 1.1rem;
+        }
+
+        /* Placed Item Interior Styling */
+        .placed-content {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            height: 100%;
+            padding: 4px;
+        }
+
+        .placed-content img {
+            max-width: 50%;
+            max-height: 80%;
+            object-fit: contain;
+        }
+
+        .placed-content span {
+            font-weight: bold;
+            color: #111;
+        }
+
+        /* Toast Notification */
+        .toast-msg {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            padding: 12px 20px;
+            border-radius: 6px;
+            color: white;
+            font-weight: bold;
+            display: none;
+            z-index: 100;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Top Header -->
+    <header>
+        <div class="header-left">
+            <button class="icon-btn" id="btn-info" title="Instructions">i</button>
+            <button class="icon-btn" id="btn-reset" title="Reset">&#x21bb;</button>
+        </div>
+        <div class="header-title">Assemble a Computer</div>
+        <button class="btn-check" id="btn-check">Check</button>
+    </header>
+
+    <div class="app-container">
+
+        <!-- Collapsible Sidebar Palette -->
+        <div class="sidebar" id="sidebar">
+            <div class="sidebar-toggle" id="sidebar-toggle" title="Toggle Drawer">&lt;</div>
+
+            <div class="component-card" draggable="true" data-component="cpu">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='20' y='10' width='60' height='60' fill='%23b2b8bd' stroke='%234a5056' stroke-width='3' rx='4'/><rect x='35' y='25' width='30' height='30' fill='%23387844'/><text x='50' y='44' font-size='10' font-weight='bold' fill='%23fff' text-anchor='middle'>CPU</text></svg>"
+                    alt="CPU">
+                <div class="card-label">CPU</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="cpu-fan">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='15' y='10' width='70' height='60' fill='%23222' rx='4'/><circle cx='50' cy='40' r='24' fill='%23111' stroke='%23f36c21' stroke-width='2'/><circle cx='50' cy='40' r='8' fill='%23fff'/></svg>"
+                    alt="CPU Fan">
+                <div class="card-label">CPU Fan</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="heatsink">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><path d='M20 60 V20 H28 V60 H36 V20 H44 V60 H52 V20 H60 V60 H68 V20 H76 V60 H84 V60' stroke='%23888' stroke-width='4' fill='none'/><rect x='15' y='58' width='70' height='10' fill='%23555'/></svg>"
+                    alt="Heatsink">
+                <div class="card-label">Heatsink</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="thermal-paste">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='20' y='35' width='45' height='10' fill='%23ccc' stroke='%23666'/><polygon points='65,35 80,40 65,45' fill='%23f36c21'/><rect x='10' y='33' width='10' height='14' fill='%23333'/></svg>"
+                    alt="Thermal Paste">
+                <div class="card-label">Thermal Paste</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="psu">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='10' y='10' width='80' height='60' fill='%23222' rx='4'/><circle cx='35' cy='40' r='20' fill='%23111'/><rect x='65' y='20' width='18' height='12' fill='%23f36c21'/></svg>"
+                    alt="PSU">
+                <div class="card-label">PSU</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="ram">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='5' y='30' width='90' height='20' fill='%232e7d32'/><rect x='15' y='34' width='12' height='12' fill='%23111'/><rect x='35' y='34' width='12' height='12' fill='%23111'/><rect x='55' y='34' width='12' height='12' fill='%23111'/></svg>"
+                    alt="RAM">
+                <div class="card-label">RAM</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="hdd">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='20' y='10' width='60' height='60' fill='%23aaa' stroke='%23333' stroke-width='2'/><circle cx='50' cy='35' r='16' fill='%23777'/></svg>"
+                    alt="HDD">
+                <div class="card-label">HDD</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="sata">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><path d='M10 40 Q 50 10, 90 40' stroke='%23c62828' stroke-width='8' fill='none'/></svg>"
+                    alt="SATA">
+                <div class="card-label">SATA</div>
+            </div>
+
+            <div class="component-card" draggable="true" data-component="case-fan">
+                <img class="card-img"
+                    src="data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 80'><rect x='15' y='10' width='70' height='60' rx='6' fill='%23111'/><circle cx='50' cy='40' r='22' fill='%231565c0'/></svg>"
+                    alt="Case Fan">
+                <div class="card-label">Case Fan</div>
+            </div>
+
+        </div>
+
+        <!-- Computer Chassis Canvas -->
+        <div class="workspace">
+            <div class="pc-chassis">
+                <div class="mobo-tray"></div>
+                <div class="drive-bay-rack">
+                    <div class="bay-slot"></div>
+                    <div class="bay-slot"></div>
+                    <div class="bay-slot"></div>
+                </div>
+
+                <div class="vent-holes">
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                    <div class="vent-dot"></div>
+                </div>
+
+                <!-- Target Drop Slots matching exact reference diagram layout -->
+                <div class="drop-zone" id="zone-psu" data-accept="psu">PSU</div>
+                <div class="drop-zone" id="zone-ram" data-accept="ram">RAM</div>
+                <div class="drop-zone" id="zone-cpu" data-accept="cpu">CPU<br>Socket</div>
+
+                <!-- Center Stacked Black Boxes -->
+                <div class="center-stack">
+                    <div class="stack-box">Top</div>
+                    <div class="stack-box"></div>
+                    <div class="stack-box"></div>
+                    <div class="stack-box">Base</div>
+                </div>
+
+                <div class="drop-zone" id="zone-hdd" data-accept="hdd">HDD</div>
+                <div class="drop-zone" id="zone-sata" data-accept="sata">SATA</div>
+                <div class="drop-zone" id="zone-case-fan" data-accept="case-fan">Case Fan</div>
+
+            </div>
+        </div>
+
+    </div>
+
+    <div class="toast-msg" id="toast"></div>
+
+    <script>
+        let draggedCard = null;
+
+        // Toggle Sidebar
+        const sidebar = document.getElementById('sidebar');
+        const toggleBtn = document.getElementById('sidebar-toggle');
+        toggleBtn.addEventListener('click', () => {
+            sidebar.classList.toggle('closed');
+            toggleBtn.innerHTML = sidebar.classList.contains('closed') ? '&gt;' : '&lt;';
+        });
+
+        // Drag Events
+        const cards = document.querySelectorAll('.component-card');
+        cards.forEach(card => {
+            card.addEventListener('dragstart', function (e) {
+                draggedCard = this;
+                this.classList.add('dragging');
+                e.dataTransfer.setData('text/plain', this.dataset.component);
+            });
+
+            card.addEventListener('dragend', function () {
+                this.classList.remove('dragging');
+                draggedCard = null;
+            });
+        });
+
+        // Drop Zone Events
+        const dropZones = document.querySelectorAll('.drop-zone');
+        dropZones.forEach(zone => {
+            zone.addEventListener('dragover', e => {
+                e.preventDefault();
+                zone.classList.add('drag-over');
+            });
+
+            zone.addEventListener('dragleave', () => {
+                zone.classList.remove('drag-over');
+            });
+
+            zone.addEventListener('drop', function (e) {
+                e.preventDefault();
+                zone.classList.remove('drag-over');
+
+                if (!draggedCard) return;
+
+                const compType = draggedCard.dataset.component;
+                const compLabel = draggedCard.querySelector('.card-label').innerText;
+                const compImgSrc = draggedCard.querySelector('.card-img').src;
+
+                // Restore previously placed item
+                const existingComp = this.getAttribute('data-placed');
+                if (existingComp) {
+                    const prevCard = document.querySelector(`.sidebar .component-card[data-component="${existingComp}"]`);
+                    if (prevCard) prevCard.classList.remove('placed');
+                }
+
+                this.setAttribute('data-placed', compType);
+                this.innerHTML = `
+          <div class="placed-content">
+            <img src="${compImgSrc}" alt="${compLabel}">
+            <span>${compLabel}</span>
+          </div>
+        `;
+
+                draggedCard.classList.add('placed');
+                showToast(`Placed ${compLabel}`, '#2e7d32');
+            });
+        });
+
+        // Validation Check Button
+        document.getElementById('btn-check').addEventListener('click', () => {
+            let correct = 0;
+            const total = dropZones.length;
+
+            dropZones.forEach(zone => {
+                const expected = zone.dataset.accept;
+                const placed = zone.getAttribute('data-placed');
+
+                zone.classList.remove('correct', 'incorrect');
+
+                if (placed === expected) {
+                    zone.classList.add('correct');
+                    correct++;
+                } else if (placed) {
+                    zone.classList.add('incorrect');
+                }
+            });
+
+            if (correct === total) {
+                showToast('All hardware components correctly placed!', '#2e7d32');
+            } else {
+                showToast(`${correct}/${total} correct. Review red slots.`, '#c62828');
+            }
+        });
+
+        // Reset Action
+        document.getElementById('btn-reset').addEventListener('click', () => {
+            const labels = {
+                'zone-psu': 'PSU',
+                'zone-ram': 'RAM',
+                'zone-cpu': 'CPU<br>Socket',
+                'zone-hdd': 'HDD',
+                'zone-sata': 'SATA',
+                'zone-case-fan': 'Case Fan'
+            };
+
+            dropZones.forEach(zone => {
+                zone.classList.remove('correct', 'incorrect');
+                zone.removeAttribute('data-placed');
+                zone.innerHTML = labels[zone.id];
+            });
+
+            cards.forEach(card => card.classList.remove('placed'));
+            showToast('Assembly reset', '#f36c21');
+        });
+
+        // Info Action
+        document.getElementById('btn-info').addEventListener('click', () => {
+            alert('Drag components from the left menu into their matching slots inside the PC chassis.');
+        });
+
+        function showToast(msg, bg) {
+            const toast = document.getElementById('toast');
+            toast.innerText = msg;
+            toast.style.backgroundColor = bg;
+            toast.style.display = 'block';
+
+            setTimeout(() => {
+                toast.style.display = 'none';
+            }, 2000);
+        }
+    </script>
+</body>
+
+</html>

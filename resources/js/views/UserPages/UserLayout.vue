@@ -3,9 +3,9 @@
     <UserSidebar :isSidebarOpen="isSidebarOpen" @logout="handleLogout" @closeSidebar="closeSidebar" />
     <div class="sidebar-overlay" :class="{ active: isSidebarOpen && isMobile }" @click="isSidebarOpen = false" />
 
-    <div class="main-wrapper">
+    <div class="main-wrapper" >
       <UserTopbar :currentPageTitle="currentPageTitle" @toggleSidebar="toggleSidebar" />
-      <main class="user-main">
+      <main class="user-main" >
         <router-view />
       </main>
     </div>
@@ -35,6 +35,8 @@ const updateWindowWidth = () => {
     isSidebarOpen.value = false
   }
 }
+
+
 
 
 
@@ -110,6 +112,10 @@ const handleLogout = async () => {
   box-sizing: border-box;
   margin: 0;
   padding: 0;
+}
+
+.hideBox {
+  display: none;
 }
 
 /* ── WRAPPER ── */

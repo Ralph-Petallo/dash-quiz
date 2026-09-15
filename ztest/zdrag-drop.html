@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Drag And Drop</title>
+    <style>
+        body {
+
+            padding: 0;
+            margin: 0;
+        }
+
+        #container {
+            background-color: #212228;
+            background-image: linear-gradient(#292a30 .1em, transparent .1em),
+                linear-gradient(90deg, #292a30 .1em, transparent .1em);
+            background-size: 4em 4em;
+            height: 100vh;
+        }
+
+        .card {
+            width: 100px;
+            height: 100px;
+            background-color: aquamarine;
+            cursor: pointer;
+            border-radius: 5px;
+            position: fixed;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="container">
+        <div class="card"></div>
+        <div class="card"></div>
+        <div class="card"></div>
+        <div class="card"></div>
+    </div>
+    <script>
+        function getRandomInt(min, max) {
+            // Use Math.floor to round down to the nearest whole number
+            return Math.floor(Math.random() * 100)
+        }
+        const cards = document.querySelectorAll('.card');
+
+        cards.forEach(card => {
+            let startX = getRandomInt();
+            let startY = getRandomInt();
+
+            const onMouseMove = (e) => {
+                // Calculate position delta
+                const newX = startX - e.clientX;
+                const newY = startY - e.clientY;
+
+                // Update starting coordinates for next frame
+                card.style.cursor = 'grabbing'
+                // Change to fist when pressing down
+                card.addEventListener('pointerdown', (e) => {
+                    card.style.cursor = 'grabbing';
+                    card.setPointerCapture(e.pointerId); // Keeps track of the cursor even if it moves outside the element
+                });
+
+
+                startX = e.clientX;
+                startY = e.clientY;
+
+                // Apply new position using element offsets
+                card.style.top = (card.offsetTop - newY) + 'px';
+                card.style.left = (card.offsetLeft - newX) + 'px';
+            };
+
+            const onMouseUp = () => {
+                // Clean up listeners when drag stops
+                document.removeEventListener('mousemove', onMouseMove);
+                document.removeEventListener('mouseup', onMouseUp);
+                // Change back to open hand when releasing
+                card.addEventListener('pointerup', () => {
+                    card.style.cursor = 'grab';
+                });
+            };
+
+            card.addEventListener('mousedown', (e) => {
+                startX = e.clientX;
+                startY = e.clientY;
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
+    </script>
+</body>
+
+</html>

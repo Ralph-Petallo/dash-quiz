@@ -268,7 +268,7 @@ const photoPath = function (img) {
 
   width: 100%;
   background: var(--noir-white);
-  border-radius: 24px;
+  border-radius: 3px;
   padding: 28px;
   box-shadow:
     0 1px 2px rgba(0, 0, 0, 0.03),
@@ -318,7 +318,6 @@ const photoPath = function (img) {
   display: grid;
   place-items: center;
   flex-shrink: 0;
-  box-shadow: 0 6px 16px -4px rgba(0, 0, 0, 0.35);
 }
 
 .leaderboard-icon {
@@ -408,7 +407,7 @@ const photoPath = function (img) {
 .search-input {
   width: 100%;
   padding: 10px 14px 10px 38px;
-  border: none;
+  border: 1px solid var(--noir-light-gray);
   border-radius: 10px;
   font-size: 0.86rem;
   background: transparent;

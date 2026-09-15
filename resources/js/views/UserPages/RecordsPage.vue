@@ -433,9 +433,8 @@ onMounted(async () => {
   gap: 1.25rem;
   padding: 1.5rem;
   background: var(--noir-white);
-  border-radius: 1rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 8px 24px rgba(0, 0, 0, 0.05);
-  border: 1px solid var(--noir-light-gray);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.06);
+  border-radius: 3px;
 }
 
 /* ── HEADER ── */

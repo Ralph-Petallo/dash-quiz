@@ -75,7 +75,7 @@
           </div>
 
           <span class="detail-value">
-            {{ quizzesCount || 'N/A' }}
+            {{ quizzesCount }}
           </span>
 
         </div>
@@ -109,7 +109,7 @@
 
     </div>
 
-  </div>  
+  </div>
 
 
   <!-- =====================================
@@ -163,6 +163,8 @@ const {
   user
 } = useUser()
 
+console.log(user.value)
+
 
 /* =========================================
    STATE
@@ -189,43 +191,25 @@ const loading = ref(false)
 ========================================= */
 
 const showToast = (
-  msg,
-  type = "success"
-) => {
-
-  notification.value.message = msg
-
-  notification.value.type = type
-
+  message, status = "success") => {
+  notification.value.message = message
+  notification.value.status = status
   setTimeout(() => {
-
     notification.value.message = ""
-
-  }, 2000)
-
+  }, 1500)
 }
-
 
 const handleNotify = (payload) => {
-
-  showToast(
-    payload.message,
-    payload.type
-  )
-
+  showToast(payload.message, payload.status)
 }
-
 
 /* =========================================
    DELETE ACCOUNT
 ========================================= */
 
 const handleDeleted = () => {
-
   showDeleteModal.value = false
-
   router.push("/")
-
 }
 
 
@@ -234,94 +218,51 @@ const handleDeleted = () => {
 ========================================= */
 
 const quizzesCount = computed(() => {
-
   return user.value?.quizzes_taken || 0
-
 })
 
 
 const formattedDate = computed(() => {
-
   if (!user.value?.created_at) {
     return ""
   }
-
-  return new Date(
-    user.value.created_at
-  ).toLocaleDateString()
-
+  return new Date(user.value.created_at).toLocaleDateString()
 })
 
 
 /* =========================================
    PROFILE PHOTO
 ========================================= */
-
 const uploadPhoto = async (e) => {
-
   const file = e.target.files[0]
-
-  if (!file) {
-    return
-  }
-
-
+  // if not file, then just  return
+  if (!file) return
   /* Validate image */
 
   if (!file.type.startsWith("image/")) {
-
     showToast(
       "Please select a valid image file.",
       "error"
     )
-
     return
   }
-
-
   selectedFile.value = file
-
-  preview.value =
-    URL.createObjectURL(file)
-
+  preview.value = URL.createObjectURL(file)
   loading.value = true
 
-
   try {
-
     const formData = new FormData()
+    formData.append("photo", file, file.name)
 
-    formData.append(
-      "photo",
-      file,
-      file.name
-    )
-
-
-    const { data } =
-      await axios.post(
-        "/api/profile/photo",
-        formData
-      )
-
-
-    if (
-      data?.new_photo &&
-      user.value
-    ) {
-
+    const { data } = await axios.post("/api/profile/photo", formData)
+    if (data?.new_photo && user.value) {
       user.value.profile_photo =
         data.new_photo
-
     }
 
-
     preview.value = null
-
-    showToast(
-      "Profile picture updated!",
-      "success"
-    )
+    // alert notification
+    showToast("Profile picture updated!", "success")
 
   } catch (error) {
 
@@ -389,13 +330,10 @@ onMounted(async () => {
   min-height: 100%;
 
   padding: clamp(16px, 3vw, 32px);
-
   display: flex;
   justify-content: center;
   align-items: flex-start;
-
   box-sizing: border-box;
-
   overflow-x: hidden;
 }
 
@@ -411,7 +349,7 @@ onMounted(async () => {
 
   border: 1px solid var(--border);
 
-  border-radius: 16px;
+  border-radius: 3px;
 
   padding: clamp(20px, 4vw, 32px);
 

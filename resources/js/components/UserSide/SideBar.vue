@@ -5,7 +5,7 @@
       <img src="/public/lightning.png" alt="DASHQUIZ Logo" width="32" height="32">
 
       <span class="logo-text">
-        DASH<span>QUIZ</span>
+        CSS<span>Prep</span>
       </span>
     </div>
 

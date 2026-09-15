@@ -2,57 +2,42 @@ import { ref, computed } from 'vue'
 
 const messages = ref({
   morning: [
-    "Good Morning!",
-    "Rise and Shine!",
-    "Ready to Learn?",
-    "Start Strong!",
-    "A New Day, A New Challenge!",
-    "Let's Get Started!",
     "Ready to Level Up?",
-    "Time to Sharpen Your Skills!",
-    "Make Today Count!",
-    "Let's Begin!",
-    "Ready for a Fresh Start?",
-    "Your Next Challenge Awaits!",
-    "Start Your Day Strong!",
+    "Start Strong!",
+    "Rise and Grind!",
+    "Ready for a Challenge?",
+    "Let's Get Started!",
     "Time to Power Up!",
-    "Let's Make Some Progress!"
+    "New Day, New Knowledge!",
+    "Your Next Challenge Awaits!",
+    "Let's Make Some Progress!",
+    "Ready to Test Yourself?"
   ],
 
   afternoon: [
-    "Good Afternoon!",
-    "Keep Going!",
     "Keep the Momentum!",
-    "Ready for Another Challenge?",
     "Keep Leveling Up!",
-    "Time to Practice!",
+    "Ready for the Next Challenge?",
+    "Don't Stop Now!",
+    "Keep Pushing!",
+    "Time to Test Your Skills!",
+    "You're Making Progress!",
     "Stay on Track!",
     "Keep Building Your Skills!",
-    "You're Doing Great!",
-    "Don't Stop Now!",
-    "Keep Pushing Forward!",
-    "Time to Test Your Skills!",
-    "Make This Session Count!",
-    "Ready for the Next Challenge?",
-    "Keep That Progress Going!"
+    "Let's Keep Going!"
   ],
 
   evening: [
-    "Good Evening!",
     "Finish Strong!",
+    "One More Challenge?",
     "Time to Level Up!",
     "Keep Learning!",
-    "One More Challenge?",
     "End the Day Strong!",
-    "Time to Master Your Skills!",
+    "Ready for One Last Challenge?",
+    "Another Step Toward Mastery!",
     "Keep Pushing!",
     "You've Got This!",
-    "Ready for One Last Challenge?",
-    "Keep the Progress Going!",
-    "Time to Sharpen Your Skills!",
-    "Another Step Toward Mastery!",
-    "Make Your Last Session Count!",
-    "End Your Day on a High Note!"
+    "Make Your Last Session Count!"
   ]
 })
 

@@ -1,0 +1,1247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Competency Assessment</title>
+
+<style>
+/* =========================================================
+   FROSTED NOIR DESIGN SYSTEM
+========================================================= */
+
+:root {
+    --white: #ffffff;
+    --black: #000000;
+    --gray-100: #f7f7f7;
+    --gray-200: #eeeeee;
+    --gray-300: #d3d3d3;
+    --gray-400: #a9a9a9;
+    --gray-500: #696969;
+    --gray-600: #444444;
+    --gray-700: #292929;
+
+    --border: rgba(0, 0, 0, 0.10);
+    --shadow: 0 18px 45px rgba(0, 0, 0, 0.08);
+
+    --radius-lg: 22px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+}
+
+/* =========================================================
+   RESET
+========================================================= */
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: Inter, Arial, sans-serif;
+    background:
+        radial-gradient(circle at 15% 10%, rgba(255,255,255,.9), transparent 30%),
+        linear-gradient(135deg, #eeeeee, #d3d3d3);
+    color: var(--black);
+    min-height: 100vh;
+}
+
+/* =========================================================
+   APP
+========================================================= */
+
+.app {
+    min-height: 100vh;
+    display: flex;
+}
+
+/* =========================================================
+   SIDEBAR
+========================================================= */
+
+.sidebar {
+    width: 260px;
+    background: rgba(255,255,255,.65);
+    backdrop-filter: blur(18px);
+    border-right: 1px solid rgba(0,0,0,.08);
+    padding: 24px 18px;
+    position: fixed;
+    inset: 0 auto 0 0;
+    z-index: 20;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 4px 10px 30px;
+}
+
+.logo-mark {
+    width: 40px;
+    height: 40px;
+    background: var(--black);
+    color: var(--white);
+    border-radius: 12px;
+    display: grid;
+    place-items: center;
+    font-weight: 800;
+}
+
+.logo-text {
+    font-weight: 800;
+    font-size: 17px;
+}
+
+.logo-text span {
+    display: block;
+    color: var(--gray-500);
+    font-size: 11px;
+    font-weight: 500;
+    margin-top: 2px;
+}
+
+.nav-title {
+    color: var(--gray-500);
+    font-size: 10px;
+    font-weight: 800;
+    letter-spacing: 1.2px;
+    padding: 0 12px 10px;
+    text-transform: uppercase;
+}
+
+.nav {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.nav-item {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 12px;
+    border-radius: 11px;
+    color: var(--gray-600);
+    font-size: 14px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.nav-item:hover {
+    background: rgba(0,0,0,.05);
+    color: var(--black);
+}
+
+.nav-item.active {
+    background: var(--black);
+    color: var(--white);
+}
+
+.nav-icon {
+    width: 20px;
+    text-align: center;
+}
+
+.profile {
+    position: absolute;
+    bottom: 20px;
+    left: 18px;
+    right: 18px;
+    border-top: 1px solid var(--border);
+    padding-top: 18px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.avatar {
+    width: 38px;
+    height: 38px;
+    background: var(--gray-300);
+    border-radius: 50%;
+    display: grid;
+    place-items: center;
+    font-weight: 700;
+}
+
+.profile-info strong {
+    display: block;
+    font-size: 13px;
+}
+
+.profile-info span {
+    color: var(--gray-500);
+    font-size: 11px;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+.main {
+    margin-left: 260px;
+    width: calc(100% - 260px);
+    padding: 28px;
+}
+
+/* =========================================================
+   TOP BAR
+========================================================= */
+
+.topbar {
+    max-width: 1250px;
+    margin: auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+}
+
+.breadcrumb {
+    color: var(--gray-500);
+    font-size: 13px;
+}
+
+.breadcrumb strong {
+    color: var(--black);
+}
+
+.back-btn {
+    border: 1px solid var(--border);
+    background: rgba(255,255,255,.7);
+    width: 42px;
+    height: 42px;
+    border-radius: 12px;
+    cursor: pointer;
+    font-size: 18px;
+}
+
+/* =========================================================
+   HEADER CARD
+========================================================= */
+
+.assessment-header {
+    max-width: 1250px;
+    margin: auto;
+    background: rgba(255,255,255,.78);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,.8);
+    border-radius: var(--radius-lg);
+    padding: 28px;
+    box-shadow: var(--shadow);
+    margin-bottom: 20px;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 30px;
+}
+
+.eyebrow {
+    color: var(--gray-500);
+    font-size: 11px;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    margin-bottom: 9px;
+}
+
+.assessment-title {
+    font-size: clamp(25px, 3vw, 36px);
+    letter-spacing: -1.2px;
+    margin-bottom: 8px;
+}
+
+.description {
+    max-width: 700px;
+    color: var(--gray-500);
+    line-height: 1.6;
+    font-size: 14px;
+}
+
+.status {
+    background: var(--black);
+    color: white;
+    padding: 8px 13px;
+    border-radius: 100px;
+    font-size: 11px;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+/* =========================================================
+   META
+========================================================= */
+
+.meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
+.meta-item {
+    background: var(--gray-100);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 10px 13px;
+    font-size: 12px;
+    color: var(--gray-600);
+}
+
+.meta-item strong {
+    color: var(--black);
+}
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+.progress-wrap {
+    max-width: 1250px;
+    margin: auto;
+    background: rgba(255,255,255,.65);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 17px 20px;
+    margin-bottom: 20px;
+}
+
+.progress-top {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    margin-bottom: 10px;
+}
+
+.progress-top span {
+    color: var(--gray-500);
+}
+
+.progress {
+    height: 8px;
+    background: var(--gray-300);
+    border-radius: 20px;
+    overflow: hidden;
+}
+
+.progress-bar {
+    height: 100%;
+    width: 25%;
+    background: var(--black);
+    border-radius: 20px;
+    transition: .3s;
+}
+
+/* =========================================================
+   CONTENT GRID
+========================================================= */
+
+.content {
+    max-width: 1250px;
+    margin: auto;
+    display: grid;
+    grid-template-columns: 280px 1fr;
+    gap: 20px;
+}
+
+/* =========================================================
+   TASK LIST
+========================================================= */
+
+.task-panel {
+    background: rgba(255,255,255,.7);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    padding: 18px;
+    height: fit-content;
+}
+
+.panel-heading {
+    font-size: 13px;
+    font-weight: 800;
+    margin-bottom: 14px;
+}
+
+.task-list {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.task {
+    display: flex;
+    align-items: center;
+    gap: 11px;
+    padding: 12px;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.task:hover {
+    background: var(--gray-200);
+}
+
+.task.active {
+    background: var(--black);
+    color: var(--white);
+}
+
+.task.completed {
+    background: var(--gray-100);
+}
+
+.task-number {
+    width: 28px;
+    height: 28px;
+    border-radius: 8px;
+    background: var(--gray-300);
+    display: grid;
+    place-items: center;
+    font-size: 11px;
+    font-weight: 800;
+    flex-shrink: 0;
+}
+
+.task.active .task-number {
+    background: rgba(255,255,255,.18);
+}
+
+.task.completed .task-number {
+    background: var(--black);
+    color: white;
+}
+
+.task-name {
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.task-status {
+    margin-left: auto;
+    font-size: 12px;
+}
+
+/* =========================================================
+   WORK AREA
+========================================================= */
+
+.work-area {
+    background: rgba(255,255,255,.82);
+    backdrop-filter: blur(20px);
+    border: 1px solid rgba(255,255,255,.9);
+    border-radius: var(--radius-lg);
+    padding: 26px;
+    box-shadow: var(--shadow);
+}
+
+.task-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 20px;
+}
+
+.task-title {
+    font-size: 21px;
+    margin-bottom: 5px;
+}
+
+.task-subtitle {
+    color: var(--gray-500);
+    font-size: 13px;
+}
+
+.points {
+    border: 1px solid var(--border);
+    padding: 8px 12px;
+    border-radius: 10px;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+/* =========================================================
+   INSTRUCTION
+========================================================= */
+
+.instruction {
+    background: var(--gray-100);
+    border-left: 3px solid var(--black);
+    padding: 14px 16px;
+    border-radius: 0 10px 10px 0;
+    margin-bottom: 22px;
+}
+
+.instruction strong {
+    display: block;
+    font-size: 12px;
+    margin-bottom: 5px;
+}
+
+.instruction p {
+    color: var(--gray-600);
+    font-size: 12px;
+    line-height: 1.5;
+}
+
+/* =========================================================
+   PRACTICAL AREA
+========================================================= */
+
+.practical-area {
+    border: 1px dashed #a9a9a9;
+    background:
+        linear-gradient(rgba(0,0,0,.015) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(0,0,0,.015) 1px, transparent 1px);
+    background-size: 25px 25px;
+    border-radius: 16px;
+    min-height: 310px;
+    padding: 25px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    position: relative;
+}
+
+.cable {
+    position: relative;
+    width: 330px;
+    height: 130px;
+}
+
+.cable-wire {
+    position: absolute;
+    height: 7px;
+    width: 220px;
+    left: 0;
+    border-radius: 5px;
+}
+
+.wire-1 { top: 25px; background: #f4f4f4; border: 1px solid #999; }
+.wire-2 { top: 37px; background: #888; }
+.wire-3 { top: 49px; background: #eee; border: 1px solid #999; }
+.wire-4 { top: 61px; background: #555; }
+.wire-5 { top: 73px; background: #ddd; }
+.wire-6 { top: 85px; background: #222; }
+.wire-7 { top: 97px; background: #aaa; }
+.wire-8 { top: 109px; background: #111; }
+
+.connector {
+    position: absolute;
+    right: 0;
+    top: 20px;
+    width: 85px;
+    height: 95px;
+    border: 3px solid #444;
+    border-radius: 8px;
+    background: rgba(255,255,255,.85);
+}
+
+.connector::before {
+    content: "RJ-45";
+    position: absolute;
+    top: -25px;
+    font-size: 10px;
+    font-weight: 800;
+    color: var(--gray-500);
+}
+
+.connector-hole {
+    height: 7px;
+    width: 45px;
+    margin: 7px auto;
+    border: 1px solid #888;
+    border-radius: 3px;
+    background: #eee;
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+.action-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 20px;
+    gap: 15px;
+}
+
+.action-info {
+    color: var(--gray-500);
+    font-size: 11px;
+}
+
+.actions {
+    display: flex;
+    gap: 8px;
+}
+
+.btn {
+    border: 0;
+    padding: 11px 17px;
+    border-radius: 10px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+    transition: .2s;
+}
+
+.btn-secondary {
+    background: var(--gray-200);
+    color: var(--black);
+}
+
+.btn-secondary:hover {
+    background: var(--gray-300);
+}
+
+.btn-primary {
+    background: var(--black);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 7px 20px rgba(0,0,0,.15);
+}
+
+.btn:disabled {
+    opacity: .4;
+    cursor: not-allowed;
+}
+
+/* =========================================================
+   RESPONSIVE
+========================================================= */
+
+@media (max-width: 900px) {
+
+    .sidebar {
+        transform: translateX(-100%);
+    }
+
+    .main {
+        margin-left: 0;
+        width: 100%;
+        padding: 16px;
+    }
+
+    .content {
+        grid-template-columns: 1fr;
+    }
+
+    .task-panel {
+        order: 2;
+    }
+
+    .work-area {
+        order: 1;
+    }
+}
+
+@media (max-width: 600px) {
+
+    .header-content,
+    .task-header,
+    .action-bar {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .assessment-header,
+    .work-area {
+        padding: 20px;
+    }
+
+    .cable {
+        transform: scale(.75);
+    }
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+    <!-- SIDEBAR -->
+    <aside class="sidebar">
+
+        <div class="logo">
+            <div class="logo-mark">DQ</div>
+
+            <div class="logo-text">
+                Dash Quiz
+                <span>Competency System</span>
+            </div>
+        </div>
+
+        <div class="nav-title">Assessment</div>
+
+        <nav class="nav">
+
+            <div class="nav-item">
+                <span class="nav-icon">⌂</span>
+                Dashboard
+            </div>
+
+            <div class="nav-item active">
+                <span class="nav-icon">▣</span>
+                Competency
+            </div>
+
+            <div class="nav-item">
+                <span class="nav-icon">✓</span>
+                Results
+            </div>
+
+            <div class="nav-item">
+                <span class="nav-icon">◉</span>
+                Performance
+            </div>
+
+        </nav>
+
+        <div class="profile">
+            <div class="avatar">RP</div>
+
+            <div class="profile-info">
+                <strong>Ralph Petallo</strong>
+                <span>CSS Student</span>
+            </div>
+        </div>
+
+    </aside>
+
+
+    <!-- MAIN -->
+    <main class="main">
+
+        <!-- TOPBAR -->
+        <div class="topbar">
+
+            <div class="breadcrumb">
+                Competency Assessment /
+                <strong>COC 3</strong>
+            </div>
+
+            <button class="back-btn">←</button>
+
+        </div>
+
+
+        <!-- ASSESSMENT HEADER -->
+        <section class="assessment-header">
+
+            <div class="header-content">
+
+                <div>
+
+                    <div class="eyebrow">
+                        Competency Assessment
+                    </div>
+
+                    <h1 class="assessment-title">
+                        Install and Configure Computer Network
+                    </h1>
+
+                    <p class="description">
+                        Demonstrate your ability to perform the required
+                        networking procedures correctly, safely, and in the
+                        proper sequence.
+                    </p>
+
+                </div>
+
+                <div class="status">
+                    IN PROGRESS
+                </div>
+
+            </div>
+
+
+            <div class="meta">
+
+                <div class="meta-item">
+                    <strong>COC 3</strong> · Networking
+                </div>
+
+                <div class="meta-item">
+                    Tasks <strong>4</strong>
+                </div>
+
+                <div class="meta-item">
+                    Time <strong>15 min</strong>
+                </div>
+
+                <div class="meta-item">
+                    Passing Score <strong>75%</strong>
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- PROGRESS -->
+        <section class="progress-wrap">
+
+            <div class="progress-top">
+
+                <span>
+                    Assessment Progress
+                </span>
+
+                <strong id="progressText">
+                    1 of 4 tasks
+                </strong>
+
+            </div>
+
+            <div class="progress">
+                <div
+                    class="progress-bar"
+                    id="progressBar">
+                </div>
+            </div>
+
+        </section>
+
+
+        <!-- CONTENT -->
+        <section class="content">
+
+            <!-- TASK LIST -->
+            <aside class="task-panel">
+
+                <div class="panel-heading">
+                    Practical Tasks
+                </div>
+
+                <div class="task-list">
+
+                    <div class="task active" data-task="1">
+
+                        <div class="task-number">01</div>
+
+                        <div class="task-name">
+                            Prepare Cable
+                        </div>
+
+                        <div class="task-status">●</div>
+
+                    </div>
+
+                    <div class="task" data-task="2">
+
+                        <div class="task-number">02</div>
+
+                        <div class="task-name">
+                            Terminate RJ-45
+                        </div>
+
+                        <div class="task-status">○</div>
+
+                    </div>
+
+                    <div class="task" data-task="3">
+
+                        <div class="task-number">03</div>
+
+                        <div class="task-name">
+                            Test Cable
+                        </div>
+
+                        <div class="task-status">○</div>
+
+                    </div>
+
+                    <div class="task" data-task="4">
+
+                        <div class="task-number">04</div>
+
+                        <div class="task-name">
+                            Verify Connection
+                        </div>
+
+                        <div class="task-status">○</div>
+
+                    </div>
+
+                </div>
+
+            </aside>
+
+
+            <!-- WORK AREA -->
+            <section class="work-area">
+
+                <div class="task-header">
+
+                    <div>
+
+                        <h2 class="task-title" id="taskTitle">
+                            Task 01 — Prepare Network Cable
+                        </h2>
+
+                        <p class="task-subtitle" id="taskSubtitle">
+                            Prepare the cable before termination.
+                        </p>
+
+                    </div>
+
+                    <div class="points">
+                        25 POINTS
+                    </div>
+
+                </div>
+
+
+                <!-- INSTRUCTION -->
+                <div class="instruction">
+
+                    <strong>PROCEDURE</strong>
+
+                    <p id="instructionText">
+                        Inspect the network cable and prepare the end
+                        for RJ-45 termination. Perform the procedure
+                        carefully before proceeding to the next task.
+                    </p>
+
+                </div>
+
+
+                <!-- PRACTICAL AREA -->
+                <div class="practical-area">
+
+                    <div class="cable">
+
+                        <div class="cable-wire wire-1"></div>
+                        <div class="cable-wire wire-2"></div>
+                        <div class="cable-wire wire-3"></div>
+                        <div class="cable-wire wire-4"></div>
+                        <div class="cable-wire wire-5"></div>
+                        <div class="cable-wire wire-6"></div>
+                        <div class="cable-wire wire-7"></div>
+                        <div class="cable-wire wire-8"></div>
+
+                        <div class="connector">
+
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+                            <div class="connector-hole"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- ACTIONS -->
+                <div class="action-bar">
+
+                    <div class="action-info" id="actionInfo">
+                        Complete the task to continue.
+                    </div>
+
+                    <div class="actions">
+
+                        <button
+                            class="btn btn-secondary"
+                            id="resetBtn">
+                            Reset
+                        </button>
+
+                        <button
+                            class="btn btn-primary"
+                            id="nextBtn">
+                            Complete Task →
+                        </button>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </section>
+
+    </main>
+
+</div>
+
+
+<script>
+
+/* =========================================================
+   ASSESSMENT DATA
+========================================================= */
+
+const tasks = [
+
+    {
+        title: "Task 01 — Prepare Network Cable",
+        subtitle: "Prepare the cable before termination.",
+        instruction:
+            "Inspect the network cable and prepare the end for RJ-45 termination. Perform the procedure carefully before proceeding to the next task."
+    },
+
+    {
+        title: "Task 02 — Terminate RJ-45 Connector",
+        subtitle: "Arrange and insert the wires correctly.",
+        instruction:
+            "Place the eight wires into the RJ-45 connector following the required wiring standard. Make sure every wire reaches the correct position."
+    },
+
+    {
+        title: "Task 03 — Test Network Cable",
+        subtitle: "Verify the completed cable.",
+        instruction:
+            "Connect the terminated cable to the network tester and perform the test. Check that all eight connections are detected correctly."
+    },
+
+    {
+        title: "Task 04 — Verify Connection",
+        subtitle: "Confirm the final installation.",
+        instruction:
+            "Inspect the completed network cable and verify that the connection is properly installed and ready for use."
+    }
+
+];
+
+
+/* =========================================================
+   STATE
+========================================================= */
+
+let currentTask = 0;
+let completedTasks = new Set();
+
+
+/* =========================================================
+   ELEMENTS
+========================================================= */
+
+const taskTitle = document.getElementById("taskTitle");
+const taskSubtitle = document.getElementById("taskSubtitle");
+const instructionText = document.getElementById("instructionText");
+
+const progressBar = document.getElementById("progressBar");
+const progressText = document.getElementById("progressText");
+
+const actionInfo = document.getElementById("actionInfo");
+
+const nextBtn = document.getElementById("nextBtn");
+const resetBtn = document.getElementById("resetBtn");
+
+const taskElements =
+    document.querySelectorAll(".task");
+
+
+/* =========================================================
+   UPDATE UI
+========================================================= */
+
+function updateAssessment() {
+
+    const task = tasks[currentTask];
+
+    taskTitle.textContent = task.title;
+
+    taskSubtitle.textContent = task.subtitle;
+
+    instructionText.textContent = task.instruction;
+
+
+    /* Progress */
+
+    const progress =
+        ((currentTask + 1) / tasks.length) * 100;
+
+    progressBar.style.width = progress + "%";
+
+    progressText.textContent =
+        `${currentTask + 1} of ${tasks.length} tasks`;
+
+
+    /* Task list */
+
+    taskElements.forEach((element, index) => {
+
+        element.classList.remove("active");
+
+        if (completedTasks.has(index)) {
+            element.classList.add("completed");
+        }
+
+        if (index === currentTask) {
+            element.classList.add("active");
+        }
+
+        const status =
+            element.querySelector(".task-status");
+
+        if (completedTasks.has(index)) {
+            status.textContent = "✓";
+        } else if (index === currentTask) {
+            status.textContent = "●";
+        } else {
+            status.textContent = "○";
+        }
+
+    });
+
+
+    /* Last task */
+
+    if (currentTask === tasks.length - 1) {
+
+        nextBtn.textContent = "Finish Assessment ✓";
+
+        actionInfo.textContent =
+            "Complete this task to finish the assessment.";
+
+    } else {
+
+        nextBtn.textContent =
+            "Complete Task →";
+
+        actionInfo.textContent =
+            "Complete the task to continue.";
+
+    }
+
+}
+
+
+/* =========================================================
+   SELECT TASK
+========================================================= */
+
+taskElements.forEach((taskElement, index) => {
+
+    taskElement.addEventListener("click", () => {
+
+        /*
+            Only allow navigation to completed tasks
+            or the current task.
+        */
+
+        if (
+            completedTasks.has(index) ||
+            index === currentTask
+        ) {
+
+            currentTask = index;
+
+            updateAssessment();
+
+        }
+
+    });
+
+});
+
+
+/* =========================================================
+   COMPLETE TASK
+========================================================= */
+
+nextBtn.addEventListener("click", () => {
+
+    completedTasks.add(currentTask);
+
+
+    if (currentTask === tasks.length - 1) {
+
+        showCompletion();
+
+        return;
+
+    }
+
+
+    currentTask++;
+
+    updateAssessment();
+
+});
+
+
+/* =========================================================
+   RESET
+========================================================= */
+
+resetBtn.addEventListener("click", () => {
+
+    completedTasks.clear();
+
+    currentTask = 0;
+
+    updateAssessment();
+
+});
+
+
+/* =========================================================
+   COMPLETION
+========================================================= */
+
+function showCompletion() {
+
+    taskTitle.textContent =
+        "Assessment Completed";
+
+    taskSubtitle.textContent =
+        "You have completed all practical tasks.";
+
+    instructionText.textContent =
+        "Your competency assessment has been completed. Your performance can now be evaluated based on the required criteria.";
+
+    actionInfo.textContent =
+        "Assessment ready for evaluation.";
+
+    nextBtn.textContent =
+        "View Result";
+
+    nextBtn.onclick = () => {
+
+        alert(
+            "Assessment Complete!\n\n" +
+            "Tasks Completed: 4 / 4\n" +
+            "Status: FOR EVALUATION"
+        );
+
+    };
+
+    progressBar.style.width = "100%";
+
+    progressText.textContent =
+        "4 of 4 tasks";
+
+}
+
+
+/* =========================================================
+   INITIALIZE
+========================================================= */
+
+updateAssessment();
+
+</script>
+
+</body>
+</html>
