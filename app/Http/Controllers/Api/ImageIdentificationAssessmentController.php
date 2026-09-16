@@ -14,7 +14,11 @@ class ImageIdentificationAssessmentController extends Controller
             ->with('options')
             ->inRandomOrder()
             ->take(10)
-            ->get();
+            ->get()
+            ->each(function ($question) {
+                $question->image_path = asset('storage/images/images_identification' . $question->image_path);
+            });
+
 
         if ($questions->isEmpty()) {
             return response()->json([
