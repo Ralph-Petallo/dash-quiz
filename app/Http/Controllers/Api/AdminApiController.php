@@ -62,10 +62,12 @@ class AdminApiController extends Controller
                     ->get()
                     ->map(function ($dasher) {
                         $average = $dasher->total_quizzes
+                        // True here
                             ? round(
                                 ($dasher->total_score / ($dasher->total_quizzes * 10)) * 100,
                                 1
                             )
+                            // False here
                             : 0;
 
                         return [
