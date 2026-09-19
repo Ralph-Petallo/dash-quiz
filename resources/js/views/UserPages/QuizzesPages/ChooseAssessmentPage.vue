@@ -82,13 +82,10 @@ const route = useRoute()
 const assessmentObject = ref({})
 const assessments = ref([])
 
-const id = Number(route.params.id)
-const cocId = id <= 3 ? id - 1 : id + 1
-
 // get all assessments for the given COC ID and filter them based on availability
 const fetchAssessmentData = async () => {
     try {
-        const { data } = await axios.get(`/api/assessments-type/${cocId}`);
+        const { data } = await axios.get(`/api/assessments-type/${route.params.id}`);
         assessments.value = data.assessments
         assessmentObject.value = data.quiz
 
