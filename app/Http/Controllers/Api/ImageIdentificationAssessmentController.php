@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Question;
+use Illuminate\Support\Facades\Storage;
 
 class ImageIdentificationAssessmentController extends Controller
 {
@@ -14,7 +15,12 @@ class ImageIdentificationAssessmentController extends Controller
             ->with('options')
             ->inRandomOrder()
             ->take(10)
-            ->get();
+            ->get()
+            ->each(function ($question) {
+                $question->image_path = Storage::url(
+                    'images/images_identification/'.$question->image_path
+                );
+            });
 
         if ($questions->isEmpty()) {
             return response()->json([
