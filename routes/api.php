@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Api\AssessmentTypeController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\QuizApiController;
 use App\Http\Controllers\Api\AdminApiController;
@@ -44,7 +45,10 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
         Route::get('/quizzes', 'quizzes');
         Route::get('/records', 'records');
         Route::get('/stats', 'stats');
+        Route::get('/test', fn() => response()->json(['ok' => true]));
     });
+
+    Route::get('assessments-type/{id}', [AssessmentTypeController::class, 'getAssessmentTypes']);
 
     Route::controller(QuizApiController::class)->group(function () {
         // Static before wildcard
