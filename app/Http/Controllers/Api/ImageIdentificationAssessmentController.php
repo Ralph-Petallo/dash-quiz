@@ -16,9 +16,10 @@ class ImageIdentificationAssessmentController extends Controller
             ->take(10)
             ->get()
             ->each(function ($question) {
-                $question->image_path = asset('storage/images/images_identification' . $question->image_path);
+                $question->image_path = asset(
+                    'images/images_identification/' . ltrim($question->image_path, '/')
+                );
             });
-
 
         if ($questions->isEmpty()) {
             return response()->json([
