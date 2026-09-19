@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Question;
+use Illuminate\Support\Facades\Storage;
 
 class ImageIdentificationAssessmentController extends Controller
 {
@@ -16,8 +17,8 @@ class ImageIdentificationAssessmentController extends Controller
             ->take(10)
             ->get()
             ->each(function ($question) {
-                $question->image_path = asset(
-                    'images/images_identification/' . ltrim($question->image_path, '/')
+                $question->image_path = Storage::url(
+                    'images/images_identification/'.$question->image_path
                 );
             });
 
