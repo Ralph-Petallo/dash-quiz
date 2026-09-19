@@ -28,7 +28,7 @@
             <p>Select an assessment type to begin.</p>
         </div>
 
-        <div class="assessment-grid">
+        <div v-if="assessments.length" class="assessment-grid">
             <div v-for="assessment in assessments" :key="assessment.type" class="assessment-card"
                 :class="{ active: assessment.available, locked: !assessment.available }">
 
@@ -61,6 +61,14 @@
                 </div>
             </div>
         </div>
+
+        <div v-else>
+            <div class="empty-assessment">
+                <div class="box">
+                    <p>There is no assessment for this coc yet.</p>
+                </div>
+            </div>
+        </div>
     </div>
 </template>
 
@@ -74,70 +82,15 @@ const route = useRoute()
 const assessmentObject = ref({})
 const assessments = ref([])
 
-const assessmentDefaults = {
-    multiple_choice: {
-        title: 'Multiple Choice',
-        icon: 'fas fa-list-check',
-        description: 'Test your knowledge of computer systems and basic troubleshooting.',
-        category: 'Hardware',
-        difficulty: 'Easy',
-        meta: 'Questions',
-        path: 'quiz'
-    },
-    image_identification: {
-        title: 'Image Identification',
-        icon: 'fas fa-image',
-        description: 'Identify computer components, tools, ports, and equipment.',
-        category: 'Components',
-        difficulty: 'Medium',
-        meta: 'Practical lab',
-        path: 'image-identification'
-    },
-    drag_drop: {
-        title: 'Drag & Drop',
-        icon: 'fas fa-arrows-up-down-left-right',
-        description: 'Arrange computer components and installation procedures correctly.',
-        category: 'Installation',
-        difficulty: 'Medium',
-        meta: 'Questions',
-        path: 'dragdrop'
-    },
-    rj45: {
-        title: 'RJ-45 Cable Activity',
-        icon: 'fas fa-ethernet',
-        description: 'Cut, arrange, connect, crimp, and test a network cable.',
-        category: 'Networking',
-        difficulty: 'Hard',
-        meta: '4 practical stages',
-        path: 'rj45-hands-on'
-    },
-}
+const id = Number(route.params.id)
+const cocId = id <= 3 ? id - 1 : id + 1
 
 // get all assessments for the given COC ID and filter them based on availability
 const fetchAssessmentData = async () => {
     try {
-        const response = await axios.get('/api/quizzes')
-
-        const quizzes = response.data.data || response.data
-
-        // Find the selected assessment
-        for (let i = 0; i < quizzes.length; i++) {
-            if (quizzes[i].id == route.params.id) {
-                assessmentObject.value = quizzes[i]
-                break
-            }
-        }
-
-        // Add all available assessment types
-        assessments.value = []
-
-        for (const type in assessmentDefaults) {
-            assessments.value.push({
-                type: type,
-                ...assessmentDefaults[type],
-                available: true
-            })
-        }
+        const { data } = await axios.get(`/api/assessments-type/${cocId}`);
+        assessments.value = data.assessments
+        assessmentObject.value = data.quiz
 
     } catch (error) {
         console.error(error)
@@ -149,7 +102,7 @@ const startAssessment = (assessment) => {
     if (quizId) router.push(`/${assessment.path}/${quizId}`)
 }
 
-onMounted(fetchAssessmentData)
+onMounted(fetchAssessmentData)  
 </script>
 
 
@@ -185,7 +138,7 @@ onMounted(fetchAssessmentData)
 
     background: var(--background);
     color: var(--black);
-    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.06); 
+    box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.06);
     box-sizing: border-box;
     overflow-x: hidden;
 }
@@ -729,6 +682,31 @@ onMounted(fetchAssessmentData)
     color: var(--gray);
 }
 
+/* Empty Assessment Section */
+.empty-assessment {
+    width: 100%;
+    height: 250px;
+    background: #f0f0f0;
+    border-radius: 5px;
+    position: relative;
+}
+
+.box {
+    position: absolute;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%);
+    height: 100px;
+}
+
+.box p {
+    font-size: 13px;
+    color: grey;
+}
 
 /* =========================================================
    LARGE TABLET
