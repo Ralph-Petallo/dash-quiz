@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CSS Prep</title>
-    <link rel="icon" href="{{ asset('bolt.png') }}" type="image/x-icon">
+    <link rel="icon" href="{{ asset('lightning.png') }}" type="image/x-icon">
     @vite(['resources/js/app.js'])
 </head>
 
