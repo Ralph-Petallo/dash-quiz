@@ -1126,8 +1126,6 @@ onMounted(async () => {
     .assessment-card {
         flex: 1 1 auto;
 
-        width: 100%;
-
         min-width: 0;
 
         min-height: 220px;
