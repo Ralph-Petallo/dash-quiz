@@ -138,11 +138,6 @@ const reTake = () => {
 <style scoped>
 /* =========================================================
    FROSTED NOIR
-   #FFFFFF - White
-   #000000 - Black
-   #A9A9A9 - Gray
-   #D3D3D3 - Light Gray
-   #696969 - Dim Gray
    ========================================================= */
 
 .quiz-result-page {
@@ -161,7 +156,9 @@ const reTake = () => {
   --text-secondary: #696969;
   --text-muted: #a9a9a9;
 
-  min-height: 100vh;
+  min-height: 100dvh;
+  width: 100%;
+
   background: var(--surface-soft);
   color: var(--text-primary);
 
@@ -174,7 +171,16 @@ const reTake = () => {
 
   display: flex;
   flex-direction: column;
+
+  box-sizing: border-box;
 }
+
+.quiz-result-page *,
+.quiz-result-page *::before,
+.quiz-result-page *::after {
+  box-sizing: border-box;
+}
+
 
 /* =========================================================
    TOP BAR
@@ -182,27 +188,32 @@ const reTake = () => {
 
 .top-bar {
   width: 100%;
+
   background: rgba(255, 255, 255, 0.94);
+
   border-bottom: 1px solid var(--border);
 
   position: sticky;
   top: 0;
   z-index: 100;
 
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
 }
 
 .nav-content {
   width: 100%;
-  max-width: 800px;
+  max-width: 1100px;
 
   margin: 0 auto;
-  padding: 0.8rem 1.25rem;
+
+  padding:
+    0.8rem clamp(0.85rem, 3vw, 1.5rem);
 
   display: flex;
   align-items: center;
   justify-content: space-between;
+
   gap: 1rem;
 }
 
@@ -212,9 +223,10 @@ const reTake = () => {
    ========================================================= */
 
 .brand {
+  min-width: 0;
+
   display: flex;
   align-items: center;
-  min-width: 0;
 }
 
 .brand-text {
@@ -237,18 +249,18 @@ const reTake = () => {
    ========================================================= */
 
 .profile-link {
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
   justify-content: center;
-
-  flex-shrink: 0;
 
   text-decoration: none;
 }
 
 .user-avatar {
-  width: 36px;
-  height: 36px;
+  width: 38px;
+  height: 38px;
 
   border-radius: 50%;
 
@@ -277,11 +289,12 @@ const reTake = () => {
   flex: 1;
 
   width: 100%;
-  max-width: 800px;
+  max-width: 1100px;
 
   margin: 0 auto;
 
-  padding: 2rem 1.25rem 3rem;
+  padding:
+    clamp(1.25rem, 4vw, 3rem) clamp(0.85rem, 4vw, 1.5rem) clamp(2rem, 5vw, 4rem);
 
   display: flex;
   align-items: center;
@@ -295,14 +308,19 @@ const reTake = () => {
 
 .result-card {
   width: 100%;
-  max-width: 430px;
+
+  /*
+   * Keeps the result card comfortable on desktop
+   * while allowing it to shrink naturally on mobile.
+   */
+  max-width: 460px;
 
   background: var(--surface);
 
   border: 1px solid var(--border);
   border-radius: 18px;
 
-  padding: 2.5rem 2rem;
+  padding: clamp(1.75rem, 5vw, 2.5rem);
 
   text-align: center;
 
@@ -312,11 +330,14 @@ const reTake = () => {
   animation: resultEnter 0.35s ease-out both;
 }
 
+
 /* =========================================================
    SCORE
    ========================================================= */
 
 .score-summary {
+  width: 100%;
+
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -327,11 +348,18 @@ const reTake = () => {
 
   color: var(--black);
 
-  font-size: clamp(2rem, 7vw, 2.75rem);
+  /*
+   * Responsive without becoming excessively large.
+   */
+  font-size: clamp(2rem, 7vw, 2.9rem);
+
   line-height: 1;
 
   font-weight: 800;
+
   letter-spacing: -0.04em;
+
+  overflow-wrap: anywhere;
 }
 
 .score-text {
@@ -339,8 +367,11 @@ const reTake = () => {
 
   color: var(--dark-gray);
 
-  font-size: 0.88rem;
+  font-size: clamp(0.78rem, 2vw, 0.88rem);
+
   font-weight: 500;
+
+  line-height: 1.5;
 }
 
 
@@ -349,13 +380,15 @@ const reTake = () => {
    ========================================================= */
 
 .time-text {
-  margin: 0.7rem 0 0;
+  margin: 0.75rem 0 0;
+
+  max-width: 100%;
 
   display: inline-flex;
   align-items: center;
   justify-content: center;
 
-  padding: 0.45rem 0.75rem;
+  padding: 0.45rem 0.8rem;
 
   background: var(--surface-muted);
 
@@ -363,8 +396,11 @@ const reTake = () => {
 
   color: var(--dark-gray);
 
-  font-size: 0.78rem;
+  font-size: clamp(0.7rem, 2vw, 0.78rem);
+
   font-weight: 700;
+
+  white-space: nowrap;
 }
 
 
@@ -373,9 +409,12 @@ const reTake = () => {
    ========================================================= */
 
 .feedback-msg {
-  margin: 2rem 0;
+  width: 100%;
 
-  padding: 1rem;
+  margin:
+    clamp(1.5rem, 5vw, 2rem) 0;
+
+  padding: clamp(0.85rem, 3vw, 1rem);
 
   background: var(--surface-soft);
 
@@ -388,8 +427,11 @@ const reTake = () => {
 
   color: var(--dark-gray);
 
-  font-size: 0.85rem;
+  font-size: clamp(0.76rem, 2vw, 0.85rem);
+
   line-height: 1.6;
+
+  overflow-wrap: anywhere;
 }
 
 
@@ -398,41 +440,61 @@ const reTake = () => {
    ========================================================= */
 
 .action-grid {
+  width: 100%;
+
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
 
   gap: 0.75rem;
 
   margin-top: 0.5rem;
 }
 
-
-/* Primary */
-
-.btn-primary {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
+.btn-primary,
+.btn-outline {
+  width: 100%;
+  min-width: 0;
   min-height: 46px;
 
   padding: 0.75rem 1rem;
 
-  background: var(--black);
-  color: var(--white);
-
-  border: 1px solid var(--black);
   border-radius: 9px;
 
-  text-decoration: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  font-family: inherit;
 
   font-size: 0.82rem;
   font-weight: 700;
 
+  line-height: 1.3;
+
+  text-align: center;
+
+  cursor: pointer;
+
   transition:
     background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
     transform 0.2s ease,
     box-shadow 0.2s ease;
+}
+
+
+/* =========================================================
+   PRIMARY BUTTON
+   ========================================================= */
+
+.btn-primary {
+  background: var(--black);
+  color: var(--white);
+
+  border: 1px solid var(--black);
+
+  text-decoration: none;
 }
 
 .btn-primary:hover {
@@ -445,33 +507,15 @@ const reTake = () => {
 }
 
 
-/* Secondary */
+/* =========================================================
+   OUTLINE BUTTON
+   ========================================================= */
 
 .btn-outline {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  min-height: 46px;
-
-  padding: 0.75rem 1rem;
-
   background: var(--white);
   color: var(--dark-gray);
 
   border: 1px solid var(--border);
-  border-radius: 9px;
-
-  font-size: 0.82rem;
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
 }
 
 .btn-outline:hover {
@@ -486,7 +530,7 @@ const reTake = () => {
 
 
 /* =========================================================
-   LOADING STATE
+   LOADING
    ========================================================= */
 
 .result-card>p {
@@ -496,11 +540,13 @@ const reTake = () => {
 
   font-size: 0.85rem;
   font-weight: 600;
+
+  line-height: 1.5;
 }
 
 
 /* =========================================================
-   FOCUS / ACCESSIBILITY
+   FOCUS
    ========================================================= */
 
 .btn-primary:focus-visible,
@@ -534,11 +580,15 @@ const reTake = () => {
 
 @media (max-width: 768px) {
   .nav-content {
-    padding: 0.75rem 1rem;
+    padding:
+      0.75rem 1rem;
   }
 
   .container {
-    padding: 1.5rem 1rem 2.5rem;
+    align-items: center;
+
+    padding:
+      1.5rem 1rem 2.5rem;
   }
 
   .result-card {
@@ -551,45 +601,49 @@ const reTake = () => {
    MOBILE
    ========================================================= */
 
-@media (max-width: 480px) {
+@media (max-width: 600px) {
+  .top-bar {
+    position: sticky;
+  }
+
   .nav-content {
-    padding: 0.7rem 0.85rem;
+    padding:
+      0.7rem 0.85rem;
   }
 
   .brand-text {
+    max-width: calc(100vw - 5rem);
+
     font-size: 0.72rem;
+
+    letter-spacing: 0.06em;
   }
 
   .user-avatar {
-    width: 34px;
-    height: 34px;
+    width: 35px;
+    height: 35px;
   }
 
   .container {
-    padding: 1rem 0.75rem 2rem;
-
     align-items: flex-start;
+
+    padding:
+      1rem 0.75rem 2rem;
   }
 
   .result-card {
-    margin-top: 1rem;
+    width: 100%;
 
-    padding: 2rem 1rem;
+    margin-top: 0.5rem;
+
+    padding:
+      1.75rem 1rem;
 
     border-radius: 15px;
   }
 
-  .celebration-icon {
-    width: 56px;
-    height: 56px;
-
-    margin-bottom: 1rem;
-
-    font-size: 1.5rem;
-  }
-
   .score-number {
-    font-size: 2.15rem;
+    font-size: clamp(2rem, 11vw, 2.4rem);
   }
 
   .score-text {
@@ -601,22 +655,94 @@ const reTake = () => {
   }
 
   .feedback-msg {
-    margin: 1.5rem 0;
+    margin:
+      1.5rem 0;
 
-    padding: 0.85rem;
+    padding:
+      0.85rem;
   }
 
   .feedback-msg p {
     font-size: 0.78rem;
   }
 
+  /*
+   * Stack buttons on phones.
+   */
   .action-grid {
     grid-template-columns: 1fr;
+
+    gap: 0.6rem;
   }
 
   .btn-primary,
   .btn-outline {
-    width: 100%;
+    min-height: 45px;
+
+    padding:
+      0.7rem 0.85rem;
+
+    font-size: 0.8rem;
+  }
+}
+
+
+/* =========================================================
+   SMALL PHONES
+   ========================================================= */
+
+@media (max-width: 400px) {
+  .nav-content {
+    padding:
+      0.65rem 0.7rem;
+  }
+
+  .brand-text {
+    font-size: 0.66rem;
+  }
+
+  .user-avatar {
+    width: 33px;
+    height: 33px;
+  }
+
+  .container {
+    padding:
+      0.75rem 0.5rem 1.5rem;
+  }
+
+  .result-card {
+    margin-top: 0.35rem;
+
+    padding:
+      1.5rem 0.85rem;
+
+    border-radius: 14px;
+  }
+
+  .score-number {
+    font-size: 2rem;
+  }
+
+  .score-text {
+    font-size: 0.76rem;
+  }
+
+  .time-text {
+    padding:
+      0.4rem 0.65rem;
+
+    font-size: 0.68rem;
+  }
+
+  .feedback-msg {
+    padding:
+      0.75rem;
+  }
+
+  .feedback-msg p {
+    font-size: 0.74rem;
+    line-height: 1.55;
   }
 }
 
@@ -626,21 +752,48 @@ const reTake = () => {
    ========================================================= */
 
 @media (max-width: 340px) {
-  .container {
-    padding-left: 0.5rem;
-    padding-right: 0.5rem;
+  .brand-text {
+    max-width: calc(100vw - 4.5rem);
+
+    font-size: 0.6rem;
   }
 
   .result-card {
-    padding: 1.75rem 0.85rem;
-  }
-
-  .brand-text {
-    font-size: 0.65rem;
+    padding:
+      1.35rem 0.7rem;
   }
 
   .score-number {
-    font-size: 2rem;
+    font-size: 1.85rem;
+  }
+
+  .feedback-msg {
+    margin:
+      1.25rem 0;
+  }
+
+  .btn-primary,
+  .btn-outline {
+    min-height: 43px;
+
+    font-size: 0.76rem;
+  }
+}
+
+
+/* =========================================================
+   REDUCED MOTION
+   ========================================================= */
+
+@media (prefers-reduced-motion: reduce) {
+  .result-card {
+    animation: none;
+  }
+
+  .btn-primary,
+  .btn-outline,
+  .user-avatar {
+    transition: none;
   }
 }
 </style>
