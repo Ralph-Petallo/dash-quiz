@@ -63,6 +63,7 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
 
     Route::controller(ImageIdentificationAssessmentController::class)->group(function () {
         Route::get('/assessments/image-identification/{id}', 'show');
+        Route::post('/assessments/image-identification/answer', 'answer');
     });
 
     Route::controller(DragDropController::class)->group(function () {

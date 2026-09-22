@@ -10,8 +10,8 @@ return new class extends Migration {
         Schema::create('image_identification_items', function (Blueprint $table) {
             $table->id();
 
-            $table->foreignId('question_id')
-                ->constrained('image_identification_questions')
+            $table->foreignId('quiz_id')
+                ->constrained('quizzes')
                 ->cascadeOnDelete();
 
             $table->string('item_name', 100);
@@ -25,7 +25,6 @@ return new class extends Migration {
             $table->timestamps();
 
             $table->index([
-                'question_id',
                 'sort_order'
             ]);
         });
