@@ -1614,30 +1614,53 @@ onMounted(() => {
 
 @media (max-width: 700px) {
 
+    /* =====================================================
+       MOBILE PAGE
+    ===================================================== */
+
     .quiz-page {
-        padding-bottom: 80px;
+        width: 100%;
+        min-height: 100vh;
+        height: auto;
+
+        padding-bottom: 90px;
+
+        overflow-x: hidden;
+        overflow-y: auto;
+
+        -webkit-overflow-scrolling: touch;
     }
 
-    /* Header */
+    /* =====================================================
+       HEADER
+    ===================================================== */
 
     .quiz-header {
         min-height: 58px;
 
         flex-wrap: wrap;
-
         gap: 10px;
 
         padding: 10px 14px;
+
+        position: sticky;
+        top: 0;
+
+        z-index: 30;
     }
 
     .back-btn {
         width: 34px;
         height: 34px;
+
+        flex-shrink: 0;
+
         font-size: 14px;
     }
 
     .header-title {
         flex: 1;
+        min-width: 0;
     }
 
     .header-title .eyebrow {
@@ -1647,6 +1670,10 @@ onMounted(() => {
 
     .quiz-header h1 {
         font-size: 14px;
+
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
     }
 
     .progress-info {
@@ -1655,45 +1682,85 @@ onMounted(() => {
         order: 3;
 
         gap: 8px;
-        padding-left: 14px;
+        padding-left: 0;
     }
 
-    /* Main */
+
+    /* =====================================================
+       MAIN CONTAINER
+    ===================================================== */
 
     .quiz-container {
         width: calc(100% - 24px);
 
+        max-width: none;
+
         padding-top: 24px;
+        padding-bottom: 20px;
+
+        margin: 0 auto;
+    }
+
+
+    /* =====================================================
+       QUESTION
+    ===================================================== */
+
+    .question {
+        width: 100%;
     }
 
     .question h2 {
         font-size: 20px;
         line-height: 1.35;
+
+        overflow-wrap: anywhere;
     }
 
     .question p {
         margin-top: 8px;
+
         font-size: 13px;
+        line-height: 1.5;
+
+        overflow-wrap: anywhere;
     }
 
-    /* Layout */
+
+    /* =====================================================
+       MAIN LAYOUT
+    ===================================================== */
 
     .quiz-layout {
         display: flex;
+
         flex-direction: column;
 
         gap: 16px;
 
+        width: 100%;
+
         margin-top: 22px;
     }
 
-    /* Detail first */
+
+    /* =====================================================
+       DETAIL
+    ===================================================== */
 
     .detail {
         order: 1;
+
+        width: 100%;
+        min-width: 0;
+
+        overflow: visible;
     }
 
-    /* Item list second */
+
+    /* =====================================================
+       ITEM NAVIGATOR
+    ===================================================== */
 
     .item-list {
         order: 2;
@@ -1701,20 +1768,32 @@ onMounted(() => {
         display: flex;
         flex-direction: row;
 
+        width: 100%;
+        min-width: 0;
+
         overflow-x: auto;
+        overflow-y: hidden;
 
         padding: 6px;
 
         border-radius: 12px;
 
-        scrollbar-width: none;
+        scrollbar-width: thin;
 
         position: static;
-        top: auto;
+
+        -webkit-overflow-scrolling: touch;
+
+        overscroll-behavior-x: contain;
     }
 
     .item-list::-webkit-scrollbar {
-        display: none;
+        height: 4px;
+    }
+
+    .item-list::-webkit-scrollbar-thumb {
+        border-radius: 10px;
+        background: var(--muted);
     }
 
     .item-list-header {
@@ -1722,10 +1801,15 @@ onMounted(() => {
     }
 
     .item-row {
+        position: relative;
+
         width: 48px;
         min-width: 48px;
+
         height: 48px;
         min-height: 48px;
+
+        flex-shrink: 0;
 
         justify-content: center;
 
@@ -1737,6 +1821,8 @@ onMounted(() => {
     .item-row .item-number {
         width: 30px;
         height: 30px;
+
+        flex-shrink: 0;
     }
 
     .item-text {
@@ -1751,6 +1837,7 @@ onMounted(() => {
         content: "";
 
         position: absolute;
+
         right: 5px;
         top: 5px;
 
@@ -1762,12 +1849,20 @@ onMounted(() => {
         background: var(--black);
     }
 
-    /* Image */
+
+    /* =====================================================
+       IMAGE
+    ===================================================== */
 
     .image-frame {
+        width: 100%;
+
         min-height: 260px;
+        height: auto;
 
         border-radius: 13px;
+
+        overflow: hidden;
     }
 
     .image-frame::before {
@@ -1776,60 +1871,109 @@ onMounted(() => {
 
     .image-label {
         font-size: 10px;
+
         padding: 5px 8px;
     }
 
     .component-image {
+        display: block;
+
         width: 100%;
         height: 260px;
+
+        max-width: 100%;
+
+        object-fit: contain;
 
         padding: 28px;
     }
 
-    /* Answer section */
+
+    /* =====================================================
+       ANSWER SECTION
+    ===================================================== */
 
     .answer-header {
         flex-direction: column;
+
         gap: 8px;
+
+        align-items: flex-start;
     }
 
-    /* Options */
+    .answer-section {
+        width: 100%;
+        min-width: 0;
+    }
+
+
+    /* =====================================================
+       OPTIONS
+    ===================================================== */
 
     .options {
+        display: grid;
+
         grid-template-columns: 1fr;
+
+        width: 100%;
+
         gap: 8px;
     }
 
     .option {
+        width: 100%;
+        min-width: 0;
+
         min-height: 62px;
 
         padding: 12px;
 
         border-radius: 10px;
+
+        text-align: left;
     }
 
     .option-text {
+        min-width: 0;
+
         font-size: 13px;
+        line-height: 1.45;
+
+        overflow-wrap: anywhere;
+        word-break: break-word;
     }
 
-    /* Confirm */
+
+    /* =====================================================
+       CONFIRM
+    ===================================================== */
 
     .confirm-btn {
         width: 100%;
+
         min-height: 44px;
 
-        align-self: center;
+        align-self: stretch;
+
+        margin-top: 10px;
     }
 
-    /* Footer */
+
+    /* =====================================================
+       FOOTER ACTIONS
+    ===================================================== */
 
     .quiz-actions {
         position: fixed;
+
         left: 0;
         right: 0;
         bottom: 0;
 
-        z-index: 25;
+        z-index: 50;
+
+        width: 100%;
 
         margin: 0;
 
@@ -1837,19 +1981,31 @@ onMounted(() => {
 
         border-top: 1px solid var(--border);
 
-        background: rgba(250, 250, 250, 0.94);
+        background: rgba(250, 250, 250, 0.96);
 
         backdrop-filter: blur(14px);
         -webkit-backdrop-filter: blur(14px);
+
+        box-sizing: border-box;
     }
 
     .action-status {
-        font-size: 11px;
+        min-width: 0;
 
         flex: 1;
+
+        font-size: 11px;
+
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
     }
 
     .action-buttons {
+        flex-shrink: 0;
+
+        display: flex;
+
         gap: 6px;
     }
 
@@ -1860,13 +2016,43 @@ onMounted(() => {
         padding: 0 14px;
 
         font-size: 11px;
+
+        white-space: nowrap;
     }
 
-    /* Result */
+
+    /* =====================================================
+       RESULT
+    ===================================================== */
+
+    .result-overlay {
+        position: fixed;
+
+        inset: 0;
+
+        z-index: 100;
+
+        overflow-y: auto;
+
+        padding: 20px;
+
+        box-sizing: border-box;
+
+        -webkit-overflow-scrolling: touch;
+    }
 
     .result-notice {
+        width: min(100%, 420px);
+
+        max-height: calc(100vh - 40px);
+
+        overflow-y: auto;
+
         padding: 28px 22px;
+
         border-radius: 15px;
+
+        box-sizing: border-box;
     }
 
     .result-score strong {
