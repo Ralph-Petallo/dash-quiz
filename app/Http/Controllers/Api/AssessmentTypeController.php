@@ -14,7 +14,7 @@ class AssessmentTypeController extends Controller
         $quiz = Quiz::findOrFail($id);
 
         // Get assessments for the quiz's COC
-        $assessments = Assessment::where('coc_id', $quiz->coc_number)->get();
+        $assessments = Assessment::where('coc_id', $quiz->id)->get();
 
         return response()->json([
             'status' => 'success',

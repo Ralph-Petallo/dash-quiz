@@ -8,13 +8,14 @@ use Illuminate\Database\Eloquent\Model;
 class QuizRecord extends Model
 {
     use HasFactory;
+
     public $table = 'quiz_records';
+
     protected $fillable = [
         'user_id',
         'quiz_id',
         'score',
         'elapsed_time',
-
         'correct_answers',
         'total_questions',
         'percentage',
@@ -36,7 +37,6 @@ class QuizRecord extends Model
         'completed_at' => 'datetime',
     ];
 
-
     public function quiz()
     {
         return $this->belongsTo(Quiz::class, 'quiz_id');
@@ -55,5 +55,10 @@ class QuizRecord extends Model
     public function rj45Attempt()
     {
         return $this->hasOne(Rj45Attempt::class, 'quiz_record_id');
+    }
+
+    public function hardwareProcedureAttempt()
+    {
+        return $this->hasOne(DragDropAttempt::class, 'quiz_record_id');
     }
 }

@@ -10,6 +10,7 @@ class Quiz extends Model
     use HasFactory;
 
     public $table = 'quizzes';
+
     protected $fillable = [
         'title',
         'description',
@@ -28,6 +29,7 @@ class Quiz extends Model
     {
         return $this->hasMany(QuizRecord::class, 'quiz_id');
     }
+
     public function attemptsCount()
     {
         return $this->records()->count();
@@ -36,5 +38,10 @@ class Quiz extends Model
     public function rj45Assessment()
     {
         return $this->hasOne(Rj45Assessment::class);
+    }
+
+    public function hardwareProcedureAttempts()
+    {
+        return $this->hasMany(DragDropAttempt::class, 'quiz_id');
     }
 }

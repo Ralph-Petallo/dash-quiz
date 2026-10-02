@@ -41,18 +41,18 @@ class RJ45Seeder extends Seeder
                     'category' => 'Network Cabling',
                     'difficulty' => 'Medium',
                     'meta' => json_encode([
-                        'quiz_id' => $quiz->id,
+                        'quiz_id' => $quiz->coc_number,
                         'standard_options' => ['A', 'B'],
                         'pins' => 8,
                     ]),
                     // Change only if your Vue router uses a different path.
-                    'path' => '/user/quizzes/rj45/' . $quiz->id,
+                    'path' => '/user/quizzes/rj45/' . $quiz->coc_number,
                     'available' => true,
                 ]
             );
 
             $rj45 = Rj45Assessment::updateOrCreate(
-                ['quiz_id' => $quiz->id],
+                ['quiz_id' => $quiz->coc_number],
                 [
                     'assessment_id' => $assessment->id,
                     'app_name' => 'CSS Prep',

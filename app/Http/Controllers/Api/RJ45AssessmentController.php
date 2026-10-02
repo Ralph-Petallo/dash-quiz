@@ -11,7 +11,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
-class Rj45AssessmentController extends Controller
+class RJ45AssessmentController extends Controller
 {
     public function show(Quiz $quiz)
     {

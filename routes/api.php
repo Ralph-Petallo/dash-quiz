@@ -10,6 +10,8 @@ use App\Http\Controllers\Api\RJ45AssessmentController;
 use App\Http\Controllers\Api\ImageIdentificationAssessmentController;
 use App\Http\Controllers\Api\DragDropController;
 use App\Http\Controllers\Api\PasswordResetController;
+use App\Http\Controllers\Api\HardwareProcedureController;
+
 
 /*
 |--------------------------------------------------------------------------
@@ -63,6 +65,16 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
         Route::post('/quiz/answer', 'submitAnswer');
         Route::get('/quiz/multi-result/{id}', 'MultipleChoiceResult')
             ->middleware('throttle:quiz_submit');
+    });
+
+    // HARDWARE PRACTICAL ASSESSMENT
+    // DISASSEMBLY + ASSEMBLY
+    Route::controller(HardwareProcedureController::class)->group(function () {
+        Route::get('/quizzes/{quiz}/hardware-procedure', 'show');
+        Route::post('/quizzes/{quiz}/hardware-procedure/attempts/start', 'start');
+        Route::post('/quizzes/{quiz}/hardware-procedure/attempts/{attempt}/actions', 'action');
+        Route::post('/quizzes/{quiz}/hardware-procedure/attempts/{attempt}/complete', 'complete');
+        Route::get('/records/{record}/hardware-procedure', 'record');
     });
 
     // COMPONENT IDENTIFICATION 

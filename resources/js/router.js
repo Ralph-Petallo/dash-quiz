@@ -14,16 +14,19 @@ import AssessmentPage from './views/UserPages/AssessmentPage.vue'
 // ASSESSMENTS PAGE
 // ==========================================================
 import MultipleChoice from './views/AssessmentPages/MultipleChoice.vue'
-import AssembleSimulator from './views/AssessmentPages/AssembleAssessment.vue'
 import ImageIdentification from './views/AssessmentPages/ImageIdentification.vue'
 import RJ45HandsOn from './views/AssessmentPages/Rj45Assessment.vue'
 import ChooseAssessmentPage from './views/AssessmentPages/ChooseAssessmentPage.vue'
 import ResultPage from './views/UserPages/ResultPage.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 import CMD from './views/AssessmentPages/CMD.vue'
-import DisassembleSimulator from './views/AssessmentPages/DisassembleSimulator.vue'
 import OrderingSequence from './views/AssessmentPages/DragDropOrderingSequence.vue'
 import AssessmentLayout from './views/AssessmentPages/AssessmentLayout.vue'
+
+
+
+//new
+import HardwareProcedure from './views/AssessmentPages/HardwareProcedure.vue'
 
 // ==========================================================
 // PUBLIC
@@ -148,7 +151,8 @@ const routes = [
         path: '/taking',
 
         component: AssessmentLayout,
-        name: "layout-assessment",
+        name: 'layout-assessment',
+
         meta: {
             requiresAuth: true,
             requiresStudent: true,
@@ -171,22 +175,20 @@ const routes = [
                 },
             },
 
-
             // ==================================================
-            // DRAG & DROP
+            // COMPUTER ASSEMBLY & DISASSEMBLY
             // ==================================================
 
             {
                 path: 'assemble/:id',
                 name: 'assemble',
-                component: AssembleSimulator,
+                component: HardwareProcedure,
 
                 meta: {
-                    assessmentTitle: 'Component Arrangement',
-                    assessmentType: 'Drag & Drop',
+                    assessmentTitle: 'Computer Assembly and Disassembly',
+                    assessmentType: 'Virtual Hands-On Practical',
                 },
             },
-
 
             // ==================================================
             // IMAGE IDENTIFICATION
@@ -203,7 +205,6 @@ const routes = [
                 },
             },
 
-
             // ==================================================
             // RJ45 VIRTUAL HANDS-ON
             // ==================================================
@@ -219,9 +220,8 @@ const routes = [
                 },
             },
 
-
             // ==================================================
-            // VIRTUAL HANDS-ON
+            // CMD VIRTUAL HANDS-ON
             // ==================================================
 
             {
@@ -236,17 +236,6 @@ const routes = [
             },
 
             {
-                path: 'disassemble',
-                name: 'disassemble',
-                component: DisassembleSimulator,
-
-                meta: {
-                    assessmentTitle: 'Computer Disassembly',
-                    assessmentType: 'Virtual Hands-On',
-                },
-            },
-
-            {
                 path: 'ordering-sequence',
                 name: 'ordering-sequence',
                 component: OrderingSequence,
@@ -256,7 +245,6 @@ const routes = [
                     assessmentType: 'Virtual Hands-On',
                 },
             },
-
         ],
     },
 

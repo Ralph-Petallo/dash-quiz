@@ -6,7 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Question;
 use Illuminate\Http\Request;
 use App\Models\Quiz;
-use App\Models\DragDrop;
+use App\Models\DragDropItem;
 
 class DragDropController extends Controller
 {
@@ -20,7 +20,7 @@ class DragDropController extends Controller
             ], 404);
         }
 
-        $items = DragDrop::where('question_id', $question[0]['id'])
+        $items = DragDropItem::where('question_id', $question[0]['id'])
             ->get([
                 'id',
                 'item_text',
@@ -70,7 +70,7 @@ class DragDropController extends Controller
         |
         */
 
-            $correctItems = DragDrop::where('question_id', $question->id)
+            $correctItems = DragDropItem::where('question_id', $question->id)
                 ->orderBy('correct_position')
                 ->get();
 

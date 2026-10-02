@@ -1,0 +1,656 @@
+<!doctype html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Apple Catcher</title>
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            background: #bdeaff;
+            font-family: system-ui, sans-serif;
+        }
+
+        #hud,
+        #help {
+            position: fixed;
+            left: 0;
+            width: 100%;
+            text-align: center;
+            color: #19344a;
+            pointer-events: none;
+            text-shadow: 0 1px white;
+        }
+
+        #hud {
+            top: 16px;
+            font-size: 20px;
+            font-weight: 700;
+        }
+
+        #help {
+            bottom: 14px;
+            font-size: 14px;
+        }
+
+        #message {
+            display: none;
+            position: fixed;
+            inset: 0;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            color: #19344a;
+            font-size: 28px;
+            font-weight: 800;
+            pointer-events: none;
+            text-shadow: 0 2px white;
+        }
+    </style>
+</head>
+
+<body>
+    <div id="hud">
+        Apples: <span id="score">0</span>
+        · Falling: <span id="appleType">Good apple</span>
+        · Basket boost: <span id="boostStatus">Ready</span>
+        · Time: <span id="timer">60</span>s
+    </div>
+
+    <div id="message"></div>
+    <div id="help">Move: ← → or A / D · Dash: Shift + direction · Restart: Space</div>
+
+    <script type="module">
+        import * as THREE from "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js";
+
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color("#bdeaff");
+
+        const camera = new THREE.OrthographicCamera(-8, 8, 5, -5, 0.1, 100);
+        camera.position.z = 10;
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(innerWidth, innerHeight);
+        renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
+        document.body.appendChild(renderer.domElement);
+
+        const scoreEl = document.querySelector("#score");
+        const appleTypeEl = document.querySelector("#appleType");
+        const boostStatusEl = document.querySelector("#boostStatus");
+        const timerEl = document.querySelector("#timer");
+        const messageEl = document.querySelector("#message");
+
+        // Background
+        const ground = new THREE.Mesh(
+            new THREE.PlaneGeometry(100, 1),
+            new THREE.MeshBasicMaterial({ color: "#79c96b" })
+        );
+        ground.position.set(0, -4.5, 0);
+        scene.add(ground);
+
+        for (let i = 0; i < 7; i++) {
+            const hill = new THREE.Mesh(
+                new THREE.CircleGeometry(2.2, 32),
+                new THREE.MeshBasicMaterial({
+                    color: i % 2 ? "#9bdc87" : "#8bd47c"
+                })
+            );
+            hill.position.set(-10 + i * 3.5, -3.8, -1);
+            scene.add(hill);
+        }
+
+        // Character and basket
+        const catcher = new THREE.Group();
+        catcher.position.set(0, -3.7, 1);
+        scene.add(catcher);
+
+        for (const x of [-0.22, 0.22]) {
+            const leg = new THREE.Mesh(
+                new THREE.BoxGeometry(0.13, 0.48, 0.15),
+                new THREE.MeshBasicMaterial({ color: "#354b75" })
+            );
+            leg.position.set(x, -0.62, 0);
+            catcher.add(leg);
+        }
+
+        const body = new THREE.Mesh(
+            new THREE.CircleGeometry(0.43, 32),
+            new THREE.MeshBasicMaterial({ color: "#4c91d8" })
+        );
+        body.position.set(0, 0.05, 0);
+        catcher.add(body);
+
+        const head = new THREE.Mesh(
+            new THREE.CircleGeometry(0.32, 32),
+            new THREE.MeshBasicMaterial({ color: "#ffd2a1" })
+        );
+        head.position.set(0, 0.62, 0.1);
+        catcher.add(head);
+
+        const hair = new THREE.Mesh(
+            new THREE.CircleGeometry(0.33, 32, 0, Math.PI),
+            new THREE.MeshBasicMaterial({ color: "#563b2b" })
+        );
+        hair.position.set(0, 0.69, 0.2);
+        catcher.add(hair);
+
+        for (const x of [-0.11, 0.11]) {
+            const eye = new THREE.Mesh(
+                new THREE.CircleGeometry(0.035, 16),
+                new THREE.MeshBasicMaterial({ color: "#263238" })
+            );
+            eye.position.set(x, 0.62, 0.3);
+            catcher.add(eye);
+        }
+
+        for (const x of [-0.42, 0.42]) {
+            const arm = new THREE.Mesh(
+                new THREE.BoxGeometry(0.12, 0.55, 0.12),
+                new THREE.MeshBasicMaterial({ color: "#ffd2a1" })
+            );
+            arm.position.set(x, -0.05, 0.12);
+            arm.rotation.z = x < 0 ? -0.55 : 0.55;
+            catcher.add(arm);
+        }
+
+        const basket = new THREE.Group();
+        const basketParts = [];
+
+        const basketBody = new THREE.Mesh(
+            new THREE.BoxGeometry(1.55, 0.55, 0.2),
+            new THREE.MeshBasicMaterial({ color: "#a85e2a" })
+        );
+        basketBody.position.y = -0.1;
+        basket.add(basketBody);
+        basketParts.push(basketBody);
+
+        const rim = new THREE.Mesh(
+            new THREE.BoxGeometry(1.75, 0.14, 0.2),
+            new THREE.MeshBasicMaterial({ color: "#75401f" })
+        );
+        rim.position.y = 0.18;
+        basket.add(rim);
+        basketParts.push(rim);
+
+        for (let i = -2; i <= 2; i++) {
+            const stripe = new THREE.Mesh(
+                new THREE.BoxGeometry(0.07, 0.45, 0.22),
+                new THREE.MeshBasicMaterial({ color: "#d28a45" })
+            );
+            stripe.position.set(i * 0.27, -0.1, 0.12);
+            basket.add(stripe);
+            basketParts.push(stripe);
+        }
+
+        basket.position.set(0, -0.45, 0.3);
+        catcher.add(basket);
+
+        // Apples
+        function createApple(rotten = false) {
+            const group = new THREE.Group();
+
+            const fruit = new THREE.Mesh(
+                new THREE.CircleGeometry(0.38, 32),
+                new THREE.MeshBasicMaterial({
+                    color: rotten ? "#68733b" : "#ef3e3e"
+                })
+            );
+            group.add(fruit);
+
+            const stem = new THREE.Mesh(
+                new THREE.BoxGeometry(0.06, 0.2, 0.1),
+                new THREE.MeshBasicMaterial({ color: "#684321" })
+            );
+            stem.position.set(0, 0.42, 0.05);
+            group.add(stem);
+
+            const leaf = new THREE.Mesh(
+                new THREE.CircleGeometry(0.09, 16),
+                new THREE.MeshBasicMaterial({
+                    color: rotten ? "#59602d" : "#3b9b45"
+                })
+            );
+            leaf.scale.set(1.5, 0.6, 1);
+            leaf.position.set(0.17, 0.38, 0.1);
+            leaf.rotation.z = -0.5;
+            group.add(leaf);
+
+            if (rotten) {
+                const spots = new THREE.MeshBasicMaterial({ color: "#392f24" });
+
+                for (const [x, y] of [
+                    [-0.15, 0.1],
+                    [0.13, -0.12],
+                    [0.2, 0.16]
+                ]) {
+                    const spot = new THREE.Mesh(
+                        new THREE.CircleGeometry(0.055, 12),
+                        spots
+                    );
+                    spot.position.set(x, y, 0.12);
+                    group.add(spot);
+                }
+            }
+
+            return group;
+        }
+
+        const goodApple = createApple(false);
+        const rottenApple = createApple(true);
+        scene.add(goodApple, rottenApple);
+
+        // Falling basket-width power-up
+        const powerUp = new THREE.Group();
+
+        const powerUpGem = new THREE.Mesh(
+            new THREE.CircleGeometry(0.3, 6),
+            new THREE.MeshBasicMaterial({ color: "#8a4de8" })
+        );
+        powerUp.add(powerUpGem);
+
+        const powerUpPlus = new THREE.Mesh(
+            new THREE.BoxGeometry(0.34, 0.08, 0.12),
+            new THREE.MeshBasicMaterial({ color: "#ffffff" })
+        );
+        powerUpPlus.position.z = 0.1;
+        powerUp.add(powerUpPlus);
+
+        const powerUpPlusVertical = new THREE.Mesh(
+            new THREE.BoxGeometry(0.08, 0.34, 0.12),
+            new THREE.MeshBasicMaterial({ color: "#ffffff" })
+        );
+        powerUpPlusVertical.position.z = 0.1;
+        powerUp.add(powerUpPlusVertical);
+
+        scene.add(powerUp);
+        powerUp.visible = false;
+
+        // Falling time bonus (+5 or +10 seconds)
+        const timeBonus = new THREE.Group();
+
+        const timeBonusCircle = new THREE.Mesh(
+            new THREE.CircleGeometry(0.36, 24),
+            new THREE.MeshBasicMaterial({ color: "#ffb52e" })
+        );
+        timeBonus.add(timeBonusCircle);
+
+        const timeBonusText = new THREE.Mesh(
+            new THREE.PlaneGeometry(0.55, 0.28),
+            new THREE.MeshBasicMaterial({
+                color: "#ffffff",
+                transparent: true
+            })
+        );
+        timeBonusText.position.z = 0.15;
+        timeBonus.add(timeBonusText);
+
+        scene.add(timeBonus);
+        timeBonus.visible = false;
+
+        const keys = new Set();
+        let score = 0;
+        let appleSpeed = 3;
+        let running = true;
+        let activeApple = goodApple;
+        let activeAppleIsRotten = false;
+        let timeLeft = 60;
+
+        // Speed increases each time the score reaches 10, 20, 30, etc.
+        const speedIncreaseEvery = 10;
+        const speedIncreaseAmount = 0.75;
+
+        // Power-up doubles the basket width for this long.
+        const powerUpDuration = 8;
+        let powerUpTime = 0;
+        let powerUpActive = false;
+        let powerUpSpawnTimer = 7;
+        let powerUpFalling = false;
+
+        // Time bonus
+        let timeBonusFalling = false;
+        let timeBonusSpawnTimer = 8;
+
+        // Dash
+        let dashVelocity = 0;
+        let dashTime = 0;
+        let dashCooldown = 0;
+        const dashDuration = 0.16;
+        const dashDistance = 3.2;
+        const dashCooldownLength = 0.65;
+        let facing = 1;
+
+        function resetApple() {
+            activeAppleIsRotten = Math.random() < 0.33;
+            activeApple = activeAppleIsRotten ? rottenApple : goodApple;
+
+            goodApple.visible = !activeAppleIsRotten;
+            rottenApple.visible = activeAppleIsRotten;
+
+            appleTypeEl.textContent = activeAppleIsRotten
+                ? "Rotten apple"
+                : "Good apple";
+            appleTypeEl.style.color = activeAppleIsRotten
+                ? "#68733b"
+                : "#19344a";
+
+            activeApple.position.set(
+                (Math.random() - 0.5) * Math.max(4, camera.right * 1.6),
+                5.5,
+                1
+            );
+            activeApple.rotation.z = 0;
+        }
+
+        function resetPowerUp() {
+            powerUpFalling = false;
+            powerUp.visible = false;
+            powerUpSpawnTimer = 6 + Math.random() * 6;
+        }
+
+        function setBasketWidth(boosted) {
+            const widthScale = boosted ? 2 : 1;
+            basketParts.forEach(part => {
+                part.scale.x = widthScale;
+            });
+        }
+
+        function activatePowerUp() {
+            powerUpActive = true;
+            powerUpTime = powerUpDuration;
+            setBasketWidth(true);
+            boostStatusEl.textContent = `${Math.ceil(powerUpTime)}s`;
+        }
+
+        function resetTimeBonus() {
+            timeBonusFalling = false;
+            timeBonus.visible = false;
+            timeBonusSpawnTimer = 7 + Math.random() * 6;
+        }
+
+        function spawnTimeBonus() {
+            timeBonusFalling = true;
+            timeBonus.visible = true;
+
+            const seconds = Math.random() < 0.5 ? 5 : 10;
+            timeBonus.userData.seconds = seconds;
+
+            const canvas = document.createElement("canvas");
+            canvas.width = 128;
+            canvas.height = 64;
+
+            const context = canvas.getContext("2d");
+            context.clearRect(0, 0, canvas.width, canvas.height);
+            context.fillStyle = "#ffffff";
+            context.font = "bold 48px sans-serif";
+            context.textAlign = "center";
+            context.textBaseline = "middle";
+            context.fillText(`+${seconds}`, 64, 32);
+
+            if (timeBonusText.material.map) {
+                timeBonusText.material.map.dispose();
+            }
+
+            timeBonusText.material.map = new THREE.CanvasTexture(canvas);
+            timeBonusText.material.needsUpdate = true;
+
+            timeBonus.position.set(
+                (Math.random() - 0.5) * Math.max(4, camera.right * 1.6),
+                5.5,
+                1
+            );
+        }
+
+        function startDash(direction) {
+            if (!running || dashCooldown > 0) return;
+
+            facing = direction;
+            dashVelocity = direction * (dashDistance / dashDuration);
+            dashTime = dashDuration;
+            dashCooldown = dashCooldownLength;
+        }
+
+        window.addEventListener("keydown", (event) => {
+            const key = event.key.toLowerCase();
+            const isArrow = key === "arrowleft" || key === "arrowright";
+
+            if (isArrow) event.preventDefault();
+            if (event.repeat) return;
+
+            keys.add(key);
+
+            if (event.code === "Space") restart();
+
+            if (key === "arrowleft" || key === "a") {
+                facing = -1;
+                if (event.shiftKey) startDash(-1);
+            }
+
+            if (key === "arrowright" || key === "d") {
+                facing = 1;
+                if (event.shiftKey) startDash(1);
+            }
+
+            if (key === "shift") {
+                if (keys.has("arrowleft") || keys.has("a")) {
+                    startDash(-1);
+                } else if (keys.has("arrowright") || keys.has("d")) {
+                    startDash(1);
+                }
+            }
+        });
+
+        window.addEventListener("keyup", (event) => {
+            keys.delete(event.key.toLowerCase());
+        });
+
+        function endGame(reason) {
+            if (!running) return;
+
+            running = false;
+            messageEl.innerHTML =
+                `${reason}<br>You caught ${score} apple${score === 1 ? "" : "s"}<br><small>Press Space to play again</small>`;
+            messageEl.style.display = "flex";
+        }
+
+        function restart() {
+            score = 0;
+            appleSpeed = 3;
+            timeLeft = 60;
+            running = true;
+
+            scoreEl.textContent = score;
+            timerEl.textContent = timeLeft;
+            messageEl.style.display = "none";
+
+            catcher.position.x = 0;
+            dashVelocity = 0;
+            dashTime = 0;
+            dashCooldown = 0;
+
+            powerUpActive = false;
+            powerUpTime = 0;
+            powerUpSpawnTimer = 7;
+            setBasketWidth(false);
+            boostStatusEl.textContent = "Ready";
+            resetPowerUp();
+
+            resetTimeBonus();
+            resetApple();
+        }
+
+        function resize() {
+            const aspect = innerWidth / innerHeight;
+            const height = 10;
+
+            camera.left = -height * aspect / 2;
+            camera.right = height * aspect / 2;
+            camera.top = height / 2;
+            camera.bottom = -height / 2;
+            camera.updateProjectionMatrix();
+
+            renderer.setSize(innerWidth, innerHeight);
+        }
+
+        window.addEventListener("resize", resize);
+        resize();
+
+        const clock = new THREE.Clock();
+
+        function animate() {
+            requestAnimationFrame(animate);
+            const delta = Math.min(clock.getDelta(), 0.04);
+
+            if (running) {
+                // Game timer
+                timeLeft = Math.max(0, timeLeft - delta);
+                timerEl.textContent = Math.ceil(timeLeft);
+
+                if (timeLeft <= 0) {
+                    timerEl.textContent = "0";
+                    endGame("Time's up!");
+                }
+            }
+
+            if (running) {
+                dashCooldown = Math.max(0, dashCooldown - delta);
+
+                if (dashTime > 0) {
+                    const step = Math.min(delta, dashTime);
+                    catcher.position.x += dashVelocity * step;
+                    dashTime -= step;
+                } else {
+                    dashVelocity = 0;
+
+                    const direction =
+                        (keys.has("arrowright") || keys.has("d") ? 1 : 0) -
+                        (keys.has("arrowleft") || keys.has("a") ? 1 : 0);
+
+                    catcher.position.x += direction * 7 * delta;
+                    if (direction) facing = direction;
+                }
+
+                catcher.position.x = THREE.MathUtils.clamp(
+                    catcher.position.x,
+                    camera.left + 1.1,
+                    camera.right - 1.1
+                );
+                catcher.scale.x = facing;
+
+                // Power-up timer
+                if (powerUpActive) {
+                    powerUpTime -= delta;
+                    boostStatusEl.textContent = `${Math.ceil(powerUpTime)}s`;
+
+                    if (powerUpTime <= 0) {
+                        powerUpActive = false;
+                        setBasketWidth(false);
+                        boostStatusEl.textContent = "Ready";
+                    }
+                }
+
+                // Spawn and move basket-width power-up
+                if (!powerUpFalling) {
+                    powerUpSpawnTimer -= delta;
+
+                    if (powerUpSpawnTimer <= 0) {
+                        powerUpFalling = true;
+                        powerUp.visible = true;
+                        powerUp.position.set(
+                            (Math.random() - 0.5) * Math.max(4, camera.right * 1.6),
+                            5.5,
+                            1
+                        );
+                    }
+                } else {
+                    powerUp.position.y -= appleSpeed * 0.8 * delta;
+                    powerUp.rotation.z += delta * 2;
+
+                    const basketY = catcher.position.y - 0.45;
+                    const basketReach = powerUpActive ? 1.7 : 0.95;
+                    const closeX =
+                        Math.abs(powerUp.position.x - catcher.position.x) < basketReach;
+                    const atBasket =
+                        powerUp.position.y < basketY + 0.55 &&
+                        powerUp.position.y > basketY - 0.35;
+
+                    if (closeX && atBasket) {
+                        activatePowerUp();
+                        resetPowerUp();
+                    } else if (powerUp.position.y < -5) {
+                        resetPowerUp();
+                    }
+                }
+
+                // Spawn and move time bonus
+                if (!timeBonusFalling) {
+                    timeBonusSpawnTimer -= delta;
+
+                    if (timeBonusSpawnTimer <= 0) {
+                        spawnTimeBonus();
+                    }
+                } else {
+                    timeBonus.position.y -= appleSpeed * 0.8 * delta;
+                    timeBonus.rotation.z += delta * 2;
+
+                    const basketY = catcher.position.y - 0.45;
+                    const basketReach = powerUpActive ? 1.7 : 0.95;
+                    const closeX =
+                        Math.abs(timeBonus.position.x - catcher.position.x) < basketReach;
+                    const atBasket =
+                        timeBonus.position.y < basketY + 0.55 &&
+                        timeBonus.position.y > basketY - 0.35;
+
+                    if (closeX && atBasket) {
+                        timeLeft += timeBonus.userData.seconds;
+                        timerEl.textContent = Math.ceil(timeLeft);
+                        resetTimeBonus();
+                    } else if (timeBonus.position.y < -5) {
+                        resetTimeBonus();
+                    }
+                }
+
+                // Move the apple
+                activeApple.position.y -= appleSpeed * delta;
+                activeApple.rotation.z += delta * 1.5;
+
+                const basketY = catcher.position.y - 0.45;
+                const basketReach = powerUpActive ? 1.7 : 0.95;
+                const closeX =
+                    Math.abs(activeApple.position.x - catcher.position.x) < basketReach;
+                const atBasket =
+                    activeApple.position.y < basketY + 0.55 &&
+                    activeApple.position.y > basketY - 0.35;
+
+                if (closeX && atBasket) {
+                    if (activeAppleIsRotten) {
+                        score = Math.max(0, score - 1);
+                    } else {
+                        score++;
+
+                        // Increase speed at scores 10, 20, 30, 40, etc.
+                        if (score % speedIncreaseEvery === 0) {
+                            appleSpeed += speedIncreaseAmount;
+                        }
+                    }
+
+                    scoreEl.textContent = score;
+                    resetApple();
+                } else if (activeApple.position.y < -5) {
+                    resetApple();
+                }
+            }
+
+            renderer.render(scene, camera);
+        }
+
+        animate();
+    </script>
+</body>
+
+</html>
