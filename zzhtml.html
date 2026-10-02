@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CSSPrep - Virtual Hands-On</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: #f4f6f9;
+            margin: 0;
+            padding: 20px;
+        }
+
+        header {
+            text-align: center;
+            color: #333;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: auto;
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 5px rgba(0, 0, 0, 0.1);
+        }
+
+        .coc-section {
+            margin-bottom: 20px;
+            padding: 15px;
+            border-left: 5px solid #007bff;
+            background: #e9f5ff;
+        }
+
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #0056b3;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>🛠️ CSSPrep Virtual Hands-On</h1>
+        <p>Master your NC II Competency Checks (COC 1 - COC 3)</p>
+    </header>
+    <div class="container">
+        <div class="coc-section">
+            <h3>COC 1: Install and Configure Computer Systems</h3>
+            <p>Simulate BIOS settings, RAM installation, and OS partitioning.</p>
+            <button onclick="startSimulation('COC 1')">Start COC 1 Sim</button>
+        </div>
+        <div class="coc-section">
+            <h3>COC 2: Set-up Computer Networks</h3>
+            <p>Practice IP configuration and cable crimping diagrams.</p>
+            <button onclick="startSimulation('COC 2')">Start COC 2 Sim</button>
+        </div>
+        <div class="coc-section">
+            <h3>COC 3: Configure Computer Systems and Networks</h3>
+            <p>Set up active directory, DHCP, and file servers.</p>
+            <button onclick="startSimulation('COC 3')">Start COC 3 Sim</button>
+        </div>
+        <div id="output" style="margin-top: 20px; font-weight: bold; color: green;"></div>
+    </div>
+
+    <script>
+        function startSimulation(coc) {
+            const output = document.getElementById('output');
+            output.innerText = `🚀 Launching virtual sandbox for ${coc}... Get ready!`;
+        }
+    </script>
+</body>
+
+</html>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\AdminLog;
 use App\Models\Dasher;
 use App\Models\QuizRecord;
+use App\Models\Assessment;
 use App\Models\Quiz;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -45,37 +46,52 @@ class AdminApiController extends Controller
 
         $stats = Cache::remember(
             'admin:dashboard:stats',
-            now()->addMinutes(5),
-            function () use ($admin) {
+            now()->addMinutes(1),
+            function () {
 
-                $totalUsers = Dasher::where('role', 'dasher')->count();
+                $totalUsers = Dasher::where('role', 'dasher')
+                    ->count();
 
                 $totalQuizzes = Quiz::count();
 
-                $activeCount = Dasher::where('role', 'dasher')
-                    ->where('last_activity', '>=', now()->subMinutes(1))
+                $totalAssessments = Assessment::count();
+
+                $activeUsers = Dasher::where('role', 'dasher')
+                    ->where(
+                        'last_activity',
+                        '>=',
+                        now()->subMinutes(1)
+                    )
                     ->count();
 
                 $topDashers = Dasher::where('role', 'dasher')
-                    ->withCount('quizRecords as total_quizzes')
-                    ->withSum('quizRecords as total_score', 'score')
+                    ->with('quizRecords')
                     ->get()
                     ->map(function ($dasher) {
-                        $average = $dasher->total_quizzes
-                        // True here
+
+                        $totalQuizzes = $dasher->quizRecords->count();
+
+                        $totalScore = $dasher->quizRecords->sum('score');
+
+                        $average = $totalQuizzes
                             ? round(
-                                ($dasher->total_score / ($dasher->total_quizzes * 10)) * 100,
+                                (
+                                    $totalScore /
+                                    ($totalQuizzes * 10)
+                                ) * 100,
                                 1
                             )
-                            // False here
                             : 0;
 
                         return [
                             'id' => $dasher->id,
                             'first_name' => $dasher->first_name,
                             'last_name' => $dasher->last_name,
-                            'average_score' => $average,
                             'profile_photo' => $dasher->profile_photo,
+
+                            'total_quizzes' => $totalQuizzes,
+                            'total_score' => $totalScore,
+                            'average_score' => $average,
                         ];
                     })
                     ->sortByDesc('average_score')
@@ -89,14 +105,20 @@ class AdminApiController extends Controller
                 return [
                     'total_users' => $totalUsers,
                     'total_quizzes' => $totalQuizzes,
-                    'active_users' => $activeCount,
+                    'total_assessments' => $totalAssessments,
+                    'active_users' => $activeUsers,
                     'logs' => $logs,
                     'top_users' => $topDashers,
                 ];
             }
         );
 
-        // Admin name should NOT be cached
+        /*
+        |--------------------------------------------------------------------------
+        | Admin-specific data should not be cached
+        |--------------------------------------------------------------------------
+        */
+
         $stats['admin_name'] = $admin->first_name;
 
         return response()->json([
@@ -123,7 +145,6 @@ class AdminApiController extends Controller
 
         $request->session()->regenerate();
 
-        /** @var Dasher $user */
         $user = Auth::guard('dasher')->user();
 
         $user->update([

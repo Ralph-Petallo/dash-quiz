@@ -11,11 +11,13 @@
         <div class="avatar-wrap">
 
           <div :class="['avatar', { uploading: loading }]">
+
             <img :src="preview || userAvatar" alt="Profile picture" draggable="false" />
 
             <div v-if="loading" class="avatar-loader">
               <i class="fas fa-spinner fa-spin"></i>
             </div>
+
           </div>
 
           <label class="avatar-camera-badge" title="Change profile picture">
@@ -25,7 +27,6 @@
           </label>
 
         </div>
-
 
         <div class="profile-heading">
 
@@ -73,9 +74,8 @@
               Quizzes Taken
             </span>
           </div>
-
           <span class="detail-value">
-            {{ quizzesCount }}
+            {{ totalQuizzes }}
           </span>
 
         </div>
@@ -134,8 +134,6 @@ import {
   onMounted
 } from "vue"
 
-import axios from "axios"
-
 import { useRouter } from "vue-router"
 
 import DeleteAccountModal
@@ -150,6 +148,9 @@ import ToastNotification
 import { useUser }
   from "@/composables/useUser"
 
+import api
+  from "@/bootstrap"
+
 
 /* =========================================
    USER
@@ -160,10 +161,12 @@ const router = useRouter()
 const {
   fetchUser,
   userAvatar,
+  totalQuizzes,
   user
 } = useUser()
 
-console.log(user.value)
+
+
 
 
 /* =========================================
@@ -191,24 +194,35 @@ const loading = ref(false)
 ========================================= */
 
 const showToast = (
-  message, status = "success") => {
+  message,
+  status = "success"
+) => {
+
   notification.value.message = message
-  notification.value.status = status
+  notification.value.type = status
+
   setTimeout(() => {
     notification.value.message = ""
   }, 1500)
 }
 
+
 const handleNotify = (payload) => {
-  showToast(payload.message, payload.status)
+  showToast(
+    payload.message,
+    payload.status
+  )
 }
+
 
 /* =========================================
    DELETE ACCOUNT
 ========================================= */
 
 const handleDeleted = () => {
+
   showDeleteModal.value = false
+
   router.push("/")
 }
 
@@ -217,60 +231,101 @@ const handleDeleted = () => {
    COMPUTED
 ========================================= */
 
-const quizzesCount = computed(() => {
-  return user.value?.quizzes_taken || 0
-})
-
-
 const formattedDate = computed(() => {
+
   if (!user.value?.created_at) {
     return ""
   }
-  return new Date(user.value.created_at).toLocaleDateString()
+
+  return new Date(
+    user.value.created_at
+  ).toLocaleDateString()
 })
 
 
 /* =========================================
    PROFILE PHOTO
 ========================================= */
+
 const uploadPhoto = async (e) => {
+
   const file = e.target.files[0]
-  // if not file, then just  return
-  if (!file) return
-  /* Validate image */
+
+  if (!file) {
+    return
+  }
+
+  /*
+  |--------------------------------------------------------------------------
+  | Validate image
+  |--------------------------------------------------------------------------
+  */
 
   if (!file.type.startsWith("image/")) {
+
     showToast(
       "Please select a valid image file.",
       "error"
     )
+
     return
   }
+
   selectedFile.value = file
-  preview.value = URL.createObjectURL(file)
+
+  preview.value =
+    URL.createObjectURL(file)
+
   loading.value = true
 
   try {
-    const formData = new FormData()
-    formData.append("photo", file, file.name)
 
-    const { data } = await axios.post("/api/profile/photo", formData)
-    if (data?.new_photo && user.value) {
+    const formData = new FormData()
+
+    formData.append(
+      "photo",
+      file,
+      file.name
+    )
+
+    /*
+    |--------------------------------------------------------------------------
+    | Use centralized API client
+    |--------------------------------------------------------------------------
+    */
+
+    const { data } = await api.post(
+      "/api/profile/photo",
+      formData
+    )
+
+    /*
+    |--------------------------------------------------------------------------
+    | Update shared user state
+    |--------------------------------------------------------------------------
+    */
+
+    if (
+      data?.new_photo &&
+      user.value
+    ) {
       user.value.profile_photo =
         data.new_photo
     }
 
     preview.value = null
-    // alert notification
-    showToast("Profile picture updated!", "success")
+
+    showToast(
+      "Profile picture updated!",
+      "success"
+    )
 
   } catch (error) {
 
-    console.log(
+    console.error(
       "Upload error:",
       error.response?.data || error
     )
-
 
     preview.value = null
 
@@ -284,8 +339,15 @@ const uploadPhoto = async (e) => {
 
     loading.value = false
 
-  }
+    /*
+    |--------------------------------------------------------------------------
+    | Reset file input
+    |--------------------------------------------------------------------------
+    */
 
+    e.target.value = ""
+
+  }
 }
 
 
@@ -295,7 +357,15 @@ const uploadPhoto = async (e) => {
 
 onMounted(async () => {
 
-  await fetchUser(true)
+  /*
+  |--------------------------------------------------------------------------
+  | Only fetch /me if user isn't already loaded
+  |--------------------------------------------------------------------------
+  */
+
+  if (!user.value) {
+    await fetchUser()
+  }
 
 })
 

@@ -1,9 +1,8 @@
 import { ref } from "vue"
 import axios from "axios"
 
-const CACHE_KEY = "dash-quiz_admin_dashboard"
-const CACHE_TTL = 1000 * 60 * 10 // 10 minutes
-const POLL_INTERVAL = 15000 // 15 seconds auto refresh
+const POLL_INTERVAL = 15000
+const MIN_INTERVAL = 5000
 
 const stats = ref(null)
 const isLoading = ref(false)
@@ -11,129 +10,136 @@ const isLoading = ref(false)
 let lastFetchTime = 0
 let poller = null
 
-const MIN_INTERVAL = 5000
+/* =========================================================
+   NORMALIZE
+========================================================= */
 
-/* =========================
-   CACHE
-========================= */
-const getCachedStats = () => {
-    try {
-        const cached = JSON.parse(localStorage.getItem(CACHE_KEY))
-
-        if (!cached || typeof cached !== "object") return null
-
-        if (Date.now() - cached.ts > CACHE_TTL) {
-            localStorage.removeItem(CACHE_KEY)
-            return null
-        }
-
-        return cached.value
-    } catch {
-        return null
-    }
-}
-
-const setCachedStats = (value) => {
-    try {
-        localStorage.setItem(CACHE_KEY, JSON.stringify({
-            ts: Date.now(),
-            value
-        }))
-    } catch { }
-}
-
-/* =========================
-   NORMALIZER (IMPORTANT)
-========================= */
 const normalizeStats = (data) => {
     return {
         total_users: data.total_users ?? 0,
         total_quizzes: data.total_quizzes ?? 0,
+        total_assessments: data.total_assessments ?? 0,
         active_users: data.active_users ?? 0,
-        logs: data.logs ?? [],
-        top_users: data.top_users ?? [],
+
+        logs: Array.isArray(data.logs)
+            ? data.logs
+            : [],
+
+        top_users: Array.isArray(data.top_users)
+            ? data.top_users
+            : [],
+
         admin_name: data.admin_name ?? ""
     }
 }
 
-/* =========================
-   FETCH
-========================= */
+/* =========================================================
+   FETCH DASHBOARD
+========================================================= */
+
 const fetchStats = async (force = false) => {
     const now = Date.now()
 
-    if (!force && stats.value && now - lastFetchTime < MIN_INTERVAL) {
+    /*
+     * Prevent accidental duplicate requests.
+     */
+    if (
+        !force &&
+        stats.value &&
+        now - lastFetchTime < MIN_INTERVAL
+    ) {
         return stats.value
     }
 
-    if (!force && !stats.value) {
-        const cached = getCachedStats()
-        if (cached) {
-            stats.value = cached
-            lastFetchTime = now
-        }
+    /*
+     * Prevent multiple requests at the same time.
+     */
+    if (isLoading.value && !force) {
+        return stats.value
     }
-
-    if (isLoading.value && !force) return stats.value
 
     isLoading.value = true
 
     try {
-        const res = await axios.get("/api/admin/dashboard")
+        const response = await axios.get(
+            "/api/admin/dashboard"
+        )
 
-        if (res.data.status !== "success") return stats.value
+        if (response.data.status !== "success") {
+            return stats.value
+        }
 
-        const newStats = normalizeStats(res.data.data)
+        const newStats = normalizeStats(
+            response.data.data
+        )
 
-        /* 🔥 smart update (prevents UI flicker) */
+        /*
+         * Update only when the actual data changed.
+         * This helps prevent unnecessary UI updates.
+         */
         const changed =
-            JSON.stringify(stats.value) !== JSON.stringify(newStats)
+            JSON.stringify(stats.value) !==
+            JSON.stringify(newStats)
 
         if (changed) {
             stats.value = newStats
-            setCachedStats(newStats)
         }
 
         lastFetchTime = now
 
         return stats.value
 
-    } catch (err) {
-        console.error("Dashboard error:", err)
+    } catch (error) {
 
-        if (!stats.value) {
-            stats.value = getCachedStats()
-        }
+        console.error(
+            "Dashboard error:",
+            error
+        )
 
         return stats.value
 
     } finally {
+
         isLoading.value = false
     }
 }
 
-/* =========================
-   AUTO REFRESH (NEW DATA)
-========================= */
+/* =========================================================
+   AUTO REFRESH
+========================================================= */
+
 const startAutoRefresh = () => {
-    if (poller) return
+
+    if (poller) {
+        return
+    }
 
     poller = setInterval(() => {
-        fetchStats(true) // force refresh
+        fetchStats(true)
     }, POLL_INTERVAL)
 }
 
+/* =========================================================
+   STOP AUTO REFRESH
+========================================================= */
+
 const stopAutoRefresh = () => {
-    if (poller) {
-        clearInterval(poller)
-        poller = null
+
+    if (!poller) {
+        return
     }
+
+    clearInterval(poller)
+
+    poller = null
 }
 
-/* =========================
-   EXPORT
-========================= */
+/* =========================================================
+   COMPOSABLE
+========================================================= */
+
 export function useAdminDashboard() {
+
     return {
         stats,
         isLoading,

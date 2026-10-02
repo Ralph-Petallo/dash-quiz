@@ -1,83 +1,62 @@
 <template>
     <div class="quiz-page">
-
         <!-- HEADER -->
         <header class="quiz-header">
-
             <button class="back-btn" type="button" title="Go back" @click="router.back()">
                 <i class="fas fa-arrow-left"></i>
             </button>
-
             <div class="header-title">
                 <span class="eyebrow">IMAGE IDENTIFICATION</span>
                 <h1>Component Identification</h1>
             </div>
-
             <div class="progress-info">
                 <span>{{ collectedAnswers.length }} / {{ items.length }}</span>
-
                 <div class="progress-bar">
                     <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
                 </div>
             </div>
-
         </header>
 
 
         <main class="quiz-container">
-
             <!-- QUESTION -->
             <section class="question">
-
                 <div class="question-meta">
                     <span>
                         ITEM {{ selectedItemIndex + 1 }}
                     </span>
-
                     <span v-if="selectedItem">
                         {{ hasAnsweredQuestion(selectedItem.id) ? 'ANSWERED' : 'ANSWER' }}
                     </span>
                 </div>
-
                 <h2>
                     {{ selectedItem?.question_text ||
                         'Identify the component and choose the description that best explains its function.' }}
                 </h2>
-
                 <p>
                     Examine the component shown below and select the description
                     that best matches its function.
                 </p>
-
             </section>
-
-
             <!-- QUIZ -->
             <section v-if="items.length" class="quiz-layout">
-
                 <!-- ITEM NAVIGATION -->
                 <aside class="item-list">
-
                     <div class="item-list-header">
                         <span>Assessment Items</span>
                         <small>{{ collectedAnswers.length }}/{{ items.length }}</small>
                     </div>
-
                     <button v-for="(item, index) in items" :key="item.id" type="button" class="item-row" :class="{
                         selected: selectedItem?.id === item.id,
                         complete: hasAnsweredQuestion(item.id)
                     }" @click="selectItem(item)">
-
                         <span class="item-number">
                             {{ String(index + 1).padStart(2, '0') }}
                         </span>
-
                         <span class="item-text">
-
                             <strong>
-                                Item {{ index + 1 }}
+                                {{ item.item_name }}
                             </strong>
-
                             <small>
                                 {{
                                     hasAnsweredQuestion(item.id)
@@ -85,126 +64,84 @@
                                         : 'Not answered yet'
                                 }}
                             </small>
-
                         </span>
-
                         <i v-if="hasAnsweredQuestion(item.id)" class="fas fa-check"></i>
-
                     </button>
-
                 </aside>
-
-
                 <!-- DETAIL -->
                 <section class="detail">
-
                     <!-- IMAGE -->
                     <div class="image-frame">
-
                         <div class="image-label">
                             <i class="fas fa-image"></i>
                             Component
                         </div>
-
                         <img v-if="selectedItem?.image_path" :src="imageUrl(selectedItem.image_path)"
                             :alt="selectedItem.question_text || 'Component image'" class="component-image" />
-
                         <div v-else class="image-fallback">
                             <i class="fas fa-microchip"></i>
                             <span>No image available</span>
                         </div>
-
                     </div>
-
-
                     <!-- OPTIONS -->
                     <div class="answer-header">
-
                         <div>
                             <span class="answer-label">
                                 SELECT ONE ANSWER
                             </span>
-
                             <p>
                                 Choose the description that matches the component.
                             </p>
                         </div>
-
                         <span class="option-count">
                             {{ selectedItem?.options?.length || 0 }} options
                         </span>
-
                     </div>
-
-
                     <div class="options">
-
                         <button v-for="(option, idx) in selectedItem?.options || []" :key="option.id" type="button"
                             class="option" :class="{
                                 chosen: currentSelectedAnswer === option.id
                             }" :disabled="submitting" @click="selectAnswer(option)">
-
                             <span class="option-letter">
                                 {{ String.fromCharCode(65 + idx) }}
                             </span>
-
                             <span class="option-text">
                                 {{ option.description }}
                             </span>
-
                         </button>
-
                     </div>
-
-
                     <!-- CONFIRM FOR CURRENT QUESTION -->
                     <button v-if="!hasAnsweredQuestion(selectedItem?.id)" class="confirm-btn" type="button"
                         :disabled="!currentSelectedAnswer || submitting" @click="confirmCurrentAnswer">
-
                         <span v-if="!submitting">
                             Save Answer
                         </span>
-
                         <span v-else>
                             Saving...
                         </span>
-
                         <i v-if="!submitting" class="fas fa-arrow-right"></i>
-
                     </button>
-
                     <!-- NEXT -->
                     <button v-else-if="nextItem" class="confirm-btn" type="button" @click="selectItem(nextItem)">
                         Next Item
                         <i class="fas fa-arrow-right"></i>
                     </button>
-
                 </section>
-
             </section>
 
 
             <!-- EMPTY -->
             <section v-else class="empty-state">
-
                 <i class="fas fa-image"></i>
-
                 <h2>No items to identify</h2>
-
                 <p>
                     This assessment doesn't have any reference images yet.
                 </p>
-
             </section>
-
-
             <!-- FOOTER -->
             <section v-if="items.length" class="quiz-actions">
-
                 <div class="action-status">
-
                     <span class="status-dot"></span>
-
                     <span>
                         {{
                             collectedAnswers.length === items.length
@@ -212,74 +149,47 @@
                                 : `${items.length - collectedAnswers.length} remaining`
                         }}
                     </span>
-
                 </div>
-
-
                 <div class="action-buttons">
-
                     <button class="reset-btn" type="button" @click="resetLab" :disabled="submitting">
                         Reset
                     </button>
-
                     <button class="submit-btn" type="button"
                         :disabled="collectedAnswers.length !== items.length || submitting" @click="finishLab">
                         {{ submitting ? 'Submitting...' : 'Finish Assessment' }}
                     </button>
-
                 </div>
-
             </section>
-
         </main>
-
-
         <!-- RESULT -->
         <div v-if="finished" class="result-overlay" role="dialog" aria-modal="true">
-
             <div class="result-notice">
-
                 <div class="result-icon">
                     <i class="fas fa-check"></i>
                 </div>
-
                 <span class="result-label">
                     ASSESSMENT COMPLETE
                 </span>
-
                 <h2>Image Identification</h2>
-
                 <p>
                     You completed all {{ items.length }} items.
                 </p>
-
-
                 <div class="result-score">
-
                     <strong>{{ score }}</strong>
-
                     <span>
                         / {{ items.length }}
                     </span>
-
                 </div>
-
-
                 <div class="result-summary">
-
                     <div>
                         <strong>{{ score }}</strong>
                         <span>Correct</span>
                     </div>
-
                     <div>
                         <strong>{{ items.length - score }}</strong>
                         <span>Incorrect</span>
                     </div>
-
                 </div>
-
-
                 <button type="button" @click="router.push(`/user/quizzes/assessment/${quizId}`)">
                     Return to Assessment
                     <i class="fas fa-arrow-right"></i>
@@ -466,71 +376,35 @@ const confirmCurrentAnswer = () => {
 // =========================================================
 
 const resetLab = () => {
-
     collectedAnswers.value = []
-
     currentSelectedAnswer.value = null
-
     finished.value = false
-
     score.value = 0
 
     if (items.value[0]) {
         selectItem(items.value[0])
     }
 }
-
-
 // =========================================================
 // FINISH - SUBMIT ALL ANSWERS
 // =========================================================
 
 const finishLab = async () => {
-
-    if (
-        collectedAnswers.value.length !==
-        items.value.length
-    ) {
-        return
-    }
+    if (collectedAnswers.value.length !== items.value.length) return
 
     submitting.value = true
-
     try {
-
-        /*
-         * IMPORTANT:
-         *
-         * Submit ALL answers at once.
-         * Laravel validates on the server side.
-         */
-
-        const response =
-            await imageIdentificationRequest.answer(
-                collectedAnswers.value
-            )
-
+        const response = await imageIdentificationRequest.answer(quizId, collectedAnswers.value)
         const result = response.data
-
-        // Update score from server response
+        // Server-calculated score  
         score.value = result.correct
-
-        // Mark as finished
+        // Mark assessment as completed
         finished.value = true
-
-
+        console.log('Assessment submitted:', result)
     } catch (error) {
-
-        console.error(
-            'Error submitting assessment:',
-            error
-        )
-
-        // Optionally show error message to user
+        console.error('Error submitting assessment:', error)
         alert('Error submitting assessment. Please try again.')
-
     } finally {
-
         submitting.value = false
 
     }
@@ -560,7 +434,7 @@ const getQuizData = async () => {
                 'Identify this component.',
 
             image_path: item.image_path,
-
+            item_name: item.item_name,
             options: (item.options || []).map(option => ({
                 id: option.id,
                 description: option.description

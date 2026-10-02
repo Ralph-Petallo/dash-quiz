@@ -14,36 +14,42 @@
         <main class="container">
             <form class="card" @submit.prevent="handleRegister">
                 <h2>Create account</h2>
-                <p class="subtitle">Join Dash Quiz — it's free</p>
+                <p class="subtitle">Join DashQuiz — it's free</p>
 
                 <div class="grid-2">
                     <div class="field">
-                        <input v-model.trim="form.first_name" type="text" name="first_name" placeholder="First name"
-                            :class="{ error: errors.first_name }" autocomplete="off"/>
+                        <label for="first_name">First name</label>
+                        <input v-model.trim="form.first_name" type="text" id="first_name" name="first_name"
+                            placeholder="Juan" :class="{ error: errors.first_name }" autocomplete="off" />
                         <small v-if="errors.first_name">{{ errors.first_name[0] }}</small>
                     </div>
                     <div class="field">
-                        <input v-model.trim="form.last_name" type="text" name="last_name" placeholder="Last name"
-                            :class="{ error: errors.last_name }" autocomplete="off"/>
+                        <label for="last_name">Last name</label>
+                        <input v-model.trim="form.last_name" type="text" id="last_name" name="last_name"
+                            placeholder="Dela Cruz" :class="{ error: errors.last_name }" autocomplete="off" />
                         <small v-if="errors.last_name">{{ errors.last_name[0] }}</small>
                     </div>
                 </div>
 
                 <div class="field">
-                    <input v-model.trim="form.email" type="email" name="email" placeholder="Email address"
+                    <label for="email">Email address</label>
+                    <input v-model.trim="form.email" type="email" id="email" name="email" placeholder="you@example.com"
                         :class="{ error: errors.email }" autocomplete="off" />
                     <small v-if="errors.email">{{ errors.email[0] }}</small>
                 </div>
 
                 <div class="field">
-                    <input v-model.trim="form.password" type="password" name="password" placeholder="Password"
-                        :class="{ error: errors.password }" autocomplete="off" />
+                    <label for="password">Password</label>
+                    <input v-model.trim="form.password" type="password" id="password" name="password"
+                        placeholder="Min. 6 characters" :class="{ error: errors.password }" autocomplete="off" />
                     <small v-if="errors.password">{{ errors.password[0] }}</small>
                 </div>
 
                 <div class="field">
-                    <input v-model.trim="form.password_confirmation" type="password" name="confirm_password" placeholder="Confirm password"
-                        autocomplete="off" />
+                    <label for="confirm_password">Confirm password</label>
+                    <input v-model.trim="form.password_confirmation" type="password" id="confirm_password"
+                        name="confirm_password" placeholder="Repeat password"
+                        :class="{ error: errors.password_confirmation }" autocomplete="off" />
                     <small v-if="errors.password_confirmation">{{ errors.password_confirmation[0] }}</small>
                 </div>
 
@@ -56,7 +62,7 @@
                     <span v-else class="loader"></span>
                 </button>
 
-                <div class="btn-login">
+                <div class="btn-register">
                     Already have an account? &nbsp;
                     <router-link to="/" class="login-link">Login</router-link>
                 </div>
@@ -139,178 +145,423 @@ const handleRegister = async () => {
 </script>
 
 <style scoped>
+/* =========================================================
+   DASHQUIZ — FROSTED NOIR
+   #FFFFFF  White
+   #000000  Black
+   #A9A9A9  Gray
+   #D3D3D3  Light Gray
+   #696969  Dim Gray
+   ========================================================= */
+
 * {
     box-sizing: border-box;
 }
 
 .auth-wrapper {
+    --white: #ffffff;
+    --black: #000000;
+    --gray: #a9a9a9;
+    --light-gray: #d3d3d3;
+    --dark-gray: #696969;
+
+    --page-bg: #f7f7f7;
+    --soft-bg: #333333;
+    --border: #d3d3d3;
+
+    --text-primary: #000000;
+    --text-secondary: #696969;
+    --text-muted: #a9a9a9;
+
     min-height: 100vh;
+
     display: flex;
     flex-direction: column;
-    background: #ffffff;
+
+    background: var(--page-bg);
+
+    color: var(--text-primary);
+
+    font-family:
+        "Inter",
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
 }
 
-/* ── Header (matches login exactly) ── */
+:root.dark-mode .auth-wrapper {
+    --white: #1a1a1a;
+    --black: #e5e5e5;
+    --gray: #555555;
+    --light-gray: #2a2a2a;
+    --dark-gray: #888888;
+
+    --page-bg: #0f0f0f;
+    --soft-bg: #2a2a2a;
+    --border: #2a2a2a;
+
+    --text-primary: #e5e5e5;
+    --text-secondary: #888888;
+    --text-muted: #666666;
+}
+
+
+/* =========================================================
+   HEADER
+   ========================================================= */
+
 .auth-header {
-    border-bottom: 1px solid #e5e7eb;
-    background: #ffffff;
+    width: 100%;
+
+    background: rgba(255, 255, 255, 0.94);
+
+    border-bottom: 1px solid var(--border);
+
+    position: sticky;
+    top: 0;
+    z-index: 100;
+
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+
+:root.dark-mode .auth-header {
+    background: rgba(26, 26, 26, 0.94);
 }
 
 .header-inner {
+    width: 100%;
     max-width: 1100px;
+
     margin: 0 auto;
-    padding: 16px 20px;
+
+    padding: 15px 20px;
+
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    justify-content: space-between;
 }
+
+.portal {
+    font-size: 0.72rem;
+
+    color: var(--dark-gray);
+
+    background: var(--page-bg);
+
+    border: 1px solid var(--border);
+
+    padding: 4px 11px;
+
+    border-radius: 20px;
+
+    font-weight: 600;
+
+    letter-spacing: 0.02em;
+}
+
+
+/* =========================================================
+   BRAND
+   ========================================================= */
 
 .brand {
     display: flex;
     align-items: center;
+
     gap: 10px;
 }
 
+.brand img {
+    width: 32px;
+    height: 32px;
+
+    object-fit: contain;
+}
+
 .brand-name {
+    color: var(--black);
+
+    font-size: 1rem;
     font-weight: 800;
-    color: #111827;
+
+    letter-spacing: 0.04em;
 }
 
 .brand-name span {
-    color: #6366f1;
+    color: var(--dark-gray);
 }
 
-.portal {
-    font-size: 12px;
-    color: #6b7280;
-    background: #f3f4f6;
-    padding: 4px 10px;
-    border-radius: 20px;
-}
 
-/* ── Main ── */
+/* =========================================================
+   MAIN LAYOUT (Centered)
+   ========================================================= */
+
 .container {
     flex: 1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: 40px 20px;
+
     width: 100%;
+
+    padding: 3rem 20px;
+
+    display: flex;
+    align-items: center;
+    justify-content: center;
 }
 
-/* ── Card ── */
+
+/* =========================================================
+   REGISTER CARD
+   ========================================================= */
+
 .card {
     width: 100%;
-    max-width: 400px;
-    padding: 32px;
-    border-radius: 20px;
-    border: 1px solid #e5e7eb;
-    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.04), 0 20px 40px rgba(0, 0, 0, 0.06);
+    max-width: 420px;
+
+    padding: 2rem;
+
+    background: var(--white);
+
+    border: 1px solid var(--border);
+
+    border-radius: 16px;
+
     display: flex;
     flex-direction: column;
-    gap: 14px;
+
+    gap: 15px;
+
+    box-shadow:
+        0 8px 30px rgba(0, 0, 0, 0.05);
+
+    animation: cardEnter 0.35s ease-out both;
 }
 
 .card h2 {
     margin: 0;
-    color: #111827;
-    font-size: 1.4rem;
+
+    color: var(--black);
+
+    font-size: 1.35rem;
+
+    font-weight: 800;
+
+    letter-spacing: -0.025em;
 }
 
 .subtitle {
-    color: #9ca3af;
-    font-size: 13px;
-    margin-top: -6px;
+    margin: -8px 0 3px;
+
+    color: var(--dark-gray);
+
+    font-size: 0.8rem;
 }
 
-/* ── Grid — fix expanding inputs ── */
+
+/* =========================================================
+   GRID (First/Last Name)
+   ========================================================= */
+
 .grid-2 {
     display: grid;
+
     grid-template-columns: 1fr 1fr;
+
     gap: 10px;
+
     min-width: 0;
 }
 
+.grid-2 .field {
+    min-width: 0;
+}
+
+
+/* =========================================================
+   FORM FIELDS
+   ========================================================= */
+
 .field {
+    position: relative;
+
     display: flex;
     flex-direction: column;
-    gap: 4px;
-    min-width: 0;
+
+    gap: 6px;
+}
+
+.field label {
+    color: var(--dark-gray);
+
+    font-size: 0.72rem;
+
+    font-weight: 700;
+
+    letter-spacing: 0.01em;
 }
 
 .field input {
     width: 100%;
-    min-width: 0;
-    padding: 11px 14px;
-    border-radius: 10px;
-    border: 1.5px solid #e5e7eb;
-    font-size: 14px;
-    color: #111827;
-    background: #fafafa;
-    transition: all 0.15s;
+
+    min-height: 44px;
+
+    padding: 11px 13px;
+
+    background: var(--page-bg);
+
+    border: 1px solid var(--border);
+
+    border-radius: 9px;
+
+    color: var(--black);
+
+    font-family: inherit;
+
+    font-size: 0.84rem;
+
+    transition:
+        background 0.2s ease,
+        border-color 0.2s ease,
+        box-shadow 0.2s ease;
+}
+
+.field input::placeholder {
+    color: var(--gray);
+}
+
+.field input:hover {
+    border-color: var(--gray);
 }
 
 .field input:focus {
     outline: none;
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-    background: #fff;
+
+    background: var(--white);
+
+    border-color: var(--dark-gray);
+
+    box-shadow:
+        0 0 0 3px rgba(105, 105, 105, 0.12);
 }
 
 .field input.error {
-    border-color: #ef4444;
+    border-color: red;
+    box-shadow:
+        0 0 0 2px rgba(187, 49, 49, 0.1);
 }
 
 .field small {
-    font-size: 11px;
-    color: #ef4444;
+    color: red;
+
+    font-size: 0.68rem;
+
+    line-height: 1.4;
 }
+
+
+/* =========================================================
+   ALERT
+   ========================================================= */
 
 .alert {
-    background: #fef2f2;
-    color: #b91c1c;
-    padding: 10px 14px;
-    border-radius: 10px;
-    font-size: 13px;
-    border-left: 3px solid #ef4444;
+    padding: 10px 12px;
+
+    background: rgb(255, 217, 217);
+
+    border: 1px solid red;
+
+    border-radius: 8px;
+
+    color: brown;
+
+    font-size: 0.7rem;
+
+    line-height: 1.45;
 }
 
-/* ── Buttons ── */
+
+/* =========================================================
+   REGISTER BUTTON
+   ========================================================= */
+
 .btn {
-    padding: 12px;
-    border-radius: 10px;
-    border: none;
-    background: #4f46e5;
-    color: white;
-    font-weight: 600;
+    width: 100%;
+
+    min-height: 44px;
+
+    padding: 11px 14px;
+
+    border: 1px solid var(--black);
+
+    border-radius: 9px;
+
+    background: var(--black);
+
+    color: var(--white);
+
+    font-family: inherit;
+
+    font-size: 0.84rem;
+
+    font-weight: 700;
+
     cursor: pointer;
+
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
-    transition: all 0.15s;
+
+    transition:
+        background 0.2s ease,
+        transform 0.15s ease,
+        box-shadow 0.2s ease;
 }
 
-.btn:hover {
-    background: #4338ca;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.35);
+:root.dark-mode .btn {
+    background: #e5e5e5;
+    color: #000000;
+    border-color: #e5e5e5;
+}
+
+.btn:hover:not(:disabled) {
+    background: var(--dark-gray);
+
+    box-shadow:
+        0 5px 15px rgba(0, 0, 0, 0.12);
+}
+
+:root.dark-mode .btn:hover:not(:disabled) {
+    background: #888888;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.98);
 }
 
 .btn:disabled {
-    opacity: 0.6;
+    opacity: 0.55;
+
     cursor: not-allowed;
-    transform: none;
-    box-shadow: none;
 }
 
+
+/* =========================================================
+   LOADER
+   ========================================================= */
+
 .loader {
-    width: 18px;
-    height: 18px;
-    border: 3px solid rgba(255, 255, 255, 0.4);
-    border-top-color: white;
+    width: 17px;
+    height: 17px;
+
+    border: 2px solid rgba(255, 255, 255, 0.35);
+
+    border-top-color: var(--white);
+
     border-radius: 50%;
-    animation: spin 0.8s linear infinite;
+
+    animation: spin 0.75s linear infinite;
 }
 
 @keyframes spin {
@@ -319,38 +570,147 @@ const handleRegister = async () => {
     }
 }
 
-/* ── Login link (kept your text, polished wrapper) ── */
-.btn-login {
+
+/* =========================================================
+   LOGIN LINK
+   ========================================================= */
+
+.btn-register {
     display: flex;
-    justify-content: center;
+
     align-items: center;
-    font-size: 13px;
-    color: #6b7280;
+    justify-content: center;
+
+    font-size: 0.8rem;
+
+    color: var(--dark-gray);
 }
 
 .login-link {
+    color: var(--black);
+
     text-decoration: none;
-    color: #4f46e5;
-    font-weight: 600;
+
+    font-weight: 700;
+
+    transition: color 0.2s ease;
 }
 
 .login-link:hover {
+    color: var(--dark-gray);
+
     text-decoration: underline;
-    color: #4338ca;
 }
 
-/* ── Footer (matches login exactly) ── */
+
+/* =========================================================
+   FOOTER
+   ========================================================= */
+
 .auth-footer {
+    width: 100%;
+
+    padding: 13px 20px;
+
+    background: var(--black);
+
+    color: var(--gray);
+
     text-align: center;
-    padding: 12px;
-    background-color: #6366f1;
-    font-size: 12px;
-    color: rgba(255, 255, 255, 0.8);
+
+    font-size: 0.68rem;
+
+    line-height: 1.5;
 }
 
-@media (max-width: 500px) {
+
+/* =========================================================
+   FOCUS
+   ========================================================= */
+
+.btn:focus-visible,
+.login-link:focus-visible {
+    outline: 2px solid var(--black);
+
+    outline-offset: 3px;
+}
+
+
+/* =========================================================
+   CARD ANIMATION
+   ========================================================= */
+
+@keyframes cardEnter {
+    from {
+        opacity: 0;
+
+        transform: translateY(12px);
+    }
+
+    to {
+        opacity: 1;
+
+        transform: translateY(0);
+    }
+}
+
+
+/* =========================================================
+   SMALL MOBILE
+   ========================================================= */
+
+@media (max-width: 480px) {
+    .header-inner {
+        padding: 12px 14px;
+    }
+
+    .brand-name {
+        font-size: 0.9rem;
+    }
+
+    .brand img {
+        width: 29px;
+        height: 29px;
+    }
+
+    .container {
+        padding: 1.5rem 12px 2rem;
+    }
+
+    .card {
+        padding: 1.5rem;
+
+        border-radius: 14px;
+
+        gap: 14px;
+    }
+
+    .card h2 {
+        font-size: 1.2rem;
+    }
+
+    .subtitle {
+        font-size: 0.76rem;
+    }
+
     .grid-2 {
         grid-template-columns: 1fr;
+    }
+
+    .field input {
+        min-height: 43px;
+
+        font-size: 0.82rem;
+    }
+
+    .btn {
+        min-height: 42px;
+    }
+
+    .auth-footer {
+        padding: 11px 12px;
+
+        font-size: 0.62rem;
     }
 }
 </style>

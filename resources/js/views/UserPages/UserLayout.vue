@@ -1,106 +1,207 @@
 <template>
   <div class="user-wrapper">
-    <UserSidebar :isSidebarOpen="isSidebarOpen" @logout="handleLogout" @closeSidebar="closeSidebar" />
-    <div class="sidebar-overlay" :class="{ active: isSidebarOpen && isMobile }" @click="isSidebarOpen = false" />
 
-    <div class="main-wrapper" >
+    <!-- Sidebar -->
+    <UserSidebar :isSidebarOpen="isSidebarOpen" @logout="handleLogout" @closeSidebar="closeSidebar" />
+
+    <!-- Mobile overlay -->
+    <div class="sidebar-overlay" :class="{ active: isSidebarOpen && isMobile }" @click="isSidebarOpen = false"></div>
+
+    <!-- Main content -->
+    <div class="main-wrapper">
+
+      <!-- Topbar -->
       <UserTopbar :currentPageTitle="currentPageTitle" @toggleSidebar="toggleSidebar" />
-      <main class="user-main" >
+
+      <!-- Page -->
+      <main class="user-main">
         <router-view />
       </main>
+
     </div>
   </div>
 </template>
 
 <script setup>
-import UserSidebar from '@/components/UserSide/SideBar.vue'
-import UserTopbar from '@/components/UserSide/TopBar.vue'
-import axios from 'axios'
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useRouter, useRoute } from 'vue-router'
-import { startHeartbeat } from '@/composables/heartbeat'
-import { useUser } from '@/composables/useUser'
+import UserSidebar from "@/components/UserSide/SideBar.vue"
+import UserTopbar from "@/components/UserSide/TopBar.vue"
+
+import { ref, computed, onMounted, onUnmounted } from "vue"
+import { useRouter, useRoute } from "vue-router"
+
+import { startHeartbeat } from "@/composables/heartbeat"
+import { useUser } from "@/composables/useUser"
+
+import api from "@/bootstrap"
 
 const router = useRouter()
 const route = useRoute()
 
-const { user, fetchUser } = useUser()
+const {
+  user,
+  fetchUser,
+  clearUser,
+} = useUser()
 
 const isSidebarOpen = ref(false)
 const windowWidth = ref(window.innerWidth)
 
+/*
+|--------------------------------------------------------------------------
+| Window resize
+|--------------------------------------------------------------------------
+*/
+
 const updateWindowWidth = () => {
   windowWidth.value = window.innerWidth
+
   if (windowWidth.value > 1024 && isSidebarOpen.value) {
     isSidebarOpen.value = false
   }
 }
 
-
-
-
+/*
+|--------------------------------------------------------------------------
+| Mounted
+|--------------------------------------------------------------------------
+*/
 
 onMounted(async () => {
-  window.addEventListener('resize', updateWindowWidth)
+  window.addEventListener("resize", updateWindowWidth)
 
-  // Load user once
+  /*
+  |--------------------------------------------------------------------------
+  | Make sure user exists
+  |--------------------------------------------------------------------------
+  |
+  | Normally login already sets user.value.
+  | This fetch is mainly useful when the page is refreshed.
+  |
+  */
+
   if (!user.value) {
-    try {
-
-      if (!user.value) {
-        Object.keys(localStorage).forEach(key => {
-          if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
-            localStorage.removeItem(key)
-          }
-        })
-      }
-      await fetchUser()
-    } catch {
-      user.value = null
-    }
+    await fetchUser()
   }
 
-  // Start heartbeat only if logged in
+  /*
+  |--------------------------------------------------------------------------
+  | Start heartbeat
+  |--------------------------------------------------------------------------
+  */
+
   if (user.value) {
     startHeartbeat(router)
   }
 })
 
-onUnmounted(() => window.removeEventListener('resize', updateWindowWidth))
+/*
+|--------------------------------------------------------------------------
+| Unmounted
+|--------------------------------------------------------------------------
+*/
 
-const isMobile = computed(() => windowWidth.value <= 1024)
+onUnmounted(() => {
+  window.removeEventListener("resize", updateWindowWidth)
+})
+
+/*
+|--------------------------------------------------------------------------
+| Responsive
+|--------------------------------------------------------------------------
+*/
+
+const isMobile = computed(() => {
+  return windowWidth.value <= 1024
+})
+
+/*
+|--------------------------------------------------------------------------
+| Page titles
+|--------------------------------------------------------------------------
+*/
 
 const pageTitles = {
-  '/user': 'Home',
-  '/user/': 'Home',
-  '/user/quizzes': 'Assessments',
-  '/user/records': 'My Records',
-  '/user/profile': 'My Profile',
+  "/user": "Home",
+  "/user/": "Home",
+  "/user/quizzes": "Assessments",
+  "/user/records": "My Records",
+  "/user/profile": "My Profile",
 }
 
-const currentPageTitle = computed(() => pageTitles[route.path] ?? 'Home')
+const currentPageTitle = computed(() => {
+  return pageTitles[route.path] ?? "Home"
+})
 
-const toggleSidebar = () => { isSidebarOpen.value = !isSidebarOpen.value }
-const closeSidebar = () => { isSidebarOpen.value = false }
+/*
+|--------------------------------------------------------------------------
+| Sidebar
+|--------------------------------------------------------------------------
+*/
+
+const toggleSidebar = () => {
+  isSidebarOpen.value = !isSidebarOpen.value
+}
+
+const closeSidebar = () => {
+  isSidebarOpen.value = false
+}
+
+/*
+|--------------------------------------------------------------------------
+| Logout
+|--------------------------------------------------------------------------
+*/
 
 const handleLogout = async () => {
+  if (!confirm("Are you sure you want to logout?")) {
+    return
+  }
+
   try {
+    // Make sure Sanctum has a valid CSRF token
+    await api.get("/sanctum/csrf-cookie")
 
-    if (confirm('Are you sure you want to logout?')) {
-      await axios.get('/sanctum/csrf-cookie')
-      await axios.post('/api/logout')
-      user.value = null
+    // Logout from Laravel
+    await api.post("/api/logout")
 
-      //remove all quiz-related caches on logout to prevent stale data if another user logs in on same device
-      Object.keys(localStorage).forEach(key => {
-        if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
-          localStorage.removeItem(key)
-        }
-      })
-      router.push('/')
-    }
+    // Clear Vue auth state
+    clearUser()
+
+    /*
+    |--------------------------------------------------------------------------
+    | Clear quiz-related local cache
+    |--------------------------------------------------------------------------
+    |
+    | This is only done during logout.
+    | We do NOT clear localStorage when UserLayout mounts.
+    |
+    */
+
+    Object.keys(localStorage).forEach((key) => {
+      if (
+        key.startsWith("dash-quiz") ||
+        key.startsWith("quiz")
+      ) {
+        localStorage.removeItem(key)
+      }
+    })
+
+    // Go back to login
+    await router.push("/")
+
   } catch (error) {
-    console.error('Logout failed:', error)
+    console.error("Logout failed:", error)
+
+    /*
+    |--------------------------------------------------------------------------
+    | Even if the backend logout fails,
+    | clear the frontend auth state.
+    |--------------------------------------------------------------------------
+    */
+
+    clearUser()
+
+    await router.push("/")
   }
 }
 </script>
@@ -142,7 +243,7 @@ const handleLogout = async () => {
 .user-main {
   flex: 1;
   width: 100%;
-  padding: clamp(1rem, 3vw, 2rem);
+  padding: .2rem;
   overflow-x: hidden;
 }
 
@@ -181,14 +282,14 @@ const handleLogout = async () => {
   }
 
   .user-main {
-    padding: clamp(0.875rem, 4vw, 1.5rem);
+    padding: .2rem;
   }
 }
 
 /* ── SMALL MOBILE: ≤480px ── */
 @media (max-width: 480px) {
   .user-main {
-    padding: 0.875rem;
+    padding: .2rem;
   }
 }
 </style>

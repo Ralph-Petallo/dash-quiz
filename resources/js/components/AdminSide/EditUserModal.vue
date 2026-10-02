@@ -121,7 +121,7 @@ const handleSave = () => {
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1004;
+    z-index: 3;
 }
 
 .modal-content {
@@ -131,6 +131,7 @@ const handleSave = () => {
     width: 400px;
     max-width: 90%;
     box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    z-index:5;
 }
 
 /* New Input Styles */

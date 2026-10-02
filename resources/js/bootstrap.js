@@ -1,41 +1,60 @@
 import axios from "axios"
-import router from "./router"
 
-axios.defaults.baseURL = window.location.origin
-axios.defaults.withCredentials = true
-axios.defaults.withXSRFToken = true
-axios.defaults.headers.common["X-Requested-With"] = "XMLHttpRequest"
-axios.defaults.headers.common["Accept"] = "application/json"
+const api = axios.create({
+    baseURL: import.meta.env.VITE_API_URL || window.location.origin,
 
-axios.interceptors.response.use(
+    withCredentials: true,
+    withXSRFToken: true,
+
+    headers: {
+        "X-Requested-With": "XMLHttpRequest",
+        Accept: "application/json",
+    },
+})
+
+let csrfPromise = null
+
+const refreshCsrfToken = async () => {
+    if (!csrfPromise) {
+        csrfPromise = api.get("/sanctum/csrf-cookie")
+            .finally(() => {
+                csrfPromise = null
+            })
+    }
+    return csrfPromise
+}
+
+api.interceptors.response.use(
     (response) => response,
 
     async (error) => {
-        if (!error.response) return Promise.reject(error)
+        const response = error.response
+        const request = error.config
 
-        const { status, config } = error.response
+        if (!response || !request) {
+            return Promise.reject(error)
+        }
 
-        if (status === 419 || status === 401) {
+        // CSRF token expired
+        if (
+            response.status === 419 &&
+            !request._csrfRetry
+        ) {
+            request._csrfRetry = true
 
-            // Retry once on CSRF expiry
-            if (status === 419 && !config._retry) {
-                config._retry = true
-                try {
-                    await axios.get("/sanctum/csrf-cookie")
-                    return axios(config)
-                } catch {
-                    return Promise.reject(error)
-                }
-            }
-
-            // Redirect to login if not already there
-            if (router.currentRoute.value.path !== "/") {
-                router.push({ path: "/" })
+            try {
+                await refreshCsrfToken()
+                return api(request)
+            } catch {
+                return Promise.reject(error)
             }
         }
+
+        // ❌ REMOVE THIS - Let router handle auth redirects
+        // if (response.status === 401) { ... }
 
         return Promise.reject(error)
     }
 )
 
-export default axios
+export default api

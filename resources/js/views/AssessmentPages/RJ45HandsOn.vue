@@ -56,49 +56,6 @@
       <!-- WORK AREA -->
       <section class="bench-layout">
 
-        <!-- PROCEDURE -->
-        <aside class="procedure-panel">
-          <div class="panel-heading">
-            <div>
-              <span class="eyebrow">Procedure</span>
-              <h3>Termination steps</h3>
-            </div>
-
-            <span class="bench-code">RJ45</span>
-          </div>
-
-          <button v-for="stepItem in procedureSteps" :key="stepItem.id" type="button" class="procedure-step" :class="{
-            current: stage === stepItem.id,
-            complete: stage > stepItem.id
-          }" :disabled="stage < stepItem.id" @click="goToCompletedStage(stepItem.id)">
-            <span class="step-icon">
-              <i v-if="stage > stepItem.id" class="fas fa-check"></i>
-
-              <span v-else>
-                {{ stepItem.id }}
-              </span>
-            </span>
-
-            <span class="step-text">
-              <strong>{{ stepItem.title }}</strong>
-              <small>{{ stepItem.detail }}</small>
-            </span>
-
-            <i v-if="stage > stepItem.id" class="fas fa-check"></i>
-
-            <i v-else-if="stage === stepItem.id" class="fas fa-circle"></i>
-          </button>
-
-          <div class="standard-note">
-            <i class="fas fa-circle-info"></i>
-
-            <span>
-              Default wiring standard:
-              <strong>T568B</strong>
-            </span>
-          </div>
-        </aside>
-
         <!-- WORK SURFACE -->
         <section class="work-surface">
 
@@ -200,7 +157,6 @@
             <div class="action-row">
               <button type="button" class="action-btn primary" :disabled="cableCut" @click="cutCable">
                 <i class="fas fa-scissors"></i>
-
                 {{
                   cableCut
                     ? "Cable prepared"
@@ -437,8 +393,8 @@
 
               <div class="crimp-status">
                 <i :class="connectorInserted
-                    ? 'fas fa-circle-check'
-                    : 'fas fa-circle-info'
+                  ? 'fas fa-circle-check'
+                  : 'fas fa-circle-info'
                   "></i>
 
                 <div>
@@ -543,11 +499,7 @@
 
             <div class="action-row">
               <button type="button" class="action-btn primary" :disabled="tested || testing" @click="runTest">
-                <i :class="testing
-                    ? 'fas fa-spinner fa-spin'
-                    : 'fas fa-bolt'
-                  "></i>
-
+                <i :class="testing ? 'fas fa-spinner fa-spin' : 'fas fa-bolt'"></i>
                 {{
                   testing
                     ? "Testing..."
@@ -565,8 +517,8 @@
             }">
               <div class="result-icon">
                 <i :class="testPassed
-                    ? 'fas fa-circle-check'
-                    : 'fas fa-circle-xmark'
+                  ? 'fas fa-circle-check'
+                  : 'fas fa-circle-xmark'
                   "></i>
               </div>
 
@@ -674,7 +626,7 @@ const testResult = ref("");
 const testing = ref(false);
 const testLights = ref([]);
 
-let testTimer = null;
+const testTimer = ref(null);
 
 /* STAGE 1 */
 const cableCut = ref(false);
@@ -828,7 +780,7 @@ const procedureSteps = [
 
 /* WIRES */
 const looseWires = ref(
-  [...wireSets.B].sort(() => Math.random() - 0.5)
+  [...wireSets[selectedStandard.value]].sort(() => Math.random() - 0.5)
 );
 
 const arrangedWires = ref(
@@ -871,6 +823,12 @@ const chooseStandard = (standard) => {
   if (stage.value !== 1) {
     return;
   }
+
+  const advanceToTest = () => {
+    if (connectorInserted.value) {
+      stage.value = 4;
+    }
+  };
 
   selectedStandard.value = standard;
 
@@ -1068,27 +1026,22 @@ const runTest = () => {
 
   let light = 0;
 
-  testTimer = window.setInterval(() => {
-    testLights.value.push(light);
+  const runTest = () => {
+    if (testing.value || tested.value) return;
 
-    light += 1;
+    testing.value = true;
+    testLights.value = [];
+    let light = 0;
 
-    if (light === 8) {
-      window.clearInterval(testTimer);
-
-      testTimer = null;
-      testing.value = false;
-      tested.value = true;
-
-      testPassed.value =
-        isWiringCorrect.value;
-
-      testResult.value =
-        isWiringCorrect.value
-          ? "PASS / 1 2 3 4 5 6 7 8"
-          : "FAIL / PINOUT ERROR";
-    }
-  }, 220);
+    testTimer.value = window.setInterval(() => {
+      testLights.value.push(light++);
+      if (light === 8) {
+        window.clearInterval(testTimer.value);
+        testTimer.value = null;
+        // ... rest
+      }
+    }, 220);
+  };
 };
 
 /* RETRY */
@@ -1147,31 +1100,32 @@ const resetBench = () => {
 };
 
 /* COMPLETE */
-const finishActivity = () => {
-  if (!testPassed.value) {
-    return;
-  }
+const finishActivity = async () => {
+  if (!testPassed.value) return;
 
-  completed.value = true;
-
-  rj45HandsOnRequest
-    .complete({
+  try {
+    const response = await rj45HandsOnRequest.complete({
       quiz_id: quizId,
       standard: selectedStandard.value,
-      passed: true
-    })
-    .catch((error) => {
-      console.error(
-        "Failed to record RJ-45 assessment:",
-        error
-      );
+      passed: true,
+      wirings: arrangedWires.value.map(w => w?.id) // audit trail
     });
+
+    if (response?.success) {
+      completed.value = true;
+    } else {
+      testResult.value = "SUBMISSION FAILED";
+    }
+  } catch (error) {
+    testResult.value = "SERVER ERROR";
+    console.error("Failed to record:", error);
+  }
 };
 
 /* CLEANUP */
 onUnmounted(() => {
-  if (testTimer) {
-    window.clearInterval(testTimer);
+  if (testTimer.value) {
+    window.clearInterval(testTimer.value);
   }
 });
 </script>
@@ -1426,11 +1380,8 @@ onUnmounted(() => {
 ========================================================= */
 
 .bench-layout {
-  display: grid;
-
-  grid-template-columns:
-    250px minmax(0, 1fr);
-
+  display: flex;
+  width: 100%;
   gap: 12px;
 
   margin-top: 12px;
@@ -1452,7 +1403,7 @@ onUnmounted(() => {
 }
 
 .work-surface {
-  min-width: 0;
+  width: 100%;
   padding: 18px;
 }
 
@@ -1647,7 +1598,7 @@ onUnmounted(() => {
   height: 24px;
 
   flex-shrink: 0;
-
+  text-align: center;
   display: grid;
   place-items: center;
 

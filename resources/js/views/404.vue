@@ -1,163 +1,303 @@
 <template>
     <div class="not-found-wrapper">
+
         <div class="content">
-            <div class="lightning-container">
-                <svg class="lightning-bolt" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    <path d="M13 2L3 14H12L11 22L21 10H12L13 2Z" fill="currentColor" stroke="currentColor" stroke-width="1" stroke-linejoin="round"/>
-                </svg>
-                <h1 class="error-code">404</h1>
+
+            <!-- ERROR CODE -->
+            <div class="error-code">
+                404
             </div>
 
+            <!-- MESSAGE -->
             <div class="text-section">
-                <h2>Whoops! You've been zapped.</h2>
-                <p>The page you're looking for has moved or vanished into thin air.</p>
-                
+                <span class="eyebrow">Page Not Found</span>
+
+                <p>
+                    The page you're looking for may have moved,
+                    been removed, or never existed.
+                </p>
             </div>
 
+            <!-- ACTIONS -->
             <div class="actions">
-                <button @click="goBack" class="btn-back">Go Back</button>
-                <router-link to="/" class="btn-home">Return Home</router-link>
+
+                <button @click="goBack" class="btn-back">
+                    <i class="fas fa-arrow-left"></i>
+                    <span>Go Back</span>
+                </button>
+
+                <router-link to="/" class="btn-home">
+                    <i class="fas fa-house"></i>
+                    <span>Return Home</span>
+                </router-link>
+
             </div>
+
         </div>
 
-        <div class="glow-sphere"></div>
     </div>
 </template>
 
 <script setup>
-import { useRouter } from 'vue-router';
+import { useRouter } from 'vue-router'
 
-const router = useRouter();
+const router = useRouter()
 
 const goBack = () => {
-    router.back();
-};
-
+    router.back()
+}
 </script>
 
 <style scoped>
+* {
+    box-sizing: border-box;
+}
+
+/* =========================
+   PAGE
+========================= */
+
 .not-found-wrapper {
     min-height: 100vh;
-    background-color: #f8fafc;
+
     display: flex;
-    justify-content: center;
     align-items: center;
-    font-family: 'Inter', sans-serif;
-    overflow: hidden;
+    justify-content: center;
+
+    padding: 24px;
+
+    background: #ffffff;
+
+    color: #111111;
+
+    font-family:
+        -apple-system,
+        BlinkMacSystemFont,
+        "Segoe UI",
+        sans-serif;
+
     position: relative;
+    overflow: hidden;
 }
+
+/* =========================
+   CONTENT
+========================= */
 
 .content {
-    text-align: center;
-    z-index: 2;
-    padding: 2rem;
-}
+    width: 100%;
+    max-width: 520px;
 
-/* === Big Lightning Style === */
-.lightning-container {
-    position: relative;
     display: flex;
     flex-direction: column;
     align-items: center;
-    margin-bottom: 2rem;
+
+    text-align: center;
+
+    position: relative;
+    z-index: 2;
 }
 
-.lightning-bolt {
-    width: 150px; /* Big lightning */
-    height: 150px;
-    color: #8b5cf6; /* Your Accent Violet */
-    filter: drop-shadow(0 0 15px rgba(139, 92, 246, 0.5));
-    animation: flicker 2s infinite;
-}
+/* =========================
+   ERROR CODE
+========================= */
 
 .error-code {
-    font-size: 8rem;
-    font-weight: 900;
-    color: #1e1b4b; /* Your Primary Deep */
-    margin-top: -30px;
-    letter-spacing: -5px;
-    line-height: 1;
+    margin: 0;
+
+    color: #111111;
+
+    font-size: clamp(6rem, 16vw, 9rem);
+    line-height: 0.9;
+
+    font-weight: 800;
+
+    letter-spacing: -0.08em;
 }
 
-/* === Text Section === */
-.text-section h2 {
-    font-size: 2rem;
-    font-weight: 800;
-    color: #1e1b4b;
-    margin-bottom: 0.5rem;
+/* =========================
+   TEXT
+========================= */
+
+.text-section {
+    margin-top: 24px;
+}
+
+.eyebrow {
+    display: block;
+
+    margin-bottom: 8px;
+
+    color: #737373;
+
+    font-size: 10px;
+    font-weight: 700;
+
+    text-transform: uppercase;
+    letter-spacing: 0.14em;
+}
+
+.text-section h1 {
+    margin: 0;
+
+    color: #111111;
+
+    font-size: 24px;
+    line-height: 1.25;
+
+    font-weight: 700;
+
+    letter-spacing: -0.02em;
 }
 
 .text-section p {
-    color: #64748b;
-    font-size: 1.1rem;
-    margin-bottom: 2.5rem;
+    max-width: 420px;
+
+    margin: 10px auto 0;
+
+    color: #737373;
+
+    font-size: 13px;
+    line-height: 1.6;
 }
 
-/* === Action Buttons === */
+/* =========================
+   ACTIONS
+========================= */
+
 .actions {
     display: flex;
-    gap: 1rem;
+    align-items: center;
     justify-content: center;
+
+    gap: 8px;
+
+    margin-top: 28px;
+}
+
+.btn-back,
+.btn-home {
+    height: 40px;
+
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    gap: 7px;
+
+    padding: 0 15px;
+
+    border-radius: 7px;
+
+    font-size: 11px;
+    font-weight: 700;
+
+    cursor: pointer;
+
+    text-decoration: none;
+
+    transition:
+        background 0.18s ease,
+        border-color 0.18s ease,
+        color 0.18s ease,
+        transform 0.18s ease;
 }
 
 .btn-back {
-    background: transparent;
-    border: 2px solid #e2e8f0;
-    color: #64748b;
-    padding: 0.8rem 1.5rem;
-    border-radius: 12px;
-    font-weight: 700;
-    cursor: pointer;
-    transition: all 0.2s;
-}
+    border: 1px solid #e5e5e5;
 
-.btn-home {
-    background: #1e1b4b;
-    color: white;
-    text-decoration: none;
-    padding: 0.8rem 2rem;
-    border-radius: 12px;
-    font-weight: 700;
-    transition: all 0.2s;
-    box-shadow: 0 10px 15px -3px rgba(30, 27, 75, 0.2);
+    background: #ffffff;
+
+    color: #555555;
 }
 
 .btn-back:hover {
-    background: #fff;
-    border-color: #8b5cf6;
-    color: #8b5cf6;
+    border-color: #999999;
+
+    background: #fafafa;
+
+    color: #111111;
+}
+
+.btn-home {
+    border: 1px solid #111111;
+
+    background: #111111;
+
+    color: #ffffff;
 }
 
 .btn-home:hover {
-    transform: translateY(-2px);
-    background: #4c1d95;
+    background: #333333;
+
+    transform: translateY(-1px);
 }
 
-/* === Decorations & Animations === */
-.glow-sphere {
-    position: absolute;
-    width: 600px;
-    height: 600px;
-    background: radial-gradient(circle, rgba(139, 92, 246, 0.05) 0%, transparent 70%);
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    z-index: 1;
+.btn-back:active,
+.btn-home:active {
+    transform: scale(0.98);
 }
 
-@keyframes flicker {
-    0%, 18%, 22%, 25%, 53%, 57%, 100% {
-        opacity: 1;
-        transform: scale(1);
-    }
-    20%, 24%, 55% {
-        opacity: 0.7;
-        transform: scale(0.95) translateY(5px);
-    }
+.btn-back i,
+.btn-home i {
+    font-size: 10px;
 }
+
+
+
+/* =========================
+   MOBILE
+========================= */
 
 @media (max-width: 600px) {
-    .error-code { font-size: 5rem; }
-    .lightning-bolt { width: 100px; height: 100px; }
+
+
+    .logo-placeholder,
+    .logo {
+        width: 62px;
+        height: 62px;
+    }
+
+    .error-code {
+        font-size: 6rem;
+    }
+
+    .text-section {
+        margin-top: 20px;
+    }
+
+    .text-section h1 {
+        font-size: 21px;
+    }
+
+    .text-section p {
+        font-size: 12px;
+    }
+
+    .actions {
+        width: 100%;
+    }
+
+    .btn-back,
+    .btn-home {
+        flex: 1;
+    }
+}
+
+@media (max-width: 380px) {
+
+    .error-code {
+        font-size: 5rem;
+    }
+
+    .actions {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .btn-back,
+    .btn-home {
+        width: 100%;
+    }
 }
 </style>

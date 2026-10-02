@@ -12,7 +12,7 @@
                     </button>
                     <div class="title-stack">
                         <h1 class="quiz-title">{{ quiz.title }}</h1>
-                        <span class="quiz-subtitle">Computer Systems Servicing</span>
+                        <span class="quiz-subtitle">Computer Systems Servicingasas</span>
                     </div>
                 </div>
 
@@ -93,53 +93,120 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted, onBeforeUnmount } from 'vue'
-import axios from 'axios'
-import { useRoute, useRouter } from 'vue-router'
+import {
+    ref,
+    computed,
+    onMounted,
+    onBeforeUnmount
+} from 'vue'
+
+import {
+    useRoute,
+    useRouter
+} from 'vue-router'
+
+import api from '@/bootstrap'
 
 const route = useRoute()
 const router = useRouter()
 
-const quiz = ref({ title: '', total_questions: 0 })
+
+/* ========================================================
+   QUIZ STATE
+======================================================== */
+
+const quiz = ref({
+    title: '',
+    total_questions: 0
+})
+
 const questions = ref([])
+
 const submitting = ref(false)
 
-const currentIndex = ref(parseInt(localStorage.getItem('quiz_current_index')) || 0)
-const selectedAnswer = ref(null)
-const score = ref(parseInt(localStorage.getItem('quiz_score')) || 0)
-
 const loading = ref(true)
+
 const error = ref(null)
 
+
+/* ========================================================
+   QUIZ PROGRESS
+======================================================== */
+
+const currentIndex = ref(
+    parseInt(
+        localStorage.getItem('quiz_current_index')
+    ) || 0
+)
+
+const selectedAnswer = ref(null)
+
+const score = ref(
+    parseInt(
+        localStorage.getItem('quiz_score')
+    ) || 0
+)
+
 const timeElapsed = ref(0)
-const answers = ref([]) // ✅ FIX: store ALL answers properly
+
+const answers = ref([])
+
 
 let timerInterval = null
 
-// CURRENT QUESTION
+
+/* ========================================================
+   CURRENT QUESTION
+======================================================== */
+
 const currentQuestion = computed(() => {
-    return questions.value[currentIndex.value] || {
-        id: null,
-        text: '',
-        options: []
-    }
+    return (
+        questions.value[currentIndex.value] || {
+            id: null,
+            text: '',
+            options: []
+        }
+    )
 })
 
-// PROGRESS
+
+/* ========================================================
+   PROGRESS
+======================================================== */
+
 const progress = computed(() => {
-    return questions.value.length
-        ? ((currentIndex.value + 1) / questions.value.length) * 100
-        : 0
+    if (!questions.value.length) {
+        return 0
+    }
+
+    return (
+        ((currentIndex.value + 1) /
+            questions.value.length) *
+        100
+    )
 })
 
-// FORMAT TIME
+
+/* ========================================================
+   FORMAT TIME
+======================================================== */
+
 const formattedTime = computed(() => {
-    const mins = Math.floor(timeElapsed.value / 60)
-    const secs = timeElapsed.value % 60
+    const mins = Math.floor(
+        timeElapsed.value / 60
+    )
+
+    const secs =
+        timeElapsed.value % 60
+
     return `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`
 })
 
-// FETCH QUIZ
+
+/* ========================================================
+   FETCH QUIZ
+======================================================== */
+
 const fetchQuiz = async () => {
     loading.value = true
     error.value = null
@@ -151,98 +218,253 @@ const fetchQuiz = async () => {
         return
     }
 
-    localStorage.setItem('quiz_id', quizId)
+    localStorage.setItem(
+        'quiz_id',
+        quizId
+    )
 
     try {
-        const { data } = await axios.get(`/api/quiz/${quizId}`)
+        const { data } = await api.get(
+            `/api/quiz/${quizId}`
+        )
 
         if (data.status === 'success') {
+
             quiz.value = data.quiz
-            questions.value = data.quiz.questions || []
+
+            questions.value =
+                data.quiz.questions || []
 
             if (!questions.value.length) {
-                error.value = 'No questions found'
+                error.value =
+                    'No questions found'
             }
         }
+
     } catch (err) {
-        error.value = err.message
+
+        console.error(
+            'Failed to fetch quiz:',
+            err.response?.data || err
+        )
+
+        error.value =
+            err.response?.data?.message ||
+            'Failed to load quiz.'
+
     } finally {
         loading.value = false
     }
 }
 
-// SUBMIT ANSWER
+
+/* ========================================================
+   SUBMIT ANSWER
+======================================================== */
+
 const submitAnswer = async () => {
-    if (!selectedAnswer.value || submitting.value) return
+
+    if (
+        !selectedAnswer.value ||
+        submitting.value
+    ) {
+        return
+    }
 
     submitting.value = true
 
     try {
-        const { data } = await axios.post('/api/quiz/answer', {
-            question_id: currentQuestion.value.id,
-            answer_id: selectedAnswer.value
+
+        const { data } =
+            await api.post(
+                '/api/quiz/answer',
+                {
+                    question_id:
+                        currentQuestion.value.id,
+
+                    answer_id:
+                        selectedAnswer.value
+                }
+            )
+
+
+        /* --------------------------------------------
+           SAVE ANSWER
+        -------------------------------------------- */
+
+        answers.value.push({
+            question_id:
+                currentQuestion.value.id,
+
+            answer_id:
+                selectedAnswer.value
         })
 
-        // ✅ SAVE ANSWER (IMPORTANT FOR FINAL RESULT)
-        answers.value.push({
-            question_id: currentQuestion.value.id,
-            answer_id: selectedAnswer.value
-        })
+
+        /* --------------------------------------------
+           UPDATE SCORE
+        -------------------------------------------- */
 
         if (data.correct) {
+
             score.value++
-            localStorage.setItem('quiz_score', score.value)
+
+            localStorage.setItem(
+                'quiz_score',
+                score.value
+            )
         }
+
 
         selectedAnswer.value = null
 
-        if (currentIndex.value < questions.value.length - 1) {
+
+        /* --------------------------------------------
+           NEXT QUESTION
+        -------------------------------------------- */
+
+        if (
+            currentIndex.value <
+            questions.value.length - 1
+        ) {
+
             currentIndex.value++
-            localStorage.setItem('quiz_current_index', currentIndex.value)
+
+            localStorage.setItem(
+                'quiz_current_index',
+                currentIndex.value
+            )
+
         } else {
+
             await submitQuizResult()
         }
 
+    } catch (err) {
+
+        console.error(
+            'Failed to submit answer:',
+            err.response?.data || err
+        )
+
+        error.value =
+            err.response?.data?.message ||
+            'Failed to submit answer.'
+
     } finally {
+
         submitting.value = false
     }
 }
 
-// SUBMIT FINAL RESULT (ALIGNED TO CONTROLLER)
+
+/* ========================================================
+   SUBMIT FINAL RESULT
+======================================================== */
+
 const submitQuizResult = async () => {
+
     try {
-        const { data } = await axios.post('/api/quiz/result', {
-            quiz_id: route.params.quiz_id,
-            score: score.value,
-            elapsed_time: timeElapsed.value,
 
-            // ✅ REQUIRED BY CONTROLLER
-            answers: answers.value
-        })
+        const { data } =
+            await api.post(
+                '/api/quiz/result',
+                {
+                    quiz_id:
+                        route.params.quiz_id,
 
-        // cleanup
-        localStorage.removeItem('quiz_current_index')
-        localStorage.removeItem('quiz_score')
-        localStorage.removeItem('quiz_id')
+                    score:
+                        score.value,
 
-        // ✅ FIXED: controller returns record_id (NOT record.id)
-        router.replace(`/quiz-result/${data.record_id}`)
+                    elapsed_time:
+                        timeElapsed.value,
+
+                    answers:
+                        answers.value
+                }
+            )
+
+
+        /* --------------------------------------------
+           CLEAN QUIZ STORAGE
+        -------------------------------------------- */
+
+        localStorage.removeItem(
+            'quiz_current_index'
+        )
+
+        localStorage.removeItem(
+            'quiz_score'
+        )
+
+        localStorage.removeItem(
+            'quiz_id'
+        )
+
+
+        /* --------------------------------------------
+           GO TO RESULT
+        -------------------------------------------- */
+
+        router.replace(
+            `/quiz-result/${data.record_id}`
+        )
 
     } catch (err) {
-        console.error(err)
+
+        console.error(
+            'Failed to submit quiz result:',
+            err.response?.data || err
+        )
+
+        error.value =
+            err.response?.data?.message ||
+            'Failed to submit quiz result.'
     }
 }
 
-// EXIT
+
+/* ========================================================
+   EXIT QUIZ
+======================================================== */
+
 const confirmExit = () => {
-    if (confirm("Exit quiz?")) {
-        localStorage.clear()
-        router.push('/user/quizzes')
+
+    if (!confirm('Exit quiz?')) {
+        return
     }
+
+    /*
+     * Only remove quiz-related state.
+     * Do NOT use localStorage.clear()
+     * because it can remove unrelated
+     * application data.
+     */
+
+    localStorage.removeItem(
+        'quiz_current_index'
+    )
+
+    localStorage.removeItem(
+        'quiz_score'
+    )
+
+    localStorage.removeItem(
+        'quiz_id'
+    )
+
+    router.push(
+        '/user/quizzes'
+    )
 }
 
-// TIMER
+
+/* ========================================================
+   TIMER
+======================================================== */
+
 onMounted(() => {
+
     timerInterval = setInterval(() => {
         timeElapsed.value++
     }, 1000)
@@ -250,8 +472,17 @@ onMounted(() => {
     fetchQuiz()
 })
 
+
+/* ========================================================
+   CLEANUP
+======================================================== */
+
 onBeforeUnmount(() => {
-    clearInterval(timerInterval)
+
+    if (timerInterval) {
+        clearInterval(timerInterval)
+        timerInterval = null
+    }
 })
 </script>
 

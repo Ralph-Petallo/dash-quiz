@@ -29,18 +29,19 @@
             <label for="email">Email address</label>
             <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="yourname@email.com"
               :class="{ error: errors.email }" autocomplete="off" />
-            <small v-if="errors.email">{{ errors.email[0] }}</small>
+            <small v-if="errors.email">{{ errors.email }}</small>
           </div>
 
           <div class="field">
             <label for="password">Password</label>
 
-            <div class="eyeButton" @click="togglePassword">
+            <div @click="togglePassword" :class="errors.password ? 'error-pass' : 'eyeButton'">
               <i :class="showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
             </div>
 
             <input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password"
-              placeholder="••••••" />
+              :class="{ error: errors.password }" placeholder="••••••" />
+            <small v-if="errors.password">{{ errors.password }}</small>
           </div>
 
           <div v-if="generalError" class="alert">
@@ -59,9 +60,10 @@
             <div class="divider">
               <div class="line"></div>or<div class="line"></div>
             </div>
-            <router-link to="/register" class="btn-register"><i class="fas fa-user-plus"></i>
-              &nbsp;Sign Up</router-link>
-            <a class="btn-google" @click="authGoogle">
+            <a href="/register" class="btn-register">
+              <i class="fas fa-user-plus"></i>
+              &nbsp;Sign Up</a>
+            <a class="btn-google" href="/auth/google">
               <img class="google-logo" src="/public/google logo.png" alt="Google Logo" width="20" height="20">
               Sign up with Google
             </a>
@@ -148,7 +150,7 @@ onMounted(() => {
   --dark-gray: #696969;
 
   --page-bg: #f7f7f7;
-  --soft-bg: #eeeeee;
+  --soft-bg: #333333;
   --border: #d3d3d3;
 
   --text-primary: #000000;
@@ -450,13 +452,13 @@ onMounted(() => {
 }
 
 .field input.error {
-  border-color: #696969;
+  border-color: red;
   box-shadow:
-    0 0 0 3px rgba(105, 105, 105, 0.1);
+    0 0 0 2px rgba(187, 49, 49, 0.1);
 }
 
 .field small {
-  color: #696969;
+  color: red;
 
   font-size: 0.68rem;
 
@@ -492,6 +494,30 @@ onMounted(() => {
     transform 0.2s ease;
 }
 
+.field .error-pass {
+  position: absolute;
+
+  right: 12px;
+  bottom: 30px;
+
+  width: 24px;
+  height: 24px;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: var(--gray);
+
+  cursor: pointer;
+
+  z-index: 2;
+
+  transition:
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
 .field .eyeButton:hover {
   color: var(--black);
 
@@ -506,13 +532,13 @@ onMounted(() => {
 .alert {
   padding: 10px 12px;
 
-  background: var(--soft-bg);
+  background: rgb(255, 217, 217);
 
-  border: 1px solid var(--border);
+  border: 1px solid red;
 
   border-radius: 8px;
 
-  color: var(--dark-gray);
+  color: brown;
 
   font-size: 0.7rem;
 

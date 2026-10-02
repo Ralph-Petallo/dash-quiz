@@ -1909,7 +1909,6 @@ onMounted(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-
     .drag-item,
     .answer-item,
     .submit-btn,

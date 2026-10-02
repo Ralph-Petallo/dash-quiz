@@ -2,249 +2,710 @@
   <div class="leaderboard">
 
     <div class="greet-container">
+
       <div class="greet">
         {{ greetMessage }}, {{ userFullName }}!👋
       </div>
+
       <div class="greet-sub">
         See how you rank against other quiz takers.
       </div>
+
     </div>
 
+
+    <!-- Header -->
+
     <div class="lb-header">
+
       <div class="lb-title-group">
+
         <div class="lb-icon">
           <i class="fas fa-trophy leaderboard-icon"></i>
         </div>
+
         <div>
-          <h1 class="lb-title">Leaderboard</h1>
-          <p class="lb-sub">TOP {{ displayedLeaderboard.length }} participants for this selection</p>
+
+          <h1 class="lb-title">
+            Leaderboard
+          </h1>
+
+          <p class="lb-sub">
+            TOP {{ displayedLeaderboard.length }} participants for this selection
+          </p>
+
         </div>
+
       </div>
+
 
       <div v-if="userPosition" class="rank-pill">
         <span class="rank-pill-dot"></span>
+
         Rank #{{ userPosition }}
       </div>
+
     </div>
 
+
+    <!-- Toolbar -->
+
     <div class="toolbar">
+
+      <!-- Search -->
+
       <div class="search-box">
+
         <i class="fa-solid fa-magnifying-glass search-icon"></i>
-        <input v-model="searchQuery" placeholder="Search participant..." class="search-input" />
+
+        <input v-model="searchQuery" type="text" placeholder="Search participant..." class="search-input" />
+
       </div>
 
+
+      <!-- Quiz filter -->
+
       <div class="filter-box">
-        <span class="filter-box-label">Quiz</span>
+
+        <span class="filter-box-label">
+          Quiz
+        </span>
+
         <div class="select-wrapper">
+
           <select v-model="selectedQuiz" class="quiz-select">
+
+            <option value="">
+              All quizzes
+            </option>
+
             <option v-for="quiz in availableQuizzes" :key="quiz" :value="quiz">
               {{ quiz }}
             </option>
+
           </select>
+
           <span class="select-arrow"></span>
+
         </div>
+
       </div>
+
     </div>
 
-    <div class="podium" v-if="!searchQuery && topThree.length">
+
+    <!-- Podium -->
+
+    <div v-if="!searchQuery && topThree.length" class="podium">
+
       <div v-for="entry in podiumOrder" :key="entry.id" class="podium-card" :class="[
         `podium-${entry.rank}`,
         entry.isYou ? 'is-you' : ''
       ]">
+
         <div class="podium-avatar-wrap">
+
           <img :draggable="false" :src="photoPath(entry.profile_photo)" class="podium-avatar" alt="user" />
 
           <div class="podium-medal">
             {{ ['🥇', '🥈', '🥉'][entry.rank - 1] }}
           </div>
+
         </div>
 
+
         <div class="podium-name">
+
           {{ entry.displayName }}
-          <span v-if="entry.isYou" class="you-tag">You</span>
+
+          <span v-if="entry.isYou" class="you-tag">
+            You
+          </span>
+
         </div>
+
 
         <div class="podium-score">
           {{ entry.score }}/10
         </div>
 
+
         <div class="podium-bar-wrap">
-          <div class="podium-bar" :style="{ height: podiumHeight(entry.rank) }"></div>
+
+          <div class="podium-bar" :style="{
+            height: podiumHeight(entry.rank)
+          }"></div>
+
         </div>
+
       </div>
+
     </div>
 
-    <div class="lb-list" ref="listRef">
+
+    <!-- Leaderboard list -->
+
+    <div ref="listRef" class="lb-list">
+
+      <!-- Loading -->
 
       <div v-if="isLoading" class="lb-loading">
         <div class="spinner"></div>
       </div>
 
+
+      <!-- Content -->
+
       <template v-else>
-        <div v-for="(entry, index) in filteredList" :key="entry.id" class="lb-item"
-          :class="[entry.isYou ? 'is-you' : '', index < 3 && !searchQuery ? 'is-top' : '']"
-          :style="{ animationDelay: `${index * 20}ms` }">
 
-          <div class="item-rank" :class="index < 3 && !searchQuery ? `rank-${index + 1}` : ''">
-            <span v-if="index < 3 && !searchQuery" class="rank-medal">{{ ['🥇', '🥈', '🥉'][index] }}</span>
+        <div v-for="(entry, index) in filteredList" :key="entry.id" class="lb-item" :class="[
+          entry.isYou ? 'is-you' : '',
+          index < 3 && !searchQuery ? 'is-top' : ''
+        ]" :style="{
+            animationDelay: `${index * 20}ms`
+          }">
 
-            <span v-else class="rank-num">{{ index + 1 }}</span>
+          <!-- Rank -->
+
+          <div class="item-rank" :class="index < 3 && !searchQuery
+              ? `rank-${index + 1}`
+              : ''
+            ">
+
+            <span v-if="index < 3 && !searchQuery" class="rank-medal">
+              {{ ['🥇', '🥈', '🥉'][index] }}
+            </span>
+
+            <span v-else class="rank-num">
+              {{ index + 1 }}
+            </span>
 
           </div>
+
+
+          <!-- Avatar -->
 
           <div class="item-avatar-wrap">
+
             <img :draggable="false" :src="photoPath(entry.profile_photo)" class="item-avatar" alt="user" />
+
             <span v-if="entry.isYou" class="avatar-ring"></span>
+
           </div>
+
+
+          <!-- User information -->
 
           <div class="item-info">
+
             <div class="item-name">
+
               {{ entry.displayName }}
-              <span v-if="entry.isYou" class="you-tag">You</span>
+
+              <span v-if="entry.isYou" class="you-tag">
+                You
+              </span>
+
             </div>
-            <div class="item-quiz">{{ entry.quiz_title }}</div>
+
+            <div class="item-quiz">
+              {{ entry.quiz_title }}
+            </div>
+
           </div>
+
+
+          <!-- Score -->
 
           <div class="item-right">
+
             <div class="score-ring-wrap">
+
               <svg class="score-ring" viewBox="0 0 36 36">
+
                 <circle cx="18" cy="18" r="15.9" fill="none" stroke="#EDEDED" stroke-width="3" />
-                <circle cx="18" cy="18" r="15.9" fill="none" :stroke="entry.score >= 7 ? '#000000' : '#A9A9A9'"
-                  stroke-width="3" stroke-linecap="round" stroke-dasharray="100"
-                  :stroke-dashoffset="100 - (entry.score / 10 * 100)" transform="rotate(-10 18 18)" />
-                <text x="18" y="22" text-anchor="middle" font-size="9" font-weight="700"
-                  :fill="entry.score >= 7 ? '#000000' : '#696969'">
+
+                <circle cx="18" cy="18" r="15.9" fill="none" :stroke="entry.score >= 7
+                    ? '#000000'
+                    : '#A9A9A9'
+                  " stroke-width="3" stroke-linecap="round" stroke-dasharray="100" :stroke-dashoffset="100 - (entry.score / 10 * 100)
+                    " transform="rotate(-10 18 18)" />
+
+                <text x="18" y="22" text-anchor="middle" font-size="9" font-weight="700" :fill="entry.score >= 7
+                    ? '#000000'
+                    : '#696969'
+                  ">
                   {{ entry.score }}
                 </text>
+
               </svg>
+
             </div>
-            <div class="item-date">{{ formatDate(entry.completed_at) }}</div>
+
+
+            <div class="item-date">
+              {{ formatDate(entry.completed_at) }}
+            </div>
+
           </div>
+
         </div>
 
+
+        <!-- Empty -->
+
         <div v-if="!filteredList.length" class="lb-empty">
-          <div class="empty-icon">📊</div>
-          <p>No results found</p>
-          <small>{{ searchQuery ? 'Try a different name' : 'No rankings yet' }}</small>
+
+          <div class="empty-icon">
+            📊
+          </div>
+
+          <p>
+            No results found
+          </p>
+
+          <small>
+            {{
+              searchQuery
+                ? 'Try a different name'
+                : 'No rankings yet'
+            }}
+          </small>
+
         </div>
+
       </template>
 
     </div>
+
   </div>
 </template>
 
-<script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useUser } from "@/composables/useUser"
-import { useGreetMessages } from '@/composables/useGreetMessages'
-import { useUserRequests } from '@/composables/useUserRequests'
 
-const { greetMessage } = useGreetMessages()
-const { getLeaderBoard, leaderboard } = useUserRequests()
-const isLoading = ref(false)
-const searchQuery = ref('')
-const selectedQuiz = ref('') // Tracks active dropdown value
-const { user, fetchUser, userFullName } = useUser()
+<script setup>
+
+import {
+  ref,
+  computed,
+  onMounted,
+  watch
+} from "vue"
+
+import { useUser } from "@/composables/useUser"
+import { useGreetMessages } from "@/composables/useGreetMessages"
+import { useUserRequests } from "@/composables/useUserRequests"
+
+
+/*
+|--------------------------------------------------------------------------
+| Composables
+|--------------------------------------------------------------------------
+*/
+
+const { greetMessage } =
+  useGreetMessages()
+
+const {
+  getLeaderBoard,
+  leaderboard,
+  isLoading
+} = useUserRequests()
+
+const {
+  user,
+  userFullName,
+  fetchUser
+} = useUser()
+
+
+/*
+|--------------------------------------------------------------------------
+| State
+|--------------------------------------------------------------------------
+*/
+
+const searchQuery =
+  ref("")
+
+const selectedQuiz =
+  ref("")
+
+const listRef =
+  ref(null)
+
+
+/*
+|--------------------------------------------------------------------------
+| Load leaderboard
+|--------------------------------------------------------------------------
+*/
 
 onMounted(async () => {
-  await fetchUser()
-  getLeaderBoard()
-})
 
-// Dynamically grab all unique quiz titles from the raw dataset
-const availableQuizzes = computed(() => {
-  const titles = leaderboard.value.map(item => item.quiz_title).filter(Boolean)
-  selectedQuiz.value = titles[0]; // maintain selected quiz when leaderboard updates
-  return [...new Set(titles)]
-})
+  try {
 
-// Sorts and filters dataset based on dropdown selection
-const displayedLeaderboard = computed(() => {
-  let list = [...leaderboard.value];
+    /*
+     * Make sure the authenticated user
+     * is available before processing
+     * leaderboard entries.
+     */
 
-  // Filter by selected quiz first
-  if (selectedQuiz.value) {
-    list = list.filter(item => item.quiz_title === selectedQuiz.value);
+    if (!user.value) {
+      await fetchUser()
+    }
+
+    await getLeaderBoard()
+
+  } catch (error) {
+
+    console.error(
+      "Failed to load leaderboard:",
+      error
+    )
+
   }
 
-  // Keep only the highest score per user
-  const uniqueUsers = new Map();
-
-  list.forEach(item => {
-    const existing = uniqueUsers.get(item.user_id);
-
-    // If no existing entry or current score is higher, update the map
-    if (!existing || item.score > existing.score) {
-      uniqueUsers.set(item.user_id, item);
-    }
-  });
-
-  list = Array.from(uniqueUsers.values());
-
-  // Sort highest score first
-  return list.sort((a, b) => b.score - a.score);
-});
-
-const userPosition = computed(() => {
-  if (!user.value?.id) return null
-  const idx = displayedLeaderboard.value.findIndex(u => u.user_id === user.value.id)
-  return idx !== -1 ? idx + 1 : null
 })
 
-// Top 3 for podium based on selected filters
-const topThree = computed(() => displayedLeaderboard.value.slice(0, 3))
 
-// Podium order layout mapping
+/*
+|--------------------------------------------------------------------------
+| Available quizzes
+|--------------------------------------------------------------------------
+*/
+
+const availableQuizzes = computed(() => {
+
+  const titles =
+    leaderboard.value
+      .map(item => item.quiz_title)
+      .filter(Boolean)
+
+  return [
+    ...new Set(titles)
+  ]
+
+})
+
+
+/*
+|--------------------------------------------------------------------------
+| Keep selected quiz valid
+|--------------------------------------------------------------------------
+*/
+
+watch(
+  availableQuizzes,
+
+  (quizzes) => {
+
+    if (
+      selectedQuiz.value &&
+      !quizzes.includes(
+        selectedQuiz.value
+      )
+    ) {
+      selectedQuiz.value = ""
+    }
+
+  },
+
+  {
+    immediate: true
+  }
+)
+
+
+/*
+|--------------------------------------------------------------------------
+| Displayed leaderboard
+|--------------------------------------------------------------------------
+|
+| 1. Filter by quiz
+| 2. Keep highest score per user
+| 3. Sort highest score first
+|--------------------------------------------------------------------------
+*/
+
+const displayedLeaderboard = computed(() => {
+
+  let list =
+    [...leaderboard.value]
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Quiz filter
+  |--------------------------------------------------------------------------
+  */
+
+  if (selectedQuiz.value) {
+
+    list =
+      list.filter(
+        item =>
+          item.quiz_title ===
+          selectedQuiz.value
+      )
+
+  }
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Highest score per user
+  |--------------------------------------------------------------------------
+  */
+
+  const uniqueUsers =
+    new Map()
+
+  list.forEach(item => {
+
+    const existing =
+      uniqueUsers.get(
+        item.user_id
+      )
+
+    if (
+      !existing ||
+      Number(item.score) >
+      Number(existing.score)
+    ) {
+
+      uniqueUsers.set(
+        item.user_id,
+        item
+      )
+
+    }
+
+  })
+
+
+  list =
+    Array.from(
+      uniqueUsers.values()
+    )
+
+
+  /*
+  |--------------------------------------------------------------------------
+  | Sort
+  |--------------------------------------------------------------------------
+  */
+
+  return list.sort(
+    (a, b) =>
+      Number(b.score) -
+      Number(a.score)
+  )
+
+})
+
+
+/*
+|--------------------------------------------------------------------------
+| Current user's rank
+|--------------------------------------------------------------------------
+*/
+
+const userPosition = computed(() => {
+
+  if (!user.value?.id) {
+    return null
+  }
+
+  const index =
+    displayedLeaderboard.value.findIndex(
+      entry =>
+        Number(entry.user_id) ===
+        Number(user.value.id)
+    )
+
+  return index !== -1
+    ? index + 1
+    : null
+
+})
+
+
+/*
+|--------------------------------------------------------------------------
+| Top 3
+|--------------------------------------------------------------------------
+*/
+
+const topThree = computed(() => {
+
+  return displayedLeaderboard.value
+    .slice(0, 3)
+
+})
+
+
+/*
+|--------------------------------------------------------------------------
+| Podium order
+|--------------------------------------------------------------------------
+|
+| Visual order:
+|
+| 2nd → 1st → 3rd
+|--------------------------------------------------------------------------
+*/
+
 const podiumOrder = computed(() => {
-  const t = topThree.value
 
-  if (t.length === 0) return []
+  const ranked =
+    topThree.value.map(
+      (entry, index) => ({
+        ...entry,
+        rank: index + 1
+      })
+    )
 
-  // Assign actual leaderboard positions
-  const ranked = t.map((user, index) => ({
-    ...user,
-    rank: index + 1
-  }))
 
-  // Arrange visually: 2nd → 1st → 3rd
-  if (ranked.length === 1) {
+  if (ranked.length <= 1) {
     return ranked
   }
 
+
   if (ranked.length === 2) {
-    return [ranked[1], ranked[0]]
+
+    return [
+      ranked[1],
+      ranked[0]
+    ]
+
   }
 
-  return [ranked[1], ranked[0], ranked[2]]
+
+  return [
+    ranked[1],
+    ranked[0],
+    ranked[2]
+  ]
+
 })
+
+
+/*
+|--------------------------------------------------------------------------
+| Podium height
+|--------------------------------------------------------------------------
+*/
 
 const podiumHeight = (rank) => {
-  if (rank === 1) return '80px'
-  if (rank === 2) return '60px'
-  return '40px'
+
+  if (rank === 1) {
+    return "80px"
+  }
+
+  if (rank === 2) {
+    return "60px"
+  }
+
+  return "40px"
+
 }
 
-// Final displayed list after overlaying input text filter 
+
+/*
+|--------------------------------------------------------------------------
+| Search filter
+|--------------------------------------------------------------------------
+*/
+
 const filteredList = computed(() => {
-  const q = searchQuery.value.toLowerCase().trim()
-  if (!q) return displayedLeaderboard.value
-  return displayedLeaderboard.value.filter(e =>
-    (e.displayName || '').toLowerCase().includes(q) ||
-    (e.quiz_title || '').toLowerCase().includes(q)
+
+  const query =
+    searchQuery.value
+      .toLowerCase()
+      .trim()
+
+
+  if (!query) {
+    return displayedLeaderboard.value
+  }
+
+
+  return displayedLeaderboard.value.filter(
+    entry => {
+
+      const name =
+        entry.displayName
+          ?.toLowerCase() ?? ""
+
+
+      const quiz =
+        entry.quiz_title
+          ?.toLowerCase() ?? ""
+
+
+      return (
+        name.includes(query) ||
+        quiz.includes(query)
+      )
+
+    }
   )
+
 })
 
-const formatDate = (date) =>
-  date ? new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' }) : ''
 
-const photoPath = function (img) {
-  return `/storage/images/profiles/${img || 'default.png'}`
+/*
+|--------------------------------------------------------------------------
+| Date formatting
+|--------------------------------------------------------------------------
+*/
+
+const formatDate = (date) => {
+
+  if (!date) {
+    return ""
+  }
+
+
+  const parsedDate =
+    new Date(date)
+
+
+  if (
+    Number.isNaN(
+      parsedDate.getTime()
+    )
+  ) {
+    return ""
+  }
+
+
+  return parsedDate.toLocaleDateString(
+    "en-US",
+    {
+      month: "short",
+      day: "numeric"
+    }
+  )
+
 }
 
 
+/*
+|--------------------------------------------------------------------------
+| Profile photo
+|--------------------------------------------------------------------------
+*/
 
+const photoPath = (img) => {
+
+  return `/storage/images/profiles/${img || "default.png"
+    }`
+
+}
 
 </script>
+
 
 <style scoped>
 /* ── FONTS ── */

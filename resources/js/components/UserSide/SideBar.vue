@@ -27,7 +27,7 @@
         </span>
       </router-link>
 
-      <router-link to="/user/quizzes" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
+      <router-link to="/user/assessments" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
         <span class="nav-icon">
           <i class="fas fa-clipboard-list"></i>
         </span>

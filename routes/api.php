@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\QuizApiController;
 use App\Http\Controllers\Api\AdminApiController;
 use App\Http\Controllers\Api\UserApiController;
 use App\Http\Controllers\Api\ProfileApiController;
+use App\Http\Controllers\Api\RJ45AssessmentController;
 use App\Http\Controllers\Api\ImageIdentificationAssessmentController;
 use App\Http\Controllers\Api\DragDropController;
 use App\Http\Controllers\Api\PasswordResetController;
@@ -50,22 +51,33 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
 
     Route::get('assessments-type/{id}', [AssessmentTypeController::class, 'getAssessmentTypes']);
 
+
     Route::controller(QuizApiController::class)->group(function () {
         // Static before wildcard
         Route::get('/quiz/progress', 'getQuizProgress');
         Route::get('/quiz/result/{id}', 'getRecordPreview');
         Route::get('/quiz/{quiz_id}', 'getQuiz');
+        //preview the record attempts of rj45 assessment
+        Route::get('/records/{record}/rj45', 'showRj45');
 
         Route::post('/quiz/answer', 'submitAnswer');
         Route::get('/quiz/multi-result/{id}', 'MultipleChoiceResult')
             ->middleware('throttle:quiz_submit');
     });
 
+    // COMPONENT IDENTIFICATION 
     Route::controller(ImageIdentificationAssessmentController::class)->group(function () {
         Route::get('/assessments/image-identification/{id}', 'show');
         Route::post('/assessments/image-identification/answer', 'answer');
     });
 
+    Route::controller(RJ45AssessmentController::class)->group(function () {
+        Route::get('/quizzes/{quiz}/rj45', 'show');
+        Route::post('/quizzes/{quiz}/rj45/attempts', 'storeAttempt');
+        Route::post('/quizzes/{quiz}/rj45/test', 'testWiring');
+    });
+
+    // DROP AND DROP DISASSEMBLE AND ASSEMBLE
     Route::controller(DragDropController::class)->group(function () {
         Route::get('/quiz/dragdrop/{id}', 'getDragDropQuiz');
         Route::post('/quiz/dragdrop/answer', 'submitDragDropAnswer');

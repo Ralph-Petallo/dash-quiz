@@ -1,0 +1,3094 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>RJ-45 Virtual Hands-On</title>
+
+    <style>
+        * {
+            box-sizing: border-box;
+        }
+
+        :root {
+
+            --black: #0b0d0f;
+            --dark: #15181c;
+            --dark-2: #1e2227;
+            --dark-3: #292e34;
+
+            --text: #f5f5f5;
+            --muted: #9ca3af;
+
+            --cyan: #22d3ee;
+            --cyan-dark: #0891b2;
+
+            --green: #22c55e;
+            --red: #ef4444;
+
+            --border: #d1d5db;
+        }
+
+
+        body {
+
+            margin: 0;
+
+            background: #fff;
+
+            color: #111827;
+
+            font-family:
+                Inter,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+
+        button {
+            font: inherit;
+        }
+
+
+        /* ========================================
+           PAGE
+        ======================================== */
+
+        .lab {
+
+            width: min(1100px, 100%);
+
+            margin: auto;
+
+            padding: 30px 20px 50px;
+        }
+
+
+        /* ========================================
+           HEADER
+        ======================================== */
+
+        .header {
+            margin-bottom: 25px;
+        }
+
+
+        .eyebrow {
+
+            color: var(--cyan-dark);
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            letter-spacing: 1.5px;
+
+            text-transform: uppercase;
+        }
+
+
+        h1 {
+
+            margin: 5px 0;
+
+            color: var(--black);
+
+            font-size: clamp(28px, 5vw, 40px);
+        }
+
+
+        .header p {
+
+            margin: 0;
+
+            color: #6b7280;
+
+            font-size: 14px;
+        }
+
+
+        /* ========================================
+           PROCEDURE STEPPER
+        ======================================== */
+
+        .steps {
+
+            display: flex;
+
+            gap: 8px;
+
+            margin-bottom: 25px;
+
+            overflow-x: auto;
+
+            padding-bottom: 5px;
+        }
+
+
+        .step {
+
+            min-width: 135px;
+
+            flex: 1;
+
+            padding: 12px;
+
+            background: #f3f4f6;
+
+            border: 1px solid #e5e7eb;
+
+            border-radius: 9px;
+
+            color: #6b7280;
+
+            transition: 0.2s;
+        }
+
+
+        .step-number {
+
+            display: block;
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+            margin-bottom: 3px;
+        }
+
+
+        .step-name {
+
+            font-size: 12px;
+
+            font-weight: 700;
+        }
+
+
+        .step.active {
+
+            background: var(--dark);
+
+            border-color: var(--dark);
+
+            color: var(--text);
+        }
+
+
+        .step.active .step-number {
+            color: var(--cyan);
+        }
+
+
+        .step.completed {
+
+            border-color: #86efac;
+
+            color: #15803d;
+        }
+
+
+        /* ========================================
+           WORK AREA
+        ======================================== */
+
+        .workspace {
+
+            display: grid;
+
+            grid-template-columns: 0.8fr 1.4fr;
+
+            gap: 20px;
+        }
+
+
+        .panel {
+
+            background: var(--dark);
+
+            border: 1px solid var(--dark-3);
+
+            border-radius: 14px;
+
+            padding: 20px;
+        }
+
+
+        .panel-header {
+            margin-bottom: 18px;
+        }
+
+
+        .panel-header h2 {
+
+            margin: 0;
+
+            color: var(--text);
+
+            font-size: 17px;
+        }
+
+
+        .panel-header p {
+
+            margin: 5px 0 0;
+
+            color: var(--muted);
+
+            font-size: 12px;
+        }
+
+
+        /* ========================================
+           TOOL AREA
+        ======================================== */
+
+        .tool-area {
+
+            min-height: 420px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            justify-content: space-between;
+        }
+
+
+        .tool {
+
+            background: var(--dark-2);
+
+            border: 1px solid var(--dark-3);
+
+            border-radius: 10px;
+
+            padding: 18px;
+
+            margin-bottom: 10px;
+        }
+
+
+        .tool h3 {
+
+            margin: 0 0 5px;
+
+            color: var(--text);
+
+            font-size: 14px;
+        }
+
+
+        .tool p {
+
+            margin: 0;
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+            line-height: 1.5;
+        }
+
+
+        .tool-visual {
+
+            margin: 20px auto;
+
+            width: 90%;
+
+            height: 50px;
+
+            position: relative;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+        }
+
+
+        /* ========================================
+           CABLE
+        ======================================== */
+
+        .cable {
+
+            width: 90%;
+
+            height: 16px;
+
+            background: #111;
+
+            border: 3px solid #333;
+
+            border-radius: 20px;
+
+            transition: 0.3s;
+        }
+
+
+        .cable.cut {
+            width: 55%;
+        }
+
+
+        /* ========================================
+           SCISSORS
+        ======================================== */
+
+        .scissors {
+
+            position: absolute;
+
+            right: 5%;
+
+            font-size: 38px;
+
+            filter: grayscale(1);
+        }
+
+
+        /* ========================================
+           ACTION BUTTON
+        ======================================== */
+
+        .action-btn {
+
+            width: 100%;
+
+            min-height: 44px;
+
+            border: 1px solid #155e75;
+
+            border-radius: 8px;
+
+            background: var(--black);
+
+            color: var(--cyan);
+
+            font-size: 13px;
+
+            font-weight: 800;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+
+        .action-btn:hover {
+
+            border-color: var(--cyan);
+
+            background: #10161a;
+        }
+
+
+        .action-btn:disabled {
+
+            opacity: 0.4;
+
+            cursor: not-allowed;
+        }
+
+
+        /* ========================================
+           ACTIVITY
+        ======================================== */
+
+        .activity {
+
+            min-height: 420px;
+        }
+
+
+        /* ========================================
+           INSTRUCTION
+        ======================================== */
+
+        .instruction {
+
+            color: #d1d5db;
+
+            font-size: 13px;
+
+            line-height: 1.6;
+
+            margin-bottom: 20px;
+        }
+
+
+        /* ========================================
+           WIRING STANDARD SELECTOR
+        ======================================== */
+
+        .standard-selector {
+
+            margin-bottom: 18px;
+        }
+
+
+        .standard-label {
+
+            margin-bottom: 8px;
+
+            color: var(--muted);
+
+            font-size: 11px;
+
+            font-weight: 800;
+
+            text-transform: uppercase;
+
+            letter-spacing: 0.8px;
+        }
+
+
+        .standard-options {
+
+            display: grid;
+
+            grid-template-columns: 1fr 1fr;
+
+            gap: 8px;
+        }
+
+
+        .standard-btn {
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: flex-start;
+
+            padding: 12px;
+
+            background: var(--dark-2);
+
+            border: 1px solid var(--dark-3);
+
+            border-radius: 8px;
+
+            color: var(--muted);
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+
+        .standard-btn strong {
+
+            color: var(--text);
+
+            font-size: 13px;
+        }
+
+
+        .standard-btn span {
+
+            margin-top: 3px;
+
+            font-size: 10px;
+        }
+
+
+        .standard-btn:hover {
+
+            border-color: var(--cyan);
+        }
+
+
+        .standard-btn.selected {
+
+            background: #10161a;
+
+            border-color: var(--cyan);
+        }
+
+
+        .standard-btn.selected strong {
+
+            color: var(--cyan);
+        }
+
+
+        /* ========================================
+           WIRE LIST
+        ======================================== */
+
+        .wire-list {
+
+            display: grid;
+
+            grid-template-columns: repeat(2, 1fr);
+
+            gap: 8px;
+        }
+
+
+        .wire {
+
+            height: 40px;
+
+            display: flex;
+
+            align-items: center;
+
+            gap: 8px;
+
+            padding: 5px 8px;
+
+            background: var(--dark-2);
+
+            border: 1px solid var(--dark-3);
+
+            border-radius: 7px;
+
+            cursor: grab;
+
+            user-select: none;
+
+            transition: 0.15s;
+        }
+
+
+        .wire:hover {
+
+            border-color: var(--cyan);
+        }
+
+
+        .wire:active {
+
+            cursor: grabbing;
+        }
+
+
+        .wire.dragging {
+
+            opacity: 0.4;
+        }
+
+
+        .wire-line {
+
+            height: 7px;
+
+            flex: 1;
+
+            border-radius: 10px;
+        }
+
+
+        .wire-name {
+
+            color: #d1d5db;
+
+            font-size: 10px;
+
+            width: 90px;
+
+            text-align: right;
+        }
+
+
+        /* ========================================
+           WIRE COLORS
+        ======================================== */
+
+        .orange-white {
+
+            background:
+                repeating-linear-gradient(90deg,
+                    #f97316 0 7px,
+                    #fff 7px 14px);
+        }
+
+
+        .orange {
+            background: #f97316;
+        }
+
+
+        .green-white {
+
+            background:
+                repeating-linear-gradient(90deg,
+                    #22c55e 0 7px,
+                    #fff 7px 14px);
+        }
+
+
+        .blue {
+            background: #2563eb;
+        }
+
+
+        .blue-white {
+
+            background:
+                repeating-linear-gradient(90deg,
+                    #2563eb 0 7px,
+                    #fff 7px 14px);
+        }
+
+
+        .green {
+            background: #16a34a;
+        }
+
+
+        .brown-white {
+
+            background:
+                repeating-linear-gradient(90deg,
+                    #92400e 0 7px,
+                    #fff 7px 14px);
+        }
+
+
+        .brown {
+            background: #92400e;
+        }
+
+
+        /* ========================================
+           RJ45 CONNECTOR
+        ======================================== */
+
+        .connector-area {
+
+            margin-top: 20px;
+
+            background: #f3f4f6;
+
+            border-radius: 10px;
+
+            padding: 20px;
+        }
+
+
+        .connector {
+
+            max-width: 600px;
+
+            margin: auto;
+
+            background: #e5e7eb;
+
+            border: 3px solid #9ca3af;
+
+            border-radius: 10px;
+
+            padding: 15px;
+        }
+
+
+        .connector-title {
+
+            text-align: center;
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            color: #374151;
+
+            margin-bottom: 12px;
+        }
+
+
+        .slots {
+
+            display: grid;
+
+            grid-template-columns: repeat(8, 1fr);
+
+            gap: 5px;
+        }
+
+
+        .slot {
+
+            height: 100px;
+
+            background: #d1d5db;
+
+            border: 2px dashed #9ca3af;
+
+            border-radius: 5px;
+
+            display: flex;
+
+            flex-direction: column;
+
+            align-items: center;
+
+            padding-top: 7px;
+
+            transition: 0.15s;
+        }
+
+
+        .slot-number {
+
+            font-size: 9px;
+
+            font-weight: 800;
+
+            color: #4b5563;
+
+            margin-bottom: 7px;
+        }
+
+
+        .slot.drag-over {
+
+            background: #cffafe;
+
+            border-color: var(--cyan);
+
+            transform: translateY(-3px);
+        }
+
+
+        .slot.filled {
+
+            border-style: solid;
+
+            border-color: #6b7280;
+        }
+
+
+        .slot-wire {
+
+            display: none;
+
+            width: 10px;
+
+            height: 62px;
+
+            border-radius: 4px;
+
+            cursor: grab;
+        }
+
+
+        .slot-wire:active {
+            cursor: grabbing;
+        }
+
+
+        .slot.filled .slot-wire {
+            display: block;
+        }
+
+
+        .slot-label {
+
+            margin-top: 5px;
+
+            color: #374151;
+
+            font-size: 7px;
+
+            text-align: center;
+
+            line-height: 1.1;
+        }
+
+
+        /* ========================================
+           RESET BUTTON
+        ======================================== */
+
+        .arrangement-actions {
+
+            margin-top: 12px;
+        }
+
+
+        .reset-arrangement {
+
+            width: 100%;
+
+            min-height: 40px;
+
+            background: transparent;
+
+            border: 1px solid var(--dark-3);
+
+            border-radius: 8px;
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+            font-weight: 700;
+
+            cursor: pointer;
+
+            transition: 0.2s;
+        }
+
+
+        .reset-arrangement:hover {
+
+            border-color: #6b7280;
+
+            color: var(--text);
+        }
+
+
+        /* ========================================
+           SUCCESS
+        ======================================== */
+
+        .success-box {
+
+            text-align: center;
+
+            padding: 35px 20px;
+        }
+
+
+        .success-icon {
+
+            width: 55px;
+
+            height: 55px;
+
+            margin: auto auto 15px;
+
+            display: grid;
+
+            place-items: center;
+
+            border-radius: 50%;
+
+            background: #dcfce7;
+
+            color: var(--green);
+
+            font-size: 25px;
+        }
+
+
+        .success-box h2 {
+
+            margin: 0 0 6px;
+
+            color: var(--text);
+        }
+
+
+        .success-box p {
+
+            margin: 0;
+
+            color: var(--muted);
+
+            font-size: 13px;
+        }
+
+
+        /* ========================================
+           TESTER
+        ======================================== */
+
+        .tester {
+
+            display: flex;
+
+            justify-content: center;
+
+            align-items: center;
+
+            padding: 30px;
+        }
+
+
+        .tester-body {
+
+            width: 170px;
+
+            height: 210px;
+
+            background: #d1d5db;
+
+            border: 4px solid #9ca3af;
+
+            border-radius: 14px;
+
+            padding: 18px;
+
+            text-align: center;
+        }
+
+
+        .tester-screen {
+
+            height: 55px;
+
+            display: flex;
+
+            align-items: center;
+
+            justify-content: center;
+
+            background: #111827;
+
+            border-radius: 5px;
+
+            color: var(--green);
+
+            font-size: 12px;
+
+            font-weight: 800;
+
+            margin-bottom: 20px;
+        }
+
+
+        .tester-port {
+
+            width: 70px;
+
+            height: 35px;
+
+            margin: auto;
+
+            background: #374151;
+
+            border-radius: 5px;
+        }
+
+
+        .tester-lights {
+
+            display: flex;
+
+            justify-content: center;
+
+            gap: 7px;
+
+            margin-top: 20px;
+        }
+
+
+        .light {
+
+            width: 9px;
+
+            height: 9px;
+
+            border-radius: 50%;
+
+            background: #6b7280;
+        }
+
+
+        .light.on {
+
+            background: var(--green);
+
+            box-shadow: 0 0 8px var(--green);
+        }
+
+
+        /* ========================================
+           STATUS
+        ======================================== */
+
+        .status {
+
+            margin-top: 18px;
+
+            min-height: 20px;
+
+            color: var(--muted);
+
+            font-size: 12px;
+
+            text-align: center;
+        }
+
+
+        .status.success {
+
+            color: var(--green);
+
+            font-weight: 800;
+        }
+
+
+        .status.error {
+
+            color: var(--red);
+
+            font-weight: 800;
+        }
+
+
+        /* ========================================
+           MOBILE
+        ======================================== */
+
+        @media (max-width: 800px) {
+
+            .workspace {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .tool-area,
+            .activity {
+
+                min-height: auto;
+            }
+
+        }
+
+
+        @media (max-width: 500px) {
+
+            .lab {
+
+                padding: 20px 12px 40px;
+            }
+
+
+            .panel {
+
+                padding: 14px;
+            }
+
+
+            .wire-list {
+
+                grid-template-columns: 1fr;
+            }
+
+
+            .slots {
+
+                gap: 3px;
+            }
+
+
+            .slot {
+
+                height: 85px;
+            }
+
+
+            .slot-wire {
+
+                height: 50px;
+
+                width: 8px;
+            }
+
+
+            .slot-label {
+
+                display: none;
+            }
+
+
+            .step {
+
+                min-width: 110px;
+            }
+
+
+            .standard-options {
+
+                grid-template-columns: 1fr 1fr;
+            }
+
+        }
+    </style>
+
+</head>
+
+
+<body>
+
+    <div class="lab">
+
+
+        <!-- ========================================
+             HEADER
+        ======================================== -->
+
+        <header class="header">
+
+            <div class="eyebrow">
+                Ethernet Lab • T568A / T568B
+            </div>
+
+            <h1>
+                RJ-45 Cable Termination
+            </h1>
+
+            <p>
+                Complete the cable termination procedure step by step.
+            </p>
+
+        </header>
+
+
+        <!-- ========================================
+             PROCEDURE STEPS
+        ======================================== -->
+
+        <div class="steps">
+
+            <div class="step active" data-step="1">
+
+                <span class="step-number">
+                    01
+                </span>
+
+                <span class="step-name">
+                    Cut Cable
+                </span>
+
+            </div>
+
+
+            <div class="step" data-step="2">
+
+                <span class="step-number">
+                    02
+                </span>
+
+                <span class="step-name">
+                    Strip Jacket
+                </span>
+
+            </div>
+
+
+            <div class="step" data-step="3">
+
+                <span class="step-number">
+                    03
+                </span>
+
+                <span class="step-name">
+                    Arrange Wires
+                </span>
+
+            </div>
+
+
+            <div class="step" data-step="4">
+
+                <span class="step-number">
+                    04
+                </span>
+
+                <span class="step-name">
+                    Insert RJ-45
+                </span>
+
+            </div>
+
+
+            <div class="step" data-step="5">
+
+                <span class="step-number">
+                    05
+                </span>
+
+                <span class="step-name">
+                    Crimp
+                </span>
+
+            </div>
+
+
+            <div class="step" data-step="6">
+
+                <span class="step-number">
+                    06
+                </span>
+
+                <span class="step-name">
+                    Test
+                </span>
+
+            </div>
+
+        </div>
+
+
+        <!-- ========================================
+             WORKSPACE
+        ======================================== -->
+
+        <main class="workspace">
+
+
+            <!-- ========================================
+                 LEFT TOOL PANEL
+            ======================================== -->
+
+            <section class="panel tool-area">
+
+                <div>
+
+                    <div class="panel-header">
+
+                        <h2 id="toolTitle">
+                            Prepare the Cable
+                        </h2>
+
+                        <p id="toolDescription">
+                            Cut the Ethernet cable to the required length.
+                        </p>
+
+                    </div>
+
+
+                    <div class="tool">
+
+                        <h3 id="toolInstruction">
+                            Cut the cable
+                        </h3>
+
+                        <p id="instructionText">
+                            Use the cable cutter to remove the excess cable.
+                        </p>
+
+
+                        <div class="tool-visual">
+
+                            <div class="cable" id="cable"></div>
+
+
+                            <div class="scissors" id="scissors">
+                                ✂
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <button class="action-btn" id="actionBtn">
+                    Cut Cable
+                </button>
+
+            </section>
+
+
+            <!-- ========================================
+                 RIGHT ACTIVITY PANEL
+            ======================================== -->
+
+            <section class="panel activity">
+
+                <div class="panel-header">
+
+                    <h2 id="activityTitle">
+                        Cable Preparation
+                    </h2>
+
+                    <p id="activityDescription">
+                        Follow the instruction to continue.
+                    </p>
+
+                </div>
+
+
+                <div id="activityContent">
+
+                    <div class="instruction">
+
+                        Start by cutting the Ethernet cable to the
+                        required length.
+
+                    </div>
+
+                </div>
+
+
+                <div id="status" class="status">
+                    Step 1 of 6
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script>
+
+        /*
+        ==========================================
+        STATE
+        ==========================================
+        */
+
+        let currentStep = 1;
+
+        /*
+         * The student can choose between:
+         *
+         * T568A
+         * T568B
+         */
+
+        const wiringOrders = {
+
+            T568A: [
+
+                "green-white",
+                "green",
+                "orange-white",
+                "blue",
+                "blue-white",
+                "orange",
+                "brown-white",
+                "brown"
+
+            ],
+
+            T568B: [
+
+                "orange-white",
+                "orange",
+                "green-white",
+                "blue",
+                "blue-white",
+                "green",
+                "brown-white",
+                "brown"
+
+            ]
+
+        };
+
+
+        /*
+        Default wiring standard
+        */
+
+        let selectedStandard = "T568B";
+
+
+        /*
+        Current expected order
+        */
+
+        let expectedOrder =
+            wiringOrders[selectedStandard];
+
+
+        /*
+        Currently dragged wire
+        */
+
+        let draggedWire = null;
+
+
+        /*
+        ==========================================
+        ELEMENTS
+        ==========================================
+        */
+
+        const actionBtn =
+            document.getElementById("actionBtn");
+
+
+        const cable =
+            document.getElementById("cable");
+
+
+        const scissors =
+            document.getElementById("scissors");
+
+
+        const toolTitle =
+            document.getElementById("toolTitle");
+
+
+        const toolDescription =
+            document.getElementById("toolDescription");
+
+
+        const toolInstruction =
+            document.getElementById("toolInstruction");
+
+
+        const instructionText =
+            document.getElementById("instructionText");
+
+
+        const activityTitle =
+            document.getElementById("activityTitle");
+
+
+        const activityDescription =
+            document.getElementById("activityDescription");
+
+
+        const activityContent =
+            document.getElementById("activityContent");
+
+
+        const status =
+            document.getElementById("status");
+
+
+        /*
+        ==========================================
+        STEP DATA
+        ==========================================
+        */
+
+        const steps = {
+
+            1: {
+
+                title: "Cut the Cable",
+
+                description:
+                    "Prepare the Ethernet cable by cutting it to the required length.",
+
+                instruction:
+                    "Use the cable cutter to remove the excess cable.",
+
+                button:
+                    "Cut Cable"
+
+            },
+
+
+            2: {
+
+                title: "Strip the Jacket",
+
+                description:
+                    "Remove a small section of the outer cable jacket.",
+
+                instruction:
+                    "Expose the twisted-pair conductors without damaging the wires.",
+
+                button:
+                    "Strip Jacket"
+
+            },
+
+
+            3: {
+
+                title: "Arrange the Conductors",
+
+                description:
+                    "Arrange the eight conductors according to the selected wiring standard.",
+
+                instruction:
+                    "Choose T568A or T568B, then drag the wires into the correct positions.",
+
+                button:
+                    "Check Wire Arrangement"
+
+            },
+
+
+            4: {
+
+                title: "Insert into RJ-45",
+
+                description:
+                    "Place the arranged conductors into the RJ-45 connector.",
+
+                instruction:
+                    "Make sure all conductors reach the end of the connector.",
+
+                button:
+                    "Insert Wires"
+
+            },
+
+
+            5: {
+
+                title: "Crimp the Connector",
+
+                description:
+                    "Secure the conductors inside the RJ-45 plug.",
+
+                instruction:
+                    "Use the crimping tool to lock the contacts in place.",
+
+                button:
+                    "Crimp Cable"
+
+            },
+
+
+            6: {
+
+                title: "Test Continuity",
+
+                description:
+                    "Verify that all eight connections are working.",
+
+                instruction:
+                    "Connect the finished cable to the cable tester.",
+
+                button:
+                    "Test Cable"
+
+            }
+
+        };
+
+
+        /*
+        ==========================================
+        UPDATE STEP INDICATOR
+        ==========================================
+        */
+
+        function updateStepIndicator() {
+
+            document
+                .querySelectorAll(".step")
+                .forEach(step => {
+
+                    const number =
+                        Number(step.dataset.step);
+
+
+                    step.classList.remove(
+                        "active",
+                        "completed"
+                    );
+
+
+                    if (number === currentStep) {
+
+                        step.classList.add(
+                            "active"
+                        );
+
+                    }
+
+
+                    if (number < currentStep) {
+
+                        step.classList.add(
+                            "completed"
+                        );
+
+                    }
+
+                });
+
+        }
+
+
+        /*
+        ==========================================
+        LOAD STEP
+        ==========================================
+        */
+
+        function loadStep() {
+
+            const data =
+                steps[currentStep];
+
+
+            toolTitle.textContent =
+                data.title;
+
+
+            toolDescription.textContent =
+                data.description;
+
+
+            toolInstruction.textContent =
+                data.title;
+
+
+            instructionText.textContent =
+                data.instruction;
+
+
+            activityTitle.textContent =
+                data.title;
+
+
+            activityDescription.textContent =
+                data.description;
+
+
+            actionBtn.textContent =
+                data.button;
+
+
+            actionBtn.disabled = false;
+
+
+            status.textContent =
+                `Step ${currentStep} of 6`;
+
+
+            status.className =
+                "status";
+
+
+            updateStepIndicator();
+
+
+            renderActivity();
+
+
+            updateToolVisual();
+
+        }
+
+
+        /*
+        ==========================================
+        TOOL VISUAL
+        ==========================================
+        */
+
+        function updateToolVisual() {
+
+            scissors.style.display =
+                "none";
+
+
+            cable.classList.remove(
+                "cut"
+            );
+
+
+            cable.style.width =
+                "90%";
+
+
+            if (currentStep === 1) {
+
+                scissors.style.display =
+                    "block";
+
+            }
+
+
+            if (currentStep === 2) {
+
+                scissors.style.display =
+                    "block";
+
+                cable.style.width =
+                    "70%";
+
+            }
+
+
+            if (currentStep >= 3) {
+
+                cable.style.width =
+                    "55%";
+
+            }
+
+        }
+
+
+        /*
+        ==========================================
+        RENDER ACTIVITY
+        ==========================================
+        */
+
+        function renderActivity() {
+
+
+            /*
+            STEP 1
+            */
+
+            if (currentStep === 1) {
+
+                activityContent.innerHTML = `
+
+                    <div class="instruction">
+
+                        Cut the cable to the appropriate length
+                        before beginning the termination process.
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            /*
+            STEP 2
+            */
+
+            if (currentStep === 2) {
+
+                activityContent.innerHTML = `
+
+                    <div class="instruction">
+
+                        Carefully strip approximately 1–2 inches
+                        of the outer jacket to expose the twisted pairs.
+
+                    </div>
+
+
+                    <div class="tool">
+
+                        <h3>
+                            Exposed Conductors
+                        </h3>
+
+                        <p>
+                            The individual conductors are now visible.
+                        </p>
+
+
+                        <div
+                            class="wire-list"
+                            style="margin-top:15px"
+                        >
+
+                            <div class="wire">
+                                <div class="wire-line orange-white"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line orange"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line green-white"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line blue"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line blue-white"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line green"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line brown-white"></div>
+                            </div>
+
+                            <div class="wire">
+                                <div class="wire-line brown"></div>
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            /*
+            STEP 3
+            */
+
+            if (currentStep === 3) {
+
+                renderWireActivity();
+
+                return;
+
+            }
+
+
+            /*
+            STEP 4
+            */
+
+            if (currentStep === 4) {
+
+                renderConnector();
+
+                return;
+
+            }
+
+
+            /*
+            STEP 5
+            */
+
+            if (currentStep === 5) {
+
+                activityContent.innerHTML = `
+
+                    <div class="instruction">
+
+                        The wires are positioned inside the RJ-45 plug.
+                        Press the button below to crimp the connector.
+
+                    </div>
+
+
+                    <div class="connector-area">
+
+                        <div class="connector">
+
+                            <div class="connector-title">
+                                RJ-45 Plug • ${selectedStandard}
+                            </div>
+
+
+                            <div class="slots">
+
+                                ${expectedOrder.map(
+                    (wire, index) => `
+
+                                    <div class="slot filled">
+
+                                        <div class="slot-number">
+                                            ${index + 1}
+                                        </div>
+
+
+                                        <div
+                                            class="slot-wire ${wire}"
+                                            style="display:block"
+                                        ></div>
+
+                                    </div>
+
+                                `).join("")}
+
+                            </div>
+
+                        </div>
+
+                    </div>
+
+                `;
+
+                return;
+
+            }
+
+
+            /*
+            STEP 6
+            */
+
+            if (currentStep === 6) {
+
+                renderTester();
+
+            }
+
+        }
+
+
+        /*
+        ==========================================
+        SHUFFLE
+        ==========================================
+        */
+
+        function shuffleArray(array) {
+
+            for (
+                let i = array.length - 1;
+                i > 0;
+                i--
+            ) {
+
+                const j =
+                    Math.floor(
+                        Math.random() * (i + 1)
+                    );
+
+
+                [
+                    array[i],
+                    array[j]
+                ] = [
+                        array[j],
+                        array[i]
+                    ];
+
+            }
+
+
+            return array;
+
+        }
+
+
+        /*
+        ==========================================
+        WIRE NAME
+        ==========================================
+        */
+
+        function formatWireName(wire) {
+
+            return wire
+                .split("-")
+                .map(word =>
+                    word.charAt(0).toUpperCase() +
+                    word.slice(1)
+                )
+                .join(" / ");
+
+        }
+
+
+        /*
+        ==========================================
+        RENDER WIRE ACTIVITY
+        ==========================================
+        */
+
+        function renderWireActivity() {
+
+            /*
+            Make a randomized copy.
+            */
+
+            const shuffledWires =
+                shuffleArray([
+                    ...expectedOrder
+                ]);
+
+
+            activityContent.innerHTML = `
+
+                <div class="instruction">
+
+                    Select the wiring standard, then arrange the
+                    eight conductors in the correct order.
+
+                </div>
+
+
+                <!-- WIRING STANDARD -->
+
+                <div class="standard-selector">
+
+                    <div class="standard-label">
+                        Wiring Standard
+                    </div>
+
+
+                    <div class="standard-options">
+
+                        <button
+                            type="button"
+                            class="standard-btn ${selectedStandard === "T568A"
+                    ? "selected"
+                    : ""
+                }"
+                            data-standard="T568A"
+                        >
+
+                            <strong>
+                                T568A
+                            </strong>
+
+                            <span>
+                                Type A
+                            </span>
+
+                        </button>
+
+
+                        <button
+                            type="button"
+                            class="standard-btn ${selectedStandard === "T568B"
+                    ? "selected"
+                    : ""
+                }"
+                            data-standard="T568B"
+                        >
+
+                            <strong>
+                                T568B
+                            </strong>
+
+                            <span>
+                                Type B
+                            </span>
+
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- AVAILABLE WIRES -->
+
+                <div class="standard-label">
+                    Available Conductors
+                </div>
+
+
+                <div
+                    class="wire-list"
+                    id="wireList"
+                >
+
+                    ${shuffledWires.map(wire => `
+
+                        <div
+                            class="wire"
+                            draggable="true"
+                            data-wire="${wire}"
+                        >
+
+                            <div
+                                class="wire-line ${wire}"
+                            ></div>
+
+
+                            <div class="wire-name">
+                                ${formatWireName(wire)}
+                            </div>
+
+                        </div>
+
+                    `).join("")}
+
+                </div>
+
+
+                <!-- RJ45 -->
+
+                <div class="connector-area">
+
+                    <div class="connector">
+
+                        <div class="connector-title">
+
+                            ${selectedStandard}
+                            RJ-45 Positions
+
+                        </div>
+
+
+                        <div class="slots">
+
+                            ${expectedOrder.map(
+                    (wire, index) => `
+
+                                <div
+                                    class="slot"
+                                    data-position="${index}"
+                                >
+
+                                    <div class="slot-number">
+                                        ${index + 1}
+                                    </div>
+
+
+                                    <div class="slot-wire"></div>
+
+                                </div>
+
+                            `).join("")}
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- RESET -->
+
+                <div class="arrangement-actions">
+
+                    <button
+                        type="button"
+                        class="reset-arrangement"
+                        id="resetArrangement"
+                    >
+
+                        ↻
+                        Reset Arrangement
+
+                    </button>
+
+                </div>
+
+            `;
+
+
+            setupDragAndDrop();
+
+
+            /*
+            Wiring standard buttons
+            */
+
+            document
+                .querySelectorAll(".standard-btn")
+                .forEach(button => {
+
+                    button.addEventListener(
+                        "click",
+                        () => {
+
+                            selectedStandard =
+                                button.dataset.standard;
+
+
+                            expectedOrder =
+                                wiringOrders[
+                                selectedStandard
+                                ];
+
+
+                            renderWireActivity();
+
+
+                            status.textContent =
+                                `${selectedStandard} selected. Arrange the wires.`;
+
+
+                            status.className =
+                                "status";
+
+                        }
+                    );
+
+                });
+
+
+            /*
+            Reset
+            */
+
+            document
+                .getElementById(
+                    "resetArrangement"
+                )
+                .addEventListener(
+                    "click",
+                    () => {
+
+                        renderWireActivity();
+
+
+                        status.textContent =
+                            "Wire arrangement reset.";
+
+
+                        status.className =
+                            "status";
+
+                    }
+                );
+
+
+            actionBtn.textContent =
+                "Check Wire Arrangement";
+
+        }
+
+
+        /*
+        ==========================================
+        GET WIRE FROM SLOT
+        ==========================================
+        */
+
+        function getWireFromElement(element) {
+
+            if (!element) {
+                return null;
+            }
+
+
+            return expectedOrder.find(
+                wire =>
+                    element.classList.contains(wire)
+            ) || null;
+
+        }
+
+
+        /*
+        ==========================================
+        DRAG & DROP
+        ==========================================
+        */
+
+        function setupDragAndDrop() {
+
+            const wires =
+                document.querySelectorAll(
+                    ".wire"
+                );
+
+
+            const slots =
+                document.querySelectorAll(
+                    ".slot"
+                );
+
+
+            /*
+            ======================================
+            AVAILABLE WIRES
+            ======================================
+            */
+
+            wires.forEach(wire => {
+
+                wire.addEventListener(
+                    "dragstart",
+                    () => {
+
+                        draggedWire =
+                            wire;
+
+                        wire.classList.add(
+                            "dragging"
+                        );
+
+                    }
+                );
+
+
+                wire.addEventListener(
+                    "dragend",
+                    () => {
+
+                        wire.classList.remove(
+                            "dragging"
+                        );
+
+                        draggedWire = null;
+
+                    }
+                );
+
+            });
+
+
+            /*
+            ======================================
+            SLOT EVENTS
+            ======================================
+            */
+
+            slots.forEach(slot => {
+
+
+                slot.addEventListener(
+                    "dragover",
+                    event => {
+
+                        event.preventDefault();
+
+                        slot.classList.add(
+                            "drag-over"
+                        );
+
+                    }
+                );
+
+
+                slot.addEventListener(
+                    "dragleave",
+                    () => {
+
+                        slot.classList.remove(
+                            "drag-over"
+                        );
+
+                    }
+                );
+
+
+                slot.addEventListener(
+                    "drop",
+                    event => {
+
+                        event.preventDefault();
+
+
+                        slot.classList.remove(
+                            "drag-over"
+                        );
+
+
+                        if (!draggedWire) {
+                            return;
+                        }
+
+
+                        const draggedWireName =
+                            draggedWire.dataset.wire;
+
+
+                        /*
+                        Check whether the dragged
+                        wire came from another slot.
+                        */
+
+                        const sourceSlot =
+                            draggedWire.closest(
+                                ".slot"
+                            );
+
+
+                        const targetSlotWire =
+                            slot.querySelector(
+                                ".slot-wire"
+                            );
+
+
+                        /*
+                        ==================================
+                        CASE 1:
+                        Dropping onto empty slot
+                        ==================================
+                        */
+
+                        if (
+                            !slot.classList.contains(
+                                "filled"
+                            )
+                        ) {
+
+                            /*
+                            If it came from another
+                            slot, remove it there.
+                            */
+
+                            if (sourceSlot) {
+
+                                const oldWire =
+                                    sourceSlot.querySelector(
+                                        ".slot-wire"
+                                    );
+
+
+                                oldWire.className =
+                                    "slot-wire";
+
+
+                                oldWire.style.display =
+                                    "none";
+
+
+                                sourceSlot.classList.remove(
+                                    "filled"
+                                );
+
+                            }
+
+
+                            /*
+                            Put wire into target
+                            */
+
+                            targetSlotWire.className =
+                                `slot-wire ${draggedWireName}`;
+
+
+                            targetSlotWire.style.display =
+                                "block";
+
+
+                            slot.classList.add(
+                                "filled"
+                            );
+
+
+                            /*
+                            If coming from available
+                            wire list, hide it.
+                            */
+
+                            if (!sourceSlot) {
+
+                                draggedWire.style.display =
+                                    "none";
+
+                            }
+
+
+                            return;
+
+                        }
+
+
+                        /*
+                        ==================================
+                        CASE 2:
+                        Dropping onto occupied slot
+                        ==================================
+                        */
+
+                        if (
+                            slot.classList.contains(
+                                "filled"
+                            )
+                        ) {
+
+                            /*
+                            If dragging a wire from
+                            the available list, do not
+                            overwrite an occupied slot.
+                            */
+
+                            if (!sourceSlot) {
+
+                                status.textContent =
+                                    "That position is occupied. Move the existing wire first.";
+
+                                status.className =
+                                    "status error";
+
+                                return;
+
+                            }
+
+
+                            /*
+                            If moving a wire from another
+                            slot, swap the wires.
+                            */
+
+                            if (
+                                sourceSlot !== slot
+                            ) {
+
+                                const sourceSlotWire =
+                                    sourceSlot.querySelector(
+                                        ".slot-wire"
+                                    );
+
+
+                                const existingWireName =
+                                    getWireFromElement(
+                                        targetSlotWire
+                                    );
+
+
+                                /*
+                                Put target wire
+                                into source slot
+                                */
+
+                                sourceSlotWire.className =
+                                    `slot-wire ${existingWireName}`;
+
+
+                                sourceSlotWire.style.display =
+                                    "block";
+
+
+                                sourceSlot.classList.add(
+                                    "filled"
+                                );
+
+
+                                /*
+                                Put dragged wire
+                                into target slot
+                                */
+
+                                targetSlotWire.className =
+                                    `slot-wire ${draggedWireName}`;
+
+
+                                targetSlotWire.style.display =
+                                    "block";
+
+
+                                /*
+                                The original draggable
+                                element was only the
+                                visual source.
+                                */
+
+                                draggedWire.remove();
+
+                            }
+
+                        }
+
+                    }
+
+                );
+
+            });
+
+
+            /*
+            ======================================
+            MAKE PLACED WIRES DRAGGABLE
+            ======================================
+            */
+
+            slots.forEach(slot => {
+
+                const slotWire =
+                    slot.querySelector(
+                        ".slot-wire"
+                    );
+
+
+                if (!slotWire) {
+                    return;
+                }
+
+
+                /*
+                The actual wire inside a slot
+                needs to be draggable.
+                */
+
+                slotWire.draggable = true;
+
+
+                slotWire.addEventListener(
+                    "dragstart",
+                    event => {
+
+                        event.stopPropagation();
+
+
+                        draggedWire =
+                            createTemporaryWire(
+                                getWireFromElement(
+                                    slotWire
+                                )
+                            );
+
+
+                        slotWire.classList.add(
+                            "dragging"
+                        );
+
+
+                        slotWire._sourceSlot =
+                            slot;
+
+                    }
+                );
+
+
+                slotWire.addEventListener(
+                    "dragend",
+                    () => {
+
+                        slotWire.classList.remove(
+                            "dragging"
+                        );
+
+                        draggedWire = null;
+
+                    }
+                );
+
+            });
+
+        }
+
+
+        /*
+        ==========================================
+        TEMPORARY DRAG WIRE
+        ==========================================
+        */
+
+        function createTemporaryWire(wireName) {
+
+            const wire =
+                document.createElement("div");
+
+
+            wire.className =
+                `wire temporary-wire ${wireName}`;
+
+
+            wire.dataset.wire =
+                wireName;
+
+
+            return wire;
+
+        }
+
+
+        /*
+        ==========================================
+        CHECK ARRANGEMENT
+        ==========================================
+        */
+
+        function checkArrangement() {
+
+            const slots =
+                document.querySelectorAll(
+                    ".slot"
+                );
+
+
+            if (slots.length !== 8) {
+
+                return false;
+
+            }
+
+
+            for (
+                let i = 0;
+                i < slots.length;
+                i++
+            ) {
+
+                const slotWire =
+                    slots[i].querySelector(
+                        ".slot-wire"
+                    );
+
+
+                if (
+                    !slotWire ||
+                    !slotWire.classList.contains(
+                        expectedOrder[i]
+                    )
+                ) {
+
+                    return false;
+
+                }
+
+            }
+
+
+            return true;
+
+        }
+
+
+        /*
+        ==========================================
+        NEXT STEP
+        ==========================================
+        */
+
+        function nextStep() {
+
+            if (currentStep >= 6) {
+
+                finishLab();
+
+                return;
+
+            }
+
+
+            currentStep++;
+
+
+            loadStep();
+
+        }
+
+
+        /*
+        ==========================================
+        MAIN ACTION BUTTON
+        ==========================================
+        */
+
+        actionBtn.addEventListener(
+            "click",
+            () => {
+
+
+                /*
+                ======================================
+                CUT
+                ======================================
+                */
+
+                if (currentStep === 1) {
+
+                    cable.classList.add(
+                        "cut"
+                    );
+
+
+                    status.textContent =
+                        "Cable cut successfully.";
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        nextStep,
+                        600
+                    );
+
+
+                    return;
+
+                }
+
+
+                /*
+                ======================================
+                STRIP
+                ======================================
+                */
+
+                if (currentStep === 2) {
+
+                    status.textContent =
+                        "Cable jacket stripped successfully.";
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        nextStep,
+                        600
+                    );
+
+
+                    return;
+
+                }
+
+
+                /*
+                ======================================
+                ARRANGE
+                ======================================
+                */
+
+                if (currentStep === 3) {
+
+
+                    if (!checkArrangement()) {
+
+                        status.textContent =
+                            `Incorrect ${selectedStandard} arrangement. Check the wire order.`;
+
+
+                        status.className =
+                            "status error";
+
+
+                        return;
+
+                    }
+
+
+                    status.textContent =
+                        `Correct ${selectedStandard} arrangement.`;
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        nextStep,
+                        700
+                    );
+
+
+                    return;
+
+                }
+
+
+                /*
+                ======================================
+                INSERT
+                ======================================
+                */
+
+                if (currentStep === 4) {
+
+                    status.textContent =
+                        `All conductors inserted into the ${selectedStandard} RJ-45 plug.`;
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        nextStep,
+                        700
+                    );
+
+
+                    return;
+
+                }
+
+
+                /*
+                ======================================
+                CRIMP
+                ======================================
+                */
+
+                if (currentStep === 5) {
+
+                    status.textContent =
+                        "RJ-45 connector crimped successfully.";
+
+
+                    status.className =
+                        "status success";
+
+
+                    setTimeout(
+                        nextStep,
+                        700
+                    );
+
+
+                    return;
+
+                }
+
+
+                /*
+                ======================================
+                TEST
+                ======================================
+                */
+
+                if (currentStep === 6) {
+
+                    runTester();
+
+                }
+
+            }
+        );
+
+
+        /*
+        ==========================================
+        CABLE TESTER
+        ==========================================
+        */
+
+        function runTester() {
+
+            actionBtn.disabled =
+                true;
+
+
+            const screen =
+                document.getElementById(
+                    "testerScreen"
+                );
+
+
+            const lights =
+                document.querySelectorAll(
+                    ".light"
+                );
+
+
+            screen.textContent =
+                "TESTING...";
+
+
+            let index = 0;
+
+
+            const interval =
+                setInterval(
+                    () => {
+
+
+                        if (
+                            index <
+                            lights.length
+                        ) {
+
+                            lights[index]
+                                .classList
+                                .add("on");
+
+
+                            index++;
+
+
+                        } else {
+
+                            clearInterval(
+                                interval
+                            );
+
+
+                            screen.textContent =
+                                "PASS";
+
+
+                            status.textContent =
+                                "✓ Cable passed continuity test.";
+
+
+                            status.className =
+                                "status success";
+
+
+                            setTimeout(
+                                finishLab,
+                                800
+                            );
+
+                        }
+
+                    },
+                    250
+                );
+
+        }
+
+
+        /*
+        ==========================================
+        FINISH
+        ==========================================
+        */
+
+        function finishLab() {
+
+            document
+                .querySelectorAll(".step")
+                .forEach(step => {
+
+                    step.classList.remove(
+                        "active"
+                    );
+
+
+                    step.classList.add(
+                        "completed"
+                    );
+
+                });
+
+
+            activityTitle.textContent =
+                "Lab Complete";
+
+
+            activityDescription.textContent =
+                `The ${selectedStandard} RJ-45 cable has been successfully terminated.`;
+
+
+            activityContent.innerHTML = `
+
+                <div class="success-box">
+
+                    <div class="success-icon">
+                        ✓
+                    </div>
+
+
+                    <h2>
+                        Cable Passed
+                    </h2>
+
+
+                    <p>
+                        ${selectedStandard} termination and
+                        continuity testing were completed successfully.
+                    </p>
+
+                </div>
+
+            `;
+
+
+            actionBtn.textContent =
+                "Activity Completed";
+
+
+            actionBtn.disabled =
+                true;
+
+
+            status.textContent =
+                "6 / 6 procedures completed.";
+
+
+            status.className =
+                "status success";
+
+        }
+
+
+        /*
+        ==========================================
+        INITIALIZE
+        ==========================================
+        */
+
+        loadStep();
+
+    </script>
+
+</body>
+
+</html>

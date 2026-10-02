@@ -1,26 +1,49 @@
-import axios from 'axios'
-import { ref, computed } from 'vue'
-import { useUser } from './useUser'
+import { ref } from "vue"
+import { useUser } from "./useUser"
+import api from "../bootstrap"
 
-const { user, fetchUser, userFullName } = useUser()
+const { user } = useUser()
+
 const leaderboard = ref([])
 const isLoading = ref(false)
 
-const getLeaderBoard = async (force = false) => {
+/*
+|--------------------------------------------------------------------------
+| Get Leaderboard
+|--------------------------------------------------------------------------
+*/
 
+const getLeaderBoard = async () => {
     isLoading.value = true
 
     try {
-        await axios.get('/sanctum/csrf-cookie')
-        const { data } = await axios.get('/api/dashboard/leaderboard')
+        const { data } = await api.get(
+            "/api/dashboard/leaderboard"
+        )
+
         const currentUserId = user.value?.id ?? null
-        leaderboard.value = data.data.map(u => ({
-            ...u,
-            isYou: u.user_id === currentUserId,
-            displayName: u.name,
+
+        leaderboard.value = (data.data ?? []).map(item => ({
+            ...item,
+
+            isYou:
+                Number(item.user_id) ===
+                Number(currentUserId),
+
+            displayName:
+                item.name ?? "Unknown User",
         }))
-    } catch (err) {
-        console.error(err)
+
+        return leaderboard.value
+
+    } catch (error) {
+        console.error(
+            "Failed to load leaderboard:",
+            error
+        )
+
+        throw error
+
     } finally {
         isLoading.value = false
     }
@@ -31,11 +54,15 @@ const getLeaderBoard = async (force = false) => {
 | Update Profile
 |--------------------------------------------------------------------------
 */
+
 const updateProfile = async (formData) => {
     try {
         isLoading.value = true
 
-        const { data } = await axios.put('/api/profile/update', formData)
+        const { data } = await api.put(
+            "/api/profile/update",
+            formData
+        )
 
         if (data.data && user.value) {
             Object.assign(user.value, {
@@ -45,20 +72,32 @@ const updateProfile = async (formData) => {
             })
         }
 
-        showEditModal.value = false
-        showToast(data.message ?? 'Profile updated successfully!', 'success')
+        return data
 
-    } catch (err) {
-        showToast(err.response?.data?.message ?? 'Update failed.', 'error')
+    } catch (error) {
+        console.error(
+            "Profile update failed:",
+            error
+        )
+
+        throw error
+
     } finally {
-        loading.value = false
+        isLoading.value = false
     }
 }
+
+/*
+|--------------------------------------------------------------------------
+| Export
+|--------------------------------------------------------------------------
+*/
 
 export function useUserRequests() {
     return {
         getLeaderBoard,
         leaderboard,
-        updateProfile
+        isLoading,
+        updateProfile,
     }
 }

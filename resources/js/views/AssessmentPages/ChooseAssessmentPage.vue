@@ -88,7 +88,7 @@ const fetchAssessmentData = async () => {
         const { data } = await axios.get(`/api/assessments-type/${route.params.id}`);
         assessments.value = data.assessments
         assessmentObject.value = data.quiz
-
+        console.log(data)
     } catch (error) {
         console.error(error)
     }
@@ -96,12 +96,11 @@ const fetchAssessmentData = async () => {
 
 const startAssessment = (assessment) => {
     const quizId = route.params.id
-    if (quizId) router.push(`/${assessment.path}/${quizId}`)
+    if (quizId) router.push(`/taking/${assessment.path}/${quizId}`)
 }
 
 onMounted(fetchAssessmentData)  
 </script>
-
 
 <style scoped>
 /* =========================================================
@@ -116,30 +115,24 @@ onMounted(fetchAssessmentData)
 .assessment-page {
     --white: #ffffff;
     --black: #000000;
-
     --gray-light: #d3d3d3;
     --gray: #a9a9a9;
     --gray-dark: #696969;
-
     --background: #f6f6f6;
     --surface: #ffffff;
     --surface-soft: #f8f8f8;
-
     --border: #d3d3d3;
 
     width: 100%;
     min-width: 0;
     min-height: 100vh;
-
     padding: clamp(16px, 3vw, 32px);
-
     background: var(--background);
     color: var(--black);
     box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 16px 40px rgba(0, 0, 0, 0.06);
     box-sizing: border-box;
     overflow-x: hidden;
 }
-
 
 /* =========================================================
    BACK BUTTON
@@ -149,16 +142,11 @@ onMounted(fetchAssessmentData)
     display: inline-flex;
     align-items: center;
     gap: 8px;
-
     margin: 0 0 20px;
-
     padding: 8px 0;
-
     border: none;
     background: transparent;
-
     color: var(--gray-dark);
-
     font-family: inherit;
     font-size: 13px;
     font-weight: 600;

@@ -1,62 +1,50 @@
-import axios from "axios"
+import api from "../bootstrap"
 import { useUser } from "./useUser"
 
-const TIME = 1 * 60 * 1000 // 1 minute
+const INTERVAL = 60 * 1000
+const GUEST_ROUTES = ["/", "/register", "/forgot", "/reset"]
+
 let heartbeat = null
+
+const clearSession = (router, user) => {
+    if (heartbeat) {
+        clearInterval(heartbeat)
+        heartbeat = null
+    }
+
+    user.value = null
+
+    Object.keys(localStorage).forEach((key) => {
+        if (key.startsWith("dash-quiz_")) {
+            localStorage.removeItem(key)
+        }
+    })
+
+    router.push("/")
+}
 
 export const startHeartbeat = (router) => {
     const { user } = useUser()
 
     if (heartbeat) {
         clearInterval(heartbeat)
-        heartbeat = null
     }
 
     heartbeat = setInterval(async () => {
-        if (!user.value) return
+        const path = router.currentRoute.value.path
 
-        const guestRoutes = ['/', '/register', '/forgot', '/reset']
-        if (guestRoutes.includes(router.currentRoute.value.path)) return
+        if (!user.value || GUEST_ROUTES.includes(path)) return
 
         try {
-            const { data } = await axios.post("/api/heartbeat")
-            console.log("Heartbeat sent:", data)
+            const { data } = await api.post("/api/heartbeat")
 
-            /**
-             * 🔥 NEW: server controls account status
-             * active_status: 1 = allowed, 0 = blocked/logout
-             */
             if (data?.active_status === 0) {
-                clearInterval(heartbeat)
-                heartbeat = null
-
-                user.value = null
-
-                // clear all DashQuiz cache
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('dash-quiz_')) {
-                        localStorage.removeItem(key)
-                    }
-                })
-
-                router.push("/")
+                clearSession(router, user)
             }
-
-        } catch (err) {
-            if ([401, 403].includes(err?.response?.status)) {
-                clearInterval(heartbeat)
-                heartbeat = null
-
-                user.value = null
-
-                Object.keys(localStorage).forEach(key => {
-                    if (key.startsWith('dash-quiz_')) {
-                        localStorage.removeItem(key)
-                    }
-                })
-
-                router.push("/")
+        } catch (error) {
+            if ([401, 403].includes(error?.response?.status)) {
+                clearSession(router, user)
             }
         }
-    }, TIME)
+    }, INTERVAL)
 }

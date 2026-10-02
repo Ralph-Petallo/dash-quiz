@@ -180,7 +180,6 @@ const cocGroups = computed(() => {
     const groups = {
         1: [],
         2: [],
-        3: []
     }
 
     quizzes.value.forEach((quiz) => {

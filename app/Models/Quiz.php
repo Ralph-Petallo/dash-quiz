@@ -32,4 +32,9 @@ class Quiz extends Model
     {
         return $this->records()->count();
     }
+
+    public function rj45Assessment()
+    {
+        return $this->hasOne(Rj45Assessment::class);
+    }
 }

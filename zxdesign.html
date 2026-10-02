@@ -1,0 +1,1243 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>CSSPrep — Virtual Hands-On</title>
+
+    <style>
+        :root {
+            --bg: #f6f6f6;
+            --surface: #ffffff;
+            --surface-2: #f1f1f1;
+            --text: #111111;
+            --muted: #777777;
+            --border: #dedede;
+
+            --black: #111111;
+            --dark: #222222;
+            --success: #1f7a4d;
+            --danger: #b42318;
+
+            --radius: 14px;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            min-height: 100vh;
+            background: var(--bg);
+            color: var(--text);
+            font-family:
+                Inter,
+                ui-sans-serif,
+                system-ui,
+                -apple-system,
+                BlinkMacSystemFont,
+                "Segoe UI",
+                sans-serif;
+        }
+
+        button {
+            font: inherit;
+        }
+
+        /* =========================
+           APP
+        ========================= */
+
+        .app {
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* =========================
+           HEADER
+        ========================= */
+
+        .header {
+            height: 68px;
+            padding: 0 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+        }
+
+        .brand {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .brand-mark {
+            width: 34px;
+            height: 34px;
+            display: grid;
+            place-items: center;
+
+            background: var(--black);
+            color: white;
+            border-radius: 9px;
+
+            font-size: 14px;
+            font-weight: 800;
+        }
+
+        .brand-text strong {
+            display: block;
+            font-size: 14px;
+            line-height: 1;
+        }
+
+        .brand-text span {
+            display: block;
+            margin-top: 4px;
+
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .mode-badge {
+            padding: 7px 11px;
+            border: 1px solid var(--border);
+            border-radius: 999px;
+
+            color: var(--muted);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        /* =========================
+           MAIN
+        ========================= */
+
+        .main {
+            width: min(1400px, 100%);
+            margin: 0 auto;
+            padding: 28px;
+
+            display: grid;
+            grid-template-columns: 260px minmax(0, 1fr);
+            gap: 24px;
+            flex: 1;
+        }
+
+        /* =========================
+           SIDEBAR
+        ========================= */
+
+        .sidebar {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .panel-header {
+            padding: 16px 17px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .panel-header h3 {
+            font-size: 13px;
+        }
+
+        .panel-header p {
+            margin-top: 4px;
+            color: var(--muted);
+            font-size: 11px;
+        }
+
+        /* mode */
+
+        .mode-switch {
+            padding: 6px;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 5px;
+        }
+
+        .mode-btn {
+            border: 0;
+            padding: 10px 8px;
+
+            background: transparent;
+            color: var(--muted);
+
+            border-radius: 9px;
+            cursor: pointer;
+
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .mode-btn.active {
+            background: var(--black);
+            color: white;
+        }
+
+        /* steps */
+
+        .steps {
+            padding: 10px;
+        }
+
+        .step {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            gap: 11px;
+
+            padding: 10px;
+            margin-bottom: 3px;
+
+            background: transparent;
+            border: 0;
+            border-radius: 9px;
+
+            text-align: left;
+            cursor: pointer;
+        }
+
+        .step:hover {
+            background: var(--surface-2);
+        }
+
+        .step.active {
+            background: #ededed;
+        }
+
+        .step-number {
+            width: 25px;
+            height: 25px;
+            flex: 0 0 25px;
+
+            display: grid;
+            place-items: center;
+
+            border: 1px solid var(--border);
+            border-radius: 50%;
+
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+        .step.active .step-number {
+            background: var(--black);
+            color: white;
+            border-color: var(--black);
+        }
+
+        .step.completed .step-number {
+            background: var(--success);
+            border-color: var(--success);
+            color: white;
+        }
+
+        .step-info strong {
+            display: block;
+            font-size: 12px;
+        }
+
+        .step-info span {
+            display: block;
+            margin-top: 2px;
+
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        /* =========================
+           WORKSPACE
+        ========================= */
+
+        .workspace {
+            min-width: 0;
+        }
+
+        .workspace-top {
+            margin-bottom: 18px;
+
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 20px;
+        }
+
+        .eyebrow {
+            margin-bottom: 5px;
+
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .1em;
+            text-transform: uppercase;
+        }
+
+        .workspace-title {
+            font-size: clamp(22px, 3vw, 32px);
+            letter-spacing: -.03em;
+        }
+
+        .workspace-description {
+            max-width: 580px;
+            margin-top: 7px;
+
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .progress {
+            min-width: 160px;
+        }
+
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 7px;
+
+            color: var(--muted);
+            font-size: 10px;
+            font-weight: 600;
+        }
+
+        .progress-track {
+            height: 5px;
+            overflow: hidden;
+
+            background: #e4e4e4;
+            border-radius: 999px;
+        }
+
+        .progress-fill {
+            width: 20%;
+            height: 100%;
+
+            background: var(--black);
+            border-radius: inherit;
+
+            transition: width .3s ease;
+        }
+
+        /* =========================
+           SIMULATOR
+        ========================= */
+
+        .simulator {
+            min-height: 570px;
+            overflow: hidden;
+
+            display: flex;
+            flex-direction: column;
+
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+        }
+
+        .simulator-bar {
+            min-height: 54px;
+            padding: 0 18px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+
+            border-bottom: 1px solid var(--border);
+        }
+
+        .simulator-status {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-dot {
+            width: 7px;
+            height: 7px;
+
+            background: var(--success);
+            border-radius: 50%;
+        }
+
+        .simulator-tip {
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .work-area {
+            position: relative;
+            flex: 1;
+            min-height: 430px;
+
+            background:
+                linear-gradient(rgba(0, 0, 0, .035) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 0, 0, .035) 1px, transparent 1px);
+            background-size: 28px 28px;
+
+            display: grid;
+            place-items: center;
+            padding: 30px;
+        }
+
+        /* =========================
+           COMPONENT
+        ========================= */
+
+        .pc-component {
+            position: relative;
+            width: min(500px, 100%);
+            padding: 35px;
+
+            background: #181818;
+            border-radius: 18px;
+
+            box-shadow:
+                0 25px 60px rgba(0, 0, 0, .16);
+        }
+
+        .component-label {
+            position: absolute;
+            top: 15px;
+            left: 18px;
+
+            color: #888;
+            font-size: 9px;
+            font-weight: 700;
+            letter-spacing: .12em;
+        }
+
+        .motherboard {
+            min-height: 270px;
+            padding: 25px;
+
+            background:
+                linear-gradient(135deg,
+                    #252525,
+                    #171717);
+
+            border: 1px solid #444;
+            border-radius: 10px;
+        }
+
+        .board-title {
+            color: #aaa;
+            font-size: 10px;
+            font-weight: 700;
+            letter-spacing: .08em;
+        }
+
+        .board-lines {
+            margin-top: 22px;
+
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 12px;
+        }
+
+        .board-chip {
+            height: 48px;
+
+            background: #111;
+            border: 1px solid #383838;
+            border-radius: 5px;
+        }
+
+        .ram-slot {
+            height: 15px;
+            margin-top: 18px;
+
+            background: #c7c7c7;
+            border-radius: 3px;
+        }
+
+        .ram-slot.small {
+            width: 75%;
+        }
+
+        .component-part {
+            position: absolute;
+
+            display: flex;
+            align-items: center;
+            justify-content: center;
+
+            cursor: grab;
+            user-select: none;
+
+            transition:
+                transform .2s ease,
+                opacity .2s ease,
+                box-shadow .2s ease;
+        }
+
+        .component-part:hover {
+            transform: translateY(-3px);
+        }
+
+        .component-part.selected {
+            box-shadow: 0 0 0 3px rgba(0, 0, 0, .12);
+        }
+
+        .cpu {
+            top: 105px;
+            left: 50%;
+            width: 90px;
+            height: 90px;
+
+            transform: translateX(-50%);
+
+            background: #bdbdbd;
+            border: 7px solid #d8d8d8;
+            border-radius: 8px;
+
+            color: #555;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+        .cpu:hover {
+            transform: translateX(-50%) translateY(-3px);
+        }
+
+        .ram {
+            right: 55px;
+            bottom: 60px;
+            width: 105px;
+            height: 28px;
+
+            background: #6c6c6c;
+            border: 4px solid #999;
+            border-radius: 3px;
+        }
+
+        .ram::after {
+            content: "";
+            position: absolute;
+            left: 10px;
+            right: 10px;
+            bottom: -6px;
+
+            height: 4px;
+            background: #c7c7c7;
+        }
+
+        .storage {
+            left: 50px;
+            bottom: 60px;
+            width: 105px;
+            height: 62px;
+
+            background: #222;
+            border: 2px solid #555;
+            border-radius: 5px;
+
+            color: #aaa;
+            font-size: 9px;
+            font-weight: 700;
+        }
+
+        /* =========================
+           ACTION BAR
+        ========================= */
+
+        .action-bar {
+            min-height: 76px;
+            padding: 14px 18px;
+
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 15px;
+
+            border-top: 1px solid var(--border);
+        }
+
+        .instruction {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .instruction-icon {
+            width: 31px;
+            height: 31px;
+
+            display: grid;
+            place-items: center;
+
+            background: #eeeeee;
+            border-radius: 8px;
+
+            font-size: 13px;
+        }
+
+        .instruction strong {
+            display: block;
+            font-size: 11px;
+        }
+
+        .instruction span {
+            display: block;
+            margin-top: 2px;
+
+            color: var(--muted);
+            font-size: 10px;
+        }
+
+        .actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .btn {
+            min-height: 38px;
+            padding: 0 15px;
+
+            border: 1px solid var(--border);
+            border-radius: 8px;
+
+            background: white;
+            color: var(--text);
+
+            cursor: pointer;
+
+            font-size: 11px;
+            font-weight: 700;
+        }
+
+        .btn:hover {
+            background: #f3f3f3;
+        }
+
+        .btn.primary {
+            background: var(--black);
+            border-color: var(--black);
+            color: white;
+        }
+
+        .btn.primary:hover {
+            background: #333;
+        }
+
+        .btn:disabled {
+            opacity: .4;
+            cursor: not-allowed;
+        }
+
+        /* =========================
+           FEEDBACK
+        ========================= */
+
+        .feedback {
+            display: none;
+            padding: 11px 15px;
+
+            background: #f3f8f5;
+            border-top: 1px solid #d6e8de;
+
+            color: var(--success);
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .feedback.show {
+            display: block;
+        }
+
+        /* =========================
+           RESPONSIVE
+        ========================= */
+
+        @media (max-width: 900px) {
+            .main {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: grid;
+                grid-template-columns: 1fr 1fr;
+            }
+
+            .steps-panel {
+                grid-column: 1 / -1;
+            }
+
+            .workspace-top {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .progress {
+                width: 100%;
+            }
+        }
+
+        @media (max-width: 600px) {
+            .header {
+                height: 60px;
+                padding: 0 15px;
+            }
+
+            .mode-badge {
+                display: none;
+            }
+
+            .main {
+                padding: 15px;
+                gap: 15px;
+            }
+
+            .sidebar {
+                display: block;
+            }
+
+            .steps-panel {
+                display: none;
+            }
+
+            .workspace-title {
+                font-size: 25px;
+            }
+
+            .simulator {
+                min-height: 500px;
+            }
+
+            .work-area {
+                min-height: 330px;
+                padding: 18px;
+            }
+
+            .pc-component {
+                padding: 25px;
+            }
+
+            .motherboard {
+                min-height: 220px;
+            }
+
+            .cpu {
+                width: 70px;
+                height: 70px;
+                top: 88px;
+            }
+
+            .ram {
+                right: 35px;
+                bottom: 45px;
+                width: 80px;
+            }
+
+            .storage {
+                left: 30px;
+                bottom: 45px;
+                width: 80px;
+                height: 50px;
+            }
+
+            .simulator-tip {
+                display: none;
+            }
+
+            .action-bar {
+                align-items: stretch;
+                flex-direction: column;
+            }
+
+            .actions {
+                width: 100%;
+            }
+
+            .actions .btn {
+                flex: 1;
+            }
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app">
+
+        <!-- HEADER -->
+        <header class="header">
+
+            <div class="brand">
+                <div class="brand-mark">Q</div>
+
+                <div class="brand-text">
+                    <strong>CSSPrep</strong>
+                    <span>Virtual Hands-On</span>
+                </div>
+            </div>
+
+            <div class="header-right">
+                <div class="mode-badge">PRACTICAL SIMULATION</div>
+            </div>
+
+        </header>
+
+
+        <!-- MAIN -->
+        <main class="main">
+
+            <!-- SIDEBAR -->
+            <aside class="sidebar">
+
+                <!-- MODE -->
+                <section class="panel">
+
+                    <div class="panel-header">
+                        <h3>Activity</h3>
+                        <p>Select a practical mode</p>
+                    </div>
+
+                    <div class="mode-switch">
+                        <button class="mode-btn active" data-mode="assemble">
+                            Assemble
+                        </button>
+
+                        <button class="mode-btn" data-mode="disassemble">
+                            Disassemble
+                        </button>
+                    </div>
+
+                </section>
+
+
+                <!-- STEPS -->
+                <section class="panel steps-panel">
+
+                    <div class="panel-header">
+                        <h3>Procedure</h3>
+                        <p id="procedureDescription">
+                            Follow each step in order.
+                        </p>
+                    </div>
+
+                    <div class="steps">
+
+                        <button class="step active" data-step="1">
+                            <div class="step-number">1</div>
+
+                            <div class="step-info">
+                                <strong>Prepare workspace</strong>
+                                <span>Check tools and components</span>
+                            </div>
+                        </button>
+
+                        <button class="step" data-step="2">
+                            <div class="step-number">2</div>
+
+                            <div class="step-info">
+                                <strong>Install CPU</strong>
+                                <span>Position and secure processor</span>
+                            </div>
+                        </button>
+
+                        <button class="step" data-step="3">
+                            <div class="step-number">3</div>
+
+                            <div class="step-info">
+                                <strong>Install RAM</strong>
+                                <span>Align and lock memory</span>
+                            </div>
+                        </button>
+
+                        <button class="step" data-step="4">
+                            <div class="step-number">4</div>
+
+                            <div class="step-info">
+                                <strong>Install storage</strong>
+                                <span>Secure storage device</span>
+                            </div>
+                        </button>
+
+                        <button class="step" data-step="5">
+                            <div class="step-number">5</div>
+
+                            <div class="step-info">
+                                <strong>Verify assembly</strong>
+                                <span>Check all connections</span>
+                            </div>
+                        </button>
+
+                    </div>
+
+                </section>
+
+            </aside>
+
+
+            <!-- WORKSPACE -->
+            <section class="workspace">
+
+                <div class="workspace-top">
+
+                    <div>
+                        <div class="eyebrow">
+                            COC 1 / Computer Systems
+                        </div>
+
+                        <h1 class="workspace-title">
+                            Assemble & Disassemble
+                        </h1>
+
+                        <p class="workspace-description">
+                            Perform the procedure in the correct sequence.
+                            Select a component and complete the required action.
+                        </p>
+                    </div>
+
+                    <div class="progress">
+
+                        <div class="progress-label">
+                            <span>Progress</span>
+                            <span id="progressText">1 / 5</span>
+                        </div>
+
+                        <div class="progress-track">
+                            <div class="progress-fill" id="progressFill"></div>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <!-- SIMULATOR -->
+                <div class="simulator">
+
+                    <div class="simulator-bar">
+
+                        <div class="simulator-status">
+                            <div class="status-dot"></div>
+                            Simulation ready
+                        </div>
+
+                        <div class="simulator-tip">
+                            Select the highlighted component
+                        </div>
+
+                    </div>
+
+
+                    <!-- WORK AREA -->
+                    <div class="work-area">
+
+                        <div class="pc-component">
+
+                            <div class="component-label">
+                                SYSTEM UNIT / WORKSPACE
+                            </div>
+
+                            <div class="motherboard">
+
+                                <div class="board-title">
+                                    MAINBOARD
+                                </div>
+
+                                <div class="board-lines">
+
+                                    <div class="board-chip"></div>
+                                    <div class="board-chip"></div>
+                                    <div class="board-chip"></div>
+
+                                    <div class="board-chip"></div>
+                                    <div class="board-chip"></div>
+                                    <div class="board-chip"></div>
+
+                                </div>
+
+                                <div class="ram-slot"></div>
+                                <div class="ram-slot small"></div>
+
+                            </div>
+
+
+                            <div class="component-part cpu selected" data-component="cpu">
+                                CPU
+                            </div>
+
+                            <div class="component-part ram" data-component="ram"></div>
+
+                            <div class="component-part storage" data-component="storage">
+                                SSD
+                            </div>
+
+                        </div>
+
+                    </div>
+
+
+                    <!-- FEEDBACK -->
+                    <div class="feedback" id="feedback">
+                        Correct. Continue to the next procedure.
+                    </div>
+
+
+                    <!-- ACTION BAR -->
+                    <div class="action-bar">
+
+                        <div class="instruction">
+
+                            <div class="instruction-icon">
+                                ⌁
+                            </div>
+
+                            <div>
+                                <strong id="instructionTitle">
+                                    Prepare the workspace
+                                </strong>
+
+                                <span id="instructionText">
+                                    Make sure the workspace is clear before starting.
+                                </span>
+                            </div>
+
+                        </div>
+
+
+                        <div class="actions">
+
+                            <button class="btn" id="resetBtn">
+                                Reset
+                            </button>
+
+                            <button class="btn primary" id="actionBtn">
+                                Complete Step
+                            </button>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </section>
+
+        </main>
+
+    </div>
+
+
+    <script>
+
+        const steps = [
+            {
+                title: "Prepare the workspace",
+                text: "Make sure the workspace is clear before starting."
+            },
+            {
+                title: "Install the CPU",
+                text: "Select the processor and place it correctly into the socket."
+            },
+            {
+                title: "Install the RAM",
+                text: "Align the memory module with the slot and secure it."
+            },
+            {
+                title: "Install the storage",
+                text: "Position the storage device and secure it properly."
+            },
+            {
+                title: "Verify the assembly",
+                text: "Check that all components are installed correctly."
+            }
+        ];
+
+        let currentStep = 1;
+        let mode = "assemble";
+
+        const stepButtons =
+            document.querySelectorAll(".step");
+
+        const modeButtons =
+            document.querySelectorAll(".mode-btn");
+
+        const progressText =
+            document.getElementById("progressText");
+
+        const progressFill =
+            document.getElementById("progressFill");
+
+        const instructionTitle =
+            document.getElementById("instructionTitle");
+
+        const instructionText =
+            document.getElementById("instructionText");
+
+        const actionBtn =
+            document.getElementById("actionBtn");
+
+        const resetBtn =
+            document.getElementById("resetBtn");
+
+        const feedback =
+            document.getElementById("feedback");
+
+
+        function updateUI() {
+
+            progressText.textContent =
+                `${currentStep} / ${steps.length}`;
+
+            progressFill.style.width =
+                `${(currentStep / steps.length) * 100}%`;
+
+            instructionTitle.textContent =
+                steps[currentStep - 1].title;
+
+            instructionText.textContent =
+                steps[currentStep - 1].text;
+
+            stepButtons.forEach((button, index) => {
+
+                const stepNumber = index + 1;
+
+                button.classList.toggle(
+                    "active",
+                    stepNumber === currentStep
+                );
+
+                button.classList.toggle(
+                    "completed",
+                    stepNumber < currentStep
+                );
+
+            });
+
+            feedback.classList.remove("show");
+
+            if (currentStep === steps.length) {
+                actionBtn.textContent = "Finish";
+            } else {
+                actionBtn.textContent = "Complete Step";
+            }
+        }
+
+
+        stepButtons.forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                const selectedStep =
+                    Number(button.dataset.step);
+
+                if (selectedStep <= currentStep) {
+                    currentStep = selectedStep;
+                    updateUI();
+                }
+
+            });
+
+        });
+
+
+        modeButtons.forEach(button => {
+
+            button.addEventListener("click", () => {
+
+                modeButtons.forEach(btn =>
+                    btn.classList.remove("active")
+                );
+
+                button.classList.add("active");
+
+                mode = button.dataset.mode;
+
+                currentStep = 1;
+
+                updateUI();
+
+                if (mode === "disassemble") {
+
+                    instructionTitle.textContent =
+                        "Prepare for disassembly";
+
+                    instructionText.textContent =
+                        "Ensure the system is powered off before removing components.";
+
+                }
+
+            });
+
+        });
+
+
+        actionBtn.addEventListener("click", () => {
+
+            if (currentStep < steps.length) {
+
+                feedback.textContent =
+                    mode === "assemble"
+                        ? "Correct. Component installed successfully."
+                        : "Correct. Component removed successfully.";
+
+                feedback.classList.add("show");
+
+                currentStep++;
+
+                setTimeout(() => {
+                    updateUI();
+                }, 450);
+
+            } else {
+
+                feedback.textContent =
+                    "Procedure completed successfully.";
+
+                feedback.classList.add("show");
+
+                actionBtn.textContent = "Completed";
+                actionBtn.disabled = true;
+            }
+
+        });
+
+
+        resetBtn.addEventListener("click", () => {
+
+            currentStep = 1;
+
+            actionBtn.disabled = false;
+
+            updateUI();
+
+        });
+
+
+        updateUI();
+
+    </script>
+
+</body>
+
+</html>

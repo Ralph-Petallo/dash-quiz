@@ -2,36 +2,75 @@
   <header class="navbar">
     <div class="navbar-container">
 
+      <!-- LEFT -->
       <div class="left-section">
-        <button class="menu-trigger" @click="$emit('toggleSidebar')" v-if="isMobile" aria-label="Toggle Menu">
-          <i class="fa fa-bars-staggered"></i>
+
+        <button v-if="isMobile" class="menu-trigger" type="button" aria-label="Toggle Menu"
+          @click="$emit('toggleSidebar')">
+          <i class="fa-solid fa-bars-staggered"></i>
         </button>
-        <h2 class="page-title">{{ currentPageTitle }}</h2>
-      </div>
-      <div v-if="route.path !== '/admin/settings'">
-        <div class="user-section">
-          <div class="user-meta" v-if="showUserMeta">
-            <span class="user-name">{{ userFullName }}</span>
-            <span class="user-status">Online</span>
-          </div>
 
-
-          <router-link to="/admin/settings">
-            <div class="avatar-container">
-              <img :src="userAvatar" class="avatar-img" alt="avatar" />
-              <span class="pulse-indicator"></span>
-            </div>
-          </router-link>
+        <div class="title-wrapper">
+          <span class="title-eyebrow">CSS PREP · ADMIN</span>
+          <h2 class="page-title">
+            {{ currentPageTitle }}
+          </h2>
         </div>
+
       </div>
+
+
+      <!-- RIGHT -->
+      <div class="user-section">
+
+        <div v-if="showUserMeta" class="user-meta">
+          <span class="user-name">
+            {{ userFullName }}
+          </span>
+
+          <span class="user-status">
+            <span class="status-dot"></span>
+            Online
+          </span>
+        </div>
+
+
+        <router-link v-if="route.path !== '/admin/settings'" to="/admin/settings" class="avatar-link"
+          aria-label="Open settings">
+          <div class="avatar-container">
+
+            <img :src="userAvatar" class="avatar-img" alt="Administrator avatar" />
+
+            <span class="online-indicator"></span>
+
+          </div>
+        </router-link>
+
+
+        <div v-else class="avatar-container settings-avatar">
+          <img :src="userAvatar" class="avatar-img" alt="Administrator avatar" />
+
+          <span class="online-indicator"></span>
+        </div>
+
+      </div>
+
     </div>
   </header>
 </template>
 
+
 <script setup>
-import { ref, computed, onMounted, onUnmounted } from 'vue'
+import {
+  ref,
+  computed,
+  onMounted,
+  onUnmounted
+} from 'vue'
+
 import { useUser } from '@/composables/useUser'
 import { useRoute } from 'vue-router'
+
 
 defineProps({
   currentPageTitle: {
@@ -39,171 +78,404 @@ defineProps({
     default: 'Dashboard'
   }
 })
+
+
 defineEmits(['toggleSidebar'])
 
-const route = useRoute();
-const { fetchUser, userFullName, userAvatar } = useUser()
+
+const route = useRoute()
+
+const {
+  fetchUser,
+  userFullName,
+  userAvatar
+} = useUser()
+
+
 const windowWidth = ref(window.innerWidth)
-const updateWidth = () => { windowWidth.value = window.innerWidth }
+
+
+const updateWidth = () => {
+  windowWidth.value = window.innerWidth
+}
+
 
 onMounted(() => {
-  window.addEventListener('resize', updateWidth)
+  window.addEventListener(
+    'resize',
+    updateWidth
+  )
+
   fetchUser()
 })
-onUnmounted(() => window.removeEventListener('resize', updateWidth))
 
-const isMobile = computed(() => windowWidth.value <= 768)
-const showUserMeta = computed(() => windowWidth.value > 640)
+
+onUnmounted(() => {
+  window.removeEventListener(
+    'resize',
+    updateWidth
+  )
+})
+
+
+const isMobile = computed(
+  () => windowWidth.value <= 768
+)
+
+
+const showUserMeta = computed(
+  () => windowWidth.value > 640
+)
 </script>
 
+
 <style scoped>
-/* ── BASE ── */
+/* =====================================================
+   NAVBAR
+===================================================== */
+
 .navbar {
   position: sticky;
   top: 0;
-  z-index: 99;
-  height: 64px;
-  background: rgba(255, 255, 255, 0.97);
-  backdrop-filter: blur(20px);
-  border-bottom: 1px solid #e2e8f0;
+  width: 100%;
+  height: 62px;
+  z-index: 1;
+
   display: flex;
   align-items: center;
+
   flex-shrink: 0;
-  width: 100%;
+
+  background: rgba(255, 255, 255, 0.94);
+
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+
+  border-bottom: 1px solid #e8e8e8;
 }
+
+
+/* =====================================================
+   CONTAINER
+===================================================== */
 
 .navbar-container {
   width: 100%;
-  padding: 0 clamp(1rem, 2.5vw, 1.5rem);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
   height: 100%;
+
+  padding: 0 clamp(14px, 2.5vw, 24px);
+
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+
+  gap: 20px;
 }
 
-/* ── LEFT ── */
+
+/* =====================================================
+   LEFT
+===================================================== */
+
 .left-section {
+  min-width: 0;
+
   display: flex;
   align-items: center;
-  gap: clamp(10px, 2vw, 18px);
+
+  gap: 12px;
+}
+
+
+.title-wrapper {
   min-width: 0;
 }
 
-.page-title {
-  font-size: clamp(1rem, 2.5vw, 1.25rem);
+
+.title-eyebrow {
+  display: block;
+
+  margin-bottom: 2px;
+
+  color: #999;
+
+  font-size: 8px;
   font-weight: 700;
-  color: #1e1b4b;
+
+  letter-spacing: 0.13em;
+}
+
+
+.page-title {
   margin: 0;
+
+  color: #171717;
+
+  font-size: clamp(15px,
+      2vw,
+      18px);
+
+  font-weight: 700;
+
+  line-height: 1.2;
+
+  letter-spacing: -0.015em;
+
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
 }
 
+
+/* =====================================================
+   MOBILE MENU
+===================================================== */
+
 .menu-trigger {
+  width: 36px;
+  height: 36px;
+
   flex-shrink: 0;
-  width: 42px;
-  height: 42px;
-  background: #f1f5f9;
-  border: none;
-  border-radius: 10px;
-  color: #1e293b;
-  cursor: pointer;
-  font-size: 1rem;
+
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: background 0.2s, color 0.2s, transform 0.2s;
+
+  background: #111;
+
+  border: 1px solid #111;
+  border-radius: 6px;
+
+  color: #fff;
+
+  cursor: pointer;
+
+  font-size: 13px;
+
+  transition:
+    background 0.15s ease,
+    transform 0.15s ease;
 }
+
 
 .menu-trigger:hover {
-  background: #e2e8f0;
-  color: #6366f1;
-  transform: scale(1.05);
+  background: #2c2c2c;
 }
 
-/* ── RIGHT ── */
+
+.menu-trigger:active {
+  transform: scale(0.96);
+}
+
+
+/* =====================================================
+   RIGHT / USER
+===================================================== */
+
 .user-section {
+  flex-shrink: 0;
+
   display: flex;
   align-items: center;
-  gap: 12px;
-  flex-shrink: 0;
+
+  gap: 11px;
 }
+
 
 .user-meta {
   display: flex;
   flex-direction: column;
+
   align-items: flex-end;
-  gap: 1px;
+
+  gap: 2px;
 }
+
 
 .user-name {
-  font-size: clamp(0.8rem, 2vw, 0.9rem);
-  font-weight: 600;
-  color: #1e293b;
-  white-space: nowrap;
+  max-width: 150px;
+
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 130px;
+  white-space: nowrap;
+
+  color: #222;
+
+  font-size: 11px;
+  font-weight: 700;
 }
 
+
 .user-status {
-  font-size: 0.7rem;
-  color: #10b981;
-  font-weight: 500;
+  display: flex;
+  align-items: center;
+
+  gap: 4px;
+
+  color: #888;
+
+  font-size: 9px;
+  font-weight: 600;
 }
+
+
+.status-dot {
+  width: 5px;
+  height: 5px;
+
+  flex-shrink: 0;
+
+  background: #222;
+
+  border-radius: 50%;
+}
+
+
+/* =====================================================
+   AVATAR
+===================================================== */
+
+.avatar-link {
+  display: block;
+
+  text-decoration: none;
+
+  color: inherit;
+}
+
 
 .avatar-container {
   position: relative;
+
+  width: 38px;
+  height: 38px;
+
   padding: 2px;
-  border: 2px solid #e2e8f0;
+
+  box-sizing: border-box;
+
+  background: #fff;
+
+  border: 1px solid #dedede;
   border-radius: 50%;
-  transition: border-color 0.3s, transform 0.3s;
+
   cursor: pointer;
+
+  transition:
+    border-color 0.15s ease,
+    transform 0.15s ease;
 }
 
-.avatar-container:hover {
-  border-color: #6366f1;
-  transform: scale(1.05);
+
+.avatar-link:hover .avatar-container {
+  border-color: #111;
+
+  transform: scale(1.04);
 }
+
+
+.settings-avatar {
+  cursor: default;
+}
+
 
 .avatar-img {
-  width: clamp(36px, 5vw, 42px);
-  height: clamp(36px, 5vw, 42px);
-  border-radius: 50%;
-  object-fit: cover;
+  width: 100%;
+  height: 100%;
+
   display: block;
-}
 
-.pulse-indicator {
-  position: absolute;
-  bottom: 1px;
-  right: 1px;
-  width: 10px;
-  height: 10px;
-  background: #10b981;
-  border: 2px solid white;
+  object-fit: cover;
+
   border-radius: 50%;
-  animation: pulse 2s infinite;
+
+  background: #f2f2f2;
 }
 
-@keyframes pulse {
-  0% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  }
 
-  70% {
-    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0);
-  }
+/* =====================================================
+   ONLINE INDICATOR
+===================================================== */
 
-  100% {
-    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
-  }
+.online-indicator {
+  position: absolute;
+
+  right: -1px;
+  bottom: 0;
+
+  width: 8px;
+  height: 8px;
+
+  background: #222;
+
+  border: 2px solid #fff;
+
+  border-radius: 50%;
 }
 
-/* ── SMALL MOBILE ── */
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+
+@media (max-width: 640px) {
+
+  .navbar {
+    height: 58px;
+  }
+
+  .title-eyebrow {
+    display: none;
+  }
+
+  .page-title {
+    font-size: 15px;
+  }
+
+  .avatar-container {
+    width: 36px;
+    height: 36px;
+  }
+
+}
+
+
 @media (max-width: 480px) {
+
   .navbar-container {
-    padding: 0 0.75rem;
+    padding: 0 12px;
   }
+
+  .left-section {
+    gap: 9px;
+  }
+
+  .menu-trigger {
+    width: 34px;
+    height: 34px;
+  }
+
+  .user-section {
+    gap: 7px;
+  }
+
+  .user-meta {
+    display: none;
+  }
+
+}
+
+
+/* =====================================================
+   REDUCED MOTION
+===================================================== */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .menu-trigger,
+  .avatar-container {
+    transition: none;
+  }
+
 }
 </style>

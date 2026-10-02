@@ -7,6 +7,7 @@ use Illuminate\Notifications\Notifiable;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Laravel\Sanctum\HasApiTokens;
 use App\Models\QuizRecord;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 
 class Dasher extends Authenticatable
 {
@@ -48,5 +49,12 @@ class Dasher extends Authenticatable
     public function quizRecords()
     {
         return $this->hasMany(QuizRecord::class, 'user_id');
+    }
+
+    protected function firstName(): Attribute
+    {
+        return Attribute::make(
+            get: fn(string $value) => ucfirst($value),
+        );
     }
 }

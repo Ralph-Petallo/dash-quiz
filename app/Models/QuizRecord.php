@@ -14,6 +14,26 @@ class QuizRecord extends Model
         'quiz_id',
         'score',
         'elapsed_time',
+
+        'correct_answers',
+        'total_questions',
+        'percentage',
+        'passing_score',
+        'status',
+        'attempt_count',
+        'quiz_type',
+        'category',
+        'completed_at',
+    ];
+
+    protected $casts = [
+        'score' => 'integer',
+        'correct_answers' => 'integer',
+        'total_questions' => 'integer',
+        'percentage' => 'decimal:2',
+        'passing_score' => 'decimal:2',
+        'attempt_count' => 'integer',
+        'completed_at' => 'datetime',
     ];
 
 
@@ -30,5 +50,10 @@ class QuizRecord extends Model
     public function attempts()
     {
         return $this->hasMany(QuizAttempt::class, 'quiz_record_id');
+    }
+
+    public function rj45Attempt()
+    {
+        return $this->hasOne(Rj45Attempt::class, 'quiz_record_id');
     }
 }
