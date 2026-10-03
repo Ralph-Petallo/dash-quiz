@@ -44,11 +44,19 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
 
     Route::controller(UserApiController::class)->group(function () {
         Route::get('/me', 'profile');
+
+        Route::get('/dashboard/overview', 'dashboardOverview');
         Route::get('/dashboard/leaderboard', 'leaderboard');
+
         Route::get('/quizzes', 'quizzes');
         Route::get('/records', 'records');
-        Route::get('/stats', 'stats');
-        Route::get('/test', fn() => response()->json(['ok' => true]));
+        Route::get('/records/{id}', 'record')->whereNumber('id');
+        Route::get('/quiz/assessment/preview/{id}', 'preview')->whereNumber('id');
+        Route::get('/stats', 'recordsStatistics');
+
+        Route::get('/test', fn() => response()->json([
+            'ok' => true,
+        ]));
     });
 
     Route::get('assessments-type/{id}', [AssessmentTypeController::class, 'getAssessmentTypes']);
@@ -57,7 +65,7 @@ Route::middleware(['auth:sanctum', 'active_user', 'throttle:api'])->group(functi
     Route::controller(QuizApiController::class)->group(function () {
         // Static before wildcard
         Route::get('/quiz/progress', 'getQuizProgress');
-        Route::get('/quiz/result/{id}', 'getRecordPreview');
+
         Route::get('/quiz/{quiz_id}', 'getQuiz');
         //preview the record attempts of rj45 assessment
         Route::get('/records/{record}/rj45', 'showRj45');

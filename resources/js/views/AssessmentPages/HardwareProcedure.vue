@@ -27,12 +27,7 @@
               <p>Your actions are recorded. Work as you would on the actual unit.</p>
             </div>
 
-            <button
-              type="button"
-              class="submit-button"
-              :disabled="!canSubmit"
-              @click="submitAttempt"
-            >
+            <button type="button" class="submit-button" :disabled="!canSubmit" @click="submitAttempt">
               {{ saving ? 'Submitting…' : submitted ? 'Submitted' : 'Submit Attempt' }}
             </button>
           </div>
@@ -43,15 +38,8 @@
           </div>
 
           <div class="svg-wrap">
-            <svg
-              ref="chassisSvg"
-              class="chassis-svg"
-              viewBox="0 0 1000 650"
-              xmlns="http://www.w3.org/2000/svg"
-              role="group"
-              aria-label="Interactive computer system unit chassis"
-              @click="handleChassisClick"
-            >
+            <svg ref="chassisSvg" class="chassis-svg" viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg"
+              role="group" aria-label="Interactive computer system unit chassis" @click="handleChassisClick">
               <defs>
                 <linearGradient id="caseMetal" x1="0" x2="1" y1="0" y2="1">
                   <stop offset="0" stop-color="#F7F7F7" />
@@ -94,36 +82,41 @@
 
               <!-- Chassis shell -->
               <rect x="50" y="35" width="900" height="565" rx="27" fill="#000" opacity=".08" />
-              <rect x="38" y="23" width="900" height="565" rx="27" fill="url(#darkMetal)" stroke="#111" stroke-width="4" />
-              <rect x="62" y="49" width="852" height="515" rx="18" fill="url(#caseMetal)" stroke="#777C7F" stroke-width="2" />
+              <rect x="38" y="23" width="900" height="565" rx="27" fill="url(#darkMetal)" stroke="#111"
+                stroke-width="4" />
+              <rect x="62" y="49" width="852" height="515" rx="18" fill="url(#caseMetal)" stroke="#777C7F"
+                stroke-width="2" />
               <rect x="85" y="73" width="800" height="467" rx="12" fill="#D6D8D9" stroke="#969A9D" stroke-width="1.5" />
               <rect x="95" y="84" width="35" height="438" rx="7" fill="url(#vent)" />
               <rect x="849" y="94" width="22" height="405" rx="7" fill="url(#vent)" />
 
               <!-- Bare standoffs remain when motherboard is removed -->
               <g fill="#8A8E91" stroke="#565A5D">
-                <circle cx="260" cy="150" r="7" /><circle cx="600" cy="150" r="7" />
-                <circle cx="260" cy="440" r="7" /><circle cx="600" cy="440" r="7" />
-                <circle cx="430" cy="150" r="7" /><circle cx="430" cy="440" r="7" />
+                <circle cx="260" cy="150" r="7" />
+                <circle cx="600" cy="150" r="7" />
+                <circle cx="260" cy="440" r="7" />
+                <circle cx="600" cy="440" r="7" />
+                <circle cx="430" cy="150" r="7" />
+                <circle cx="430" cy="440" r="7" />
                 <circle cx="600" cy="300" r="7" />
               </g>
 
               <!-- Motherboard -->
-              <g
-                v-if="isInstalled('motherboard')"
-                class="interactive-part"
-                :class="partMotionClass('motherboard')"
-                data-key="motherboard"
-                @pointerdown.stop="startSvgDrag('motherboard', $event)"
-                @click.stop="selectPart('motherboard')"
-              >
-                <rect x="215" y="120" width="430" height="355" rx="9" fill="url(#boardGreen)" stroke="#123827" stroke-width="3" />
-                <path d="M245 145 H590 M245 165 H470 M270 420 H605" stroke="#83A994" stroke-opacity=".35" stroke-width="3" />
+              <g v-if="isInstalled('motherboard')" class="interactive-part" :class="partMotionClass('motherboard')"
+                data-key="motherboard" @pointerdown.stop="startSvgDrag('motherboard', $event)"
+                @click.stop="selectPart('motherboard')">
+                <rect x="215" y="120" width="430" height="355" rx="9" fill="url(#boardGreen)" stroke="#123827"
+                  stroke-width="3" />
+                <path d="M245 145 H590 M245 165 H470 M270 420 H605" stroke="#83A994" stroke-opacity=".35"
+                  stroke-width="3" />
                 <path d="M315 120 V475 M480 120 V475" stroke="#9BC2A8" stroke-opacity=".15" />
                 <g fill="#B9C2BC" opacity=".85">
-                  <circle cx="237" cy="142" r="5" /><circle cx="620" cy="142" r="5" />
-                  <circle cx="237" cy="450" r="5" /><circle cx="620" cy="450" r="5" />
-                  <circle cx="425" cy="142" r="5" /><circle cx="425" cy="450" r="5" />
+                  <circle cx="237" cy="142" r="5" />
+                  <circle cx="620" cy="142" r="5" />
+                  <circle cx="237" cy="450" r="5" />
+                  <circle cx="620" cy="450" r="5" />
+                  <circle cx="425" cy="142" r="5" />
+                  <circle cx="425" cy="450" r="5" />
                   <circle cx="620" cy="300" r="5" />
                 </g>
                 <rect x="245" y="180" width="118" height="114" rx="8" fill="#244D38" stroke="#86A593" />
@@ -147,13 +140,8 @@
               </g>
 
               <!-- RAM chips -->
-              <g
-                v-if="isInstalled('ram')"
-                class="interactive-part"
-                :class="partMotionClass('ram')"
-                @pointerdown.stop="startSvgDrag('ram', $event)"
-                @click.stop="selectPart('ram')"
-              >
+              <g v-if="isInstalled('ram')" class="interactive-part" :class="partMotionClass('ram')"
+                @pointerdown.stop="startSvgDrag('ram', $event)" @click.stop="selectPart('ram')">
                 <rect x="521" y="162" width="8" height="148" rx="3" fill="#1B2331" stroke="#8492A2" />
                 <rect x="543" y="162" width="8" height="148" rx="3" fill="#1B2331" stroke="#8492A2" />
                 <g fill="#252B2F">
@@ -169,13 +157,8 @@
               </g>
 
               <!-- CPU cooler -->
-              <g
-                v-if="isInstalled('cpu_fan')"
-                class="interactive-part"
-                :class="partMotionClass('cpu_fan')"
-                @pointerdown.stop="startSvgDrag('cpu_fan', $event)"
-                @click.stop="selectPart('cpu_fan')"
-              >
+              <g v-if="isInstalled('cpu_fan')" class="interactive-part" :class="partMotionClass('cpu_fan')"
+                @pointerdown.stop="startSvgDrag('cpu_fan', $event)" @click.stop="selectPart('cpu_fan')">
                 <circle cx="304" cy="238" r="65" fill="#242728" stroke="#7A7F82" stroke-width="4" />
                 <circle cx="304" cy="238" r="50" fill="none" stroke="#515558" stroke-width="7" />
                 <g fill="#5F6467">
@@ -188,36 +171,26 @@
               </g>
 
               <!-- CPU fan screws -->
-              <g
-                v-if="isInstalled('cpu_fan_screws')"
-                class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('cpu_fan_screws', $event)"
-                @click.stop="selectPart('cpu_fan_screws')"
-              >
-                <circle cx="252" cy="186" r="8" /><circle cx="356" cy="186" r="8" />
-                <circle cx="252" cy="290" r="8" /><circle cx="356" cy="290" r="8" />
+              <g v-if="isInstalled('cpu_fan_screws')" class="interactive-part screw-group"
+                @pointerdown.stop="startSvgDrag('cpu_fan_screws', $event)" @click.stop="selectPart('cpu_fan_screws')">
+                <circle cx="252" cy="186" r="8" />
+                <circle cx="356" cy="186" r="8" />
+                <circle cx="252" cy="290" r="8" />
+                <circle cx="356" cy="290" r="8" />
               </g>
 
               <!-- CPU fan wire -->
-              <g
-                v-if="isInstalled('cpu_fan_wire')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('cpu_fan_wire', $event)"
-                @click.stop="selectPart('cpu_fan_wire')"
-              >
+              <g v-if="isInstalled('cpu_fan_wire')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('cpu_fan_wire', $event)" @click.stop="selectPart('cpu_fan_wire')">
                 <path d="M353 249 C402 245 416 212 454 211" fill="none" stroke="#202326" stroke-width="7" />
                 <path d="M353 249 C402 245 416 212 454 211" fill="none" stroke="#E6C94C" stroke-width="2" />
                 <rect x="448" y="202" width="20" height="17" rx="2" fill="#F2F2E8" stroke="#777" />
               </g>
 
               <!-- Expansion cards -->
-              <g
-                v-if="isInstalled('expansion_cards')"
-                class="interactive-part"
-                :class="partMotionClass('expansion_cards')"
-                @pointerdown.stop="startSvgDrag('expansion_cards', $event)"
-                @click.stop="selectPart('expansion_cards')"
-              >
+              <g v-if="isInstalled('expansion_cards')" class="interactive-part"
+                :class="partMotionClass('expansion_cards')" @pointerdown.stop="startSvgDrag('expansion_cards', $event)"
+                @click.stop="selectPart('expansion_cards')">
                 <rect x="245" y="345" width="330" height="62" rx="6" fill="#242729" stroke="#767B7E" stroke-width="2" />
                 <circle cx="310" cy="376" r="22" fill="#121415" stroke="#5E6366" stroke-width="4" />
                 <circle cx="425" cy="376" r="22" fill="#121415" stroke="#5E6366" stroke-width="4" />
@@ -226,46 +199,33 @@
               </g>
 
               <!-- Expansion card power -->
-              <g
-                v-if="isInstalled('gpu_power')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('gpu_power', $event)"
-                @click.stop="selectPart('gpu_power')"
-              >
+              <g v-if="isInstalled('gpu_power')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('gpu_power', $event)" @click.stop="selectPart('gpu_power')">
                 <path d="M550 352 C618 345 650 374 692 414" fill="none" stroke="#1F2223" stroke-width="9" />
                 <path d="M550 352 C618 345 650 374 692 414" fill="none" stroke="#D7BC44" stroke-width="2" />
               </g>
 
               <!-- Expansion slot covers -->
-              <g
-                v-if="isInstalled('expansion_covers')"
-                class="interactive-part"
+              <g v-if="isInstalled('expansion_covers')" class="interactive-part"
                 @pointerdown.stop="startSvgDrag('expansion_covers', $event)"
-                @click.stop="selectPart('expansion_covers')"
-              >
+                @click.stop="selectPart('expansion_covers')">
                 <rect x="139" y="352" width="76" height="13" rx="3" fill="#AEB1B3" stroke="#717577" />
                 <rect x="139" y="374" width="76" height="13" rx="3" fill="#AEB1B3" stroke="#717577" />
               </g>
 
               <!-- Expansion screws -->
-              <g
-                v-if="isInstalled('expansion_screws')"
-                class="interactive-part screw-group"
+              <g v-if="isInstalled('expansion_screws')" class="interactive-part screw-group"
                 @pointerdown.stop="startSvgDrag('expansion_screws', $event)"
-                @click.stop="selectPart('expansion_screws')"
-              >
-                <circle cx="206" cy="358" r="7" /><circle cx="206" cy="380" r="7" />
+                @click.stop="selectPart('expansion_screws')">
+                <circle cx="206" cy="358" r="7" />
+                <circle cx="206" cy="380" r="7" />
               </g>
 
               <!-- PSU -->
-              <g
-                v-if="isInstalled('psu')"
-                class="interactive-part"
-                :class="partMotionClass('psu')"
-                @pointerdown.stop="startSvgDrag('psu', $event)"
-                @click.stop="selectPart('psu')"
-              >
-                <rect x="105" y="430" width="250" height="100" rx="8" fill="url(#driveMetal)" stroke="#2B2E30" stroke-width="3" />
+              <g v-if="isInstalled('psu')" class="interactive-part" :class="partMotionClass('psu')"
+                @pointerdown.stop="startSvgDrag('psu', $event)" @click.stop="selectPart('psu')">
+                <rect x="105" y="430" width="250" height="100" rx="8" fill="url(#driveMetal)" stroke="#2B2E30"
+                  stroke-width="3" />
                 <circle cx="172" cy="480" r="35" fill="#161819" stroke="#6D7275" stroke-width="4" />
                 <circle cx="172" cy="480" r="12" fill="url(#fanHub)" />
                 <rect x="280" y="452" width="49" height="19" rx="3" fill="#17191A" />
@@ -274,48 +234,33 @@
               </g>
 
               <!-- PSU screws -->
-              <g
-                v-if="isInstalled('psu_screws')"
-                class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('psu_screws', $event)"
-                @click.stop="selectPart('psu_screws')"
-              >
-                <circle cx="112" cy="438" r="7" /><circle cx="347" cy="438" r="7" />
-                <circle cx="112" cy="521" r="7" /><circle cx="347" cy="521" r="7" />
+              <g v-if="isInstalled('psu_screws')" class="interactive-part screw-group"
+                @pointerdown.stop="startSvgDrag('psu_screws', $event)" @click.stop="selectPart('psu_screws')">
+                <circle cx="112" cy="438" r="7" />
+                <circle cx="347" cy="438" r="7" />
+                <circle cx="112" cy="521" r="7" />
+                <circle cx="347" cy="521" r="7" />
               </g>
 
               <!-- ATX power -->
-              <g
-                v-if="isInstalled('atx_24pin')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('atx_24pin', $event)"
-                @click.stop="selectPart('atx_24pin')"
-              >
+              <g v-if="isInstalled('atx_24pin')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('atx_24pin', $event)" @click.stop="selectPart('atx_24pin')">
                 <path d="M342 444 C430 490 590 418 615 235" fill="none" stroke="#1C1E20" stroke-width="15" />
                 <path d="M342 444 C430 490 590 418 615 235" fill="none" stroke="#D1B646" stroke-width="3" />
                 <rect x="600" y="212" width="29" height="48" rx="3" fill="#EEEDE2" stroke="#676B6E" />
               </g>
 
               <!-- CPU power -->
-              <g
-                v-if="isInstalled('cpu_power')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('cpu_power', $event)"
-                @click.stop="selectPart('cpu_power')"
-              >
+              <g v-if="isInstalled('cpu_power')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('cpu_power', $event)" @click.stop="selectPart('cpu_power')">
                 <path d="M324 443 C248 393 196 234 236 144" fill="none" stroke="#1B1D1F" stroke-width="11" />
                 <path d="M324 443 C248 393 196 234 236 144" fill="none" stroke="#B83434" stroke-width="2" />
                 <rect x="226" y="130" width="25" height="22" rx="3" fill="#EFEFE7" stroke="#666" />
               </g>
 
               <!-- Rear / large system fan -->
-              <g
-                v-if="isInstalled('system_fan')"
-                class="interactive-part"
-                :class="partMotionClass('system_fan')"
-                @pointerdown.stop="startSvgDrag('system_fan', $event)"
-                @click.stop="selectPart('system_fan')"
-              >
+              <g v-if="isInstalled('system_fan')" class="interactive-part" :class="partMotionClass('system_fan')"
+                @pointerdown.stop="startSvgDrag('system_fan', $event)" @click.stop="selectPart('system_fan')">
                 <circle cx="157" cy="195" r="58" fill="#202325" stroke="#656A6D" stroke-width="4" />
                 <circle cx="157" cy="195" r="45" fill="none" stroke="#414649" stroke-width="7" />
                 <g fill="#595E61">
@@ -328,23 +273,18 @@
               </g>
 
               <!-- Large fan screws -->
-              <g
-                v-if="isInstalled('system_fan_screws')"
-                class="interactive-part screw-group"
+              <g v-if="isInstalled('system_fan_screws')" class="interactive-part screw-group"
                 @pointerdown.stop="startSvgDrag('system_fan_screws', $event)"
-                @click.stop="selectPart('system_fan_screws')"
-              >
-                <circle cx="112" cy="150" r="7" /><circle cx="202" cy="150" r="7" />
-                <circle cx="112" cy="240" r="7" /><circle cx="202" cy="240" r="7" />
+                @click.stop="selectPart('system_fan_screws')">
+                <circle cx="112" cy="150" r="7" />
+                <circle cx="202" cy="150" r="7" />
+                <circle cx="112" cy="240" r="7" />
+                <circle cx="202" cy="240" r="7" />
               </g>
 
               <!-- Large fan wire -->
-              <g
-                v-if="isInstalled('system_fan_wire')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('system_fan_wire', $event)"
-                @click.stop="selectPart('system_fan_wire')"
-              >
+              <g v-if="isInstalled('system_fan_wire')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('system_fan_wire', $event)" @click.stop="selectPart('system_fan_wire')">
                 <path d="M205 210 C237 218 254 304 286 316" fill="none" stroke="#222426" stroke-width="7" />
                 <path d="M205 210 C237 218 254 304 286 316" fill="none" stroke="#BF3C3C" stroke-width="2" />
                 <rect x="279" y="307" width="20" height="17" rx="2" fill="#EEEEEA" stroke="#6A6A68" />
@@ -361,36 +301,23 @@
               </g>
 
               <!-- Optical drive -->
-              <g
-                v-if="isInstalled('optical_drive')"
-                class="interactive-part"
-                :class="partMotionClass('optical_drive')"
-                @pointerdown.stop="startSvgDrag('optical_drive', $event)"
-                @click.stop="selectPart('optical_drive')"
-              >
+              <g v-if="isInstalled('optical_drive')" class="interactive-part" :class="partMotionClass('optical_drive')"
+                @pointerdown.stop="startSvgDrag('optical_drive', $event)" @click.stop="selectPart('optical_drive')">
                 <rect x="702" y="144" width="132" height="61" rx="5" fill="url(#driveMetal)" stroke="#484B4D" />
                 <rect x="714" y="162" width="99" height="7" rx="3" fill="#252728" />
                 <circle cx="820" cy="188" r="3" fill="#C4C6C7" />
               </g>
 
               <!-- Optical screws -->
-              <g
-                v-if="isInstalled('optical_screws')"
-                class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('optical_screws', $event)"
-                @click.stop="selectPart('optical_screws')"
-              >
-                <circle cx="695" cy="157" r="7" /><circle cx="840" cy="157" r="7" />
+              <g v-if="isInstalled('optical_screws')" class="interactive-part screw-group"
+                @pointerdown.stop="startSvgDrag('optical_screws', $event)" @click.stop="selectPart('optical_screws')">
+                <circle cx="695" cy="157" r="7" />
+                <circle cx="840" cy="157" r="7" />
               </g>
 
               <!-- Card reader -->
-              <g
-                v-if="isInstalled('card_reader')"
-                class="interactive-part"
-                :class="partMotionClass('card_reader')"
-                @pointerdown.stop="startSvgDrag('card_reader', $event)"
-                @click.stop="selectPart('card_reader')"
-              >
+              <g v-if="isInstalled('card_reader')" class="interactive-part" :class="partMotionClass('card_reader')"
+                @pointerdown.stop="startSvgDrag('card_reader', $event)" @click.stop="selectPart('card_reader')">
                 <rect x="704" y="236" width="128" height="43" rx="5" fill="#303335" stroke="#656A6D" />
                 <rect x="718" y="249" width="44" height="7" rx="2" fill="#121415" />
                 <rect x="773" y="249" width="42" height="7" rx="2" fill="#121415" />
@@ -398,23 +325,16 @@
               </g>
 
               <!-- Card reader screws -->
-              <g
-                v-if="isInstalled('card_reader_screws')"
-                class="interactive-part screw-group"
+              <g v-if="isInstalled('card_reader_screws')" class="interactive-part screw-group"
                 @pointerdown.stop="startSvgDrag('card_reader_screws', $event)"
-                @click.stop="selectPart('card_reader_screws')"
-              >
-                <circle cx="696" cy="246" r="7" /><circle cx="840" cy="246" r="7" />
+                @click.stop="selectPart('card_reader_screws')">
+                <circle cx="696" cy="246" r="7" />
+                <circle cx="840" cy="246" r="7" />
               </g>
 
               <!-- HDD -->
-              <g
-                v-if="isInstalled('hdd')"
-                class="interactive-part"
-                :class="partMotionClass('hdd')"
-                @pointerdown.stop="startSvgDrag('hdd', $event)"
-                @click.stop="selectPart('hdd')"
-              >
+              <g v-if="isInstalled('hdd')" class="interactive-part" :class="partMotionClass('hdd')"
+                @pointerdown.stop="startSvgDrag('hdd', $event)" @click.stop="selectPart('hdd')">
                 <rect x="704" y="312" width="128" height="52" rx="5" fill="#45494B" stroke="#777C7F" />
                 <circle cx="743" cy="338" r="17" fill="#B5B9BB" stroke="#5D6265" />
                 <circle cx="743" cy="338" r="5" fill="#5D6265" />
@@ -422,45 +342,34 @@
               </g>
 
               <!-- HDD screws -->
-              <g
-                v-if="isInstalled('hdd_screws')"
-                class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('hdd_screws', $event)"
-                @click.stop="selectPart('hdd_screws')"
-              >
-                <circle cx="697" cy="319" r="7" /><circle cx="839" cy="319" r="7" />
-                <circle cx="697" cy="356" r="7" /><circle cx="839" cy="356" r="7" />
+              <g v-if="isInstalled('hdd_screws')" class="interactive-part screw-group"
+                @pointerdown.stop="startSvgDrag('hdd_screws', $event)" @click.stop="selectPart('hdd_screws')">
+                <circle cx="697" cy="319" r="7" />
+                <circle cx="839" cy="319" r="7" />
+                <circle cx="697" cy="356" r="7" />
+                <circle cx="839" cy="356" r="7" />
               </g>
 
               <!-- Portable HDD slot -->
-              <g
-                v-if="isInstalled('portable_hdd_slot')"
-                class="interactive-part"
+              <g v-if="isInstalled('portable_hdd_slot')" class="interactive-part"
                 @pointerdown.stop="startSvgDrag('portable_hdd_slot', $event)"
-                @click.stop="selectPart('portable_hdd_slot')"
-              >
+                @click.stop="selectPart('portable_hdd_slot')">
                 <rect x="712" y="394" width="112" height="34" rx="5" fill="#696E71" stroke="#404346" />
                 <rect x="729" y="401" width="78" height="19" rx="4" fill="#252729" />
               </g>
 
               <!-- Drive slot cover -->
-              <g
-                v-if="isInstalled('drive_slot_cover')"
-                class="interactive-part"
+              <g v-if="isInstalled('drive_slot_cover')" class="interactive-part"
                 @pointerdown.stop="startSvgDrag('drive_slot_cover', $event)"
-                @click.stop="selectPart('drive_slot_cover')"
-              >
+                @click.stop="selectPart('drive_slot_cover')">
                 <rect x="854" y="140" width="22" height="75" rx="3" fill="#2D3032" stroke="#777" />
                 <path d="M858 152 H872 M858 162 H872 M858 172 H872 M858 182 H872 M858 192 H872" stroke="#7E8285" />
               </g>
 
               <!-- Connectivity center -->
-              <g
-                v-if="isInstalled('connectivity_center')"
-                class="interactive-part"
+              <g v-if="isInstalled('connectivity_center')" class="interactive-part"
                 @pointerdown.stop="startSvgDrag('connectivity_center', $event)"
-                @click.stop="selectPart('connectivity_center')"
-              >
+                @click.stop="selectPart('connectivity_center')">
                 <rect x="852" y="235" width="27" height="105" rx="5" fill="#333638" stroke="#74797C" />
                 <rect x="858" y="248" width="15" height="10" rx="2" fill="#151718" />
                 <rect x="858" y="266" width="15" height="10" rx="2" fill="#151718" />
@@ -469,140 +378,107 @@
               </g>
 
               <!-- Connectivity center screws -->
-              <g
-                v-if="isInstalled('io_screws')"
-                class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('io_screws', $event)"
-                @click.stop="selectPart('io_screws')"
-              >
-                <circle cx="849" cy="244" r="6" /><circle cx="881" cy="331" r="6" />
+              <g v-if="isInstalled('io_screws')" class="interactive-part screw-group"
+                @pointerdown.stop="startSvgDrag('io_screws', $event)" @click.stop="selectPart('io_screws')">
+                <circle cx="849" cy="244" r="6" />
+                <circle cx="881" cy="331" r="6" />
               </g>
 
               <!-- LED plastic piece -->
-              <g
-                v-if="isInstalled('plastic_led_piece')"
-                class="interactive-part"
+              <g v-if="isInstalled('plastic_led_piece')" class="interactive-part"
                 @pointerdown.stop="startSvgDrag('plastic_led_piece', $event)"
-                @click.stop="selectPart('plastic_led_piece')"
-              >
-                <rect x="851" y="365" width="29" height="61" rx="7" fill="#D5D7D8" fill-opacity=".65" stroke="#8D9194" />
+                @click.stop="selectPart('plastic_led_piece')">
+                <rect x="851" y="365" width="29" height="61" rx="7" fill="#D5D7D8" fill-opacity=".65"
+                  stroke="#8D9194" />
                 <circle cx="865" cy="383" r="6" fill="#8F9396" />
                 <circle cx="865" cy="404" r="3" fill="#3A6B4C" />
               </g>
 
               <!-- Motherboard screws -->
-              <g
-                v-if="isInstalled('motherboard_screws')"
-                class="interactive-part screw-group"
+              <g v-if="isInstalled('motherboard_screws')" class="interactive-part screw-group"
                 @pointerdown.stop="startSvgDrag('motherboard_screws', $event)"
-                @click.stop="selectPart('motherboard_screws')"
-              >
-                <circle cx="237" cy="142" r="7" /><circle cx="620" cy="142" r="7" />
-                <circle cx="237" cy="450" r="7" /><circle cx="620" cy="450" r="7" />
-                <circle cx="425" cy="142" r="7" /><circle cx="425" cy="450" r="7" />
+                @click.stop="selectPart('motherboard_screws')">
+                <circle cx="237" cy="142" r="7" />
+                <circle cx="620" cy="142" r="7" />
+                <circle cx="237" cy="450" r="7" />
+                <circle cx="620" cy="450" r="7" />
+                <circle cx="425" cy="142" r="7" />
+                <circle cx="425" cy="450" r="7" />
                 <circle cx="620" cy="300" r="7" />
               </g>
 
               <!-- SATA cable -->
-              <g
-                v-if="isInstalled('sata_cable_hdd')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('sata_cable_hdd', $event)"
-                @click.stop="selectPart('sata_cable_hdd')"
-              >
+              <g v-if="isInstalled('sata_cable_hdd')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('sata_cable_hdd', $event)" @click.stop="selectPart('sata_cable_hdd')">
                 <path d="M694 346 C630 350 610 374 598 393" fill="none" stroke="#BE2F2F" stroke-width="8" />
                 <rect x="586" y="384" width="23" height="17" rx="2" fill="#161819" />
               </g>
 
               <!-- Portable HDD wires -->
-              <g
-                v-if="isInstalled('portable_hdd_wires')"
-                class="interactive-part cable-part"
+              <g v-if="isInstalled('portable_hdd_wires')" class="interactive-part cable-part"
                 @pointerdown.stop="startSvgDrag('portable_hdd_wires', $event)"
-                @click.stop="selectPart('portable_hdd_wires')"
-              >
+                @click.stop="selectPart('portable_hdd_wires')">
                 <path d="M710 411 C653 432 628 423 602 407" fill="none" stroke="#242729" stroke-width="8" />
                 <path d="M710 421 C664 449 640 449 610 431" fill="none" stroke="#D5B943" stroke-width="5" />
               </g>
 
               <!-- Optical ribbon -->
-              <g
-                v-if="isInstalled('optical_ribbon')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('optical_ribbon', $event)"
-                @click.stop="selectPart('optical_ribbon')"
-              >
+              <g v-if="isInstalled('optical_ribbon')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('optical_ribbon', $event)" @click.stop="selectPart('optical_ribbon')">
                 <path d="M702 184 C652 183 626 205 593 294" fill="none" stroke="#777B7D" stroke-width="18" />
                 <path d="M702 184 C652 183 626 205 593 294" fill="none" stroke="#AEB1B3" stroke-width="11" />
               </g>
 
               <!-- Card reader wire -->
-              <g
-                v-if="isInstalled('card_reader_wire')"
-                class="interactive-part cable-part"
+              <g v-if="isInstalled('card_reader_wire')" class="interactive-part cable-part"
                 @pointerdown.stop="startSvgDrag('card_reader_wire', $event)"
-                @click.stop="selectPart('card_reader_wire')"
-              >
+                @click.stop="selectPart('card_reader_wire')">
                 <path d="M703 257 C653 270 642 318 600 333" fill="none" stroke="#282A2C" stroke-width="7" />
                 <path d="M703 257 C653 270 642 318 600 333" fill="none" stroke="#4D74A6" stroke-width="2" />
               </g>
 
               <!-- Front panel wire -->
-              <g
-                v-if="isInstalled('front_panel_wire')"
-                class="interactive-part cable-part"
+              <g v-if="isInstalled('front_panel_wire')" class="interactive-part cable-part"
                 @pointerdown.stop="startSvgDrag('front_panel_wire', $event)"
-                @click.stop="selectPart('front_panel_wire')"
-              >
+                @click.stop="selectPart('front_panel_wire')">
                 <path d="M850 392 C730 456 662 452 605 432" fill="none" stroke="#222426" stroke-width="8" />
                 <path d="M850 392 C730 456 662 452 605 432" fill="none" stroke="#D7D7D1" stroke-width="2" />
               </g>
 
               <!-- Drive power -->
-              <g
-                v-if="isInstalled('drive_power')"
-                class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('drive_power', $event)"
-                @click.stop="selectPart('drive_power')"
-              >
+              <g v-if="isInstalled('drive_power')" class="interactive-part cable-part"
+                @pointerdown.stop="startSvgDrag('drive_power', $event)" @click.stop="selectPart('drive_power')">
                 <path d="M330 458 C515 533 664 503 707 357" fill="none" stroke="#202224" stroke-width="12" />
                 <path d="M330 458 C515 533 664 503 707 357" fill="none" stroke="#D0AF39" stroke-width="3" />
               </g>
 
               <!-- Side panel under its screws but above internals -->
-              <g
-                v-if="isInstalled('side_panel')"
-                class="interactive-part side-panel-part"
-                :class="partMotionClass('side_panel')"
-                @pointerdown.stop="startSvgDrag('side_panel', $event)"
-                @click.stop="selectPart('side_panel')"
-              >
-                <rect x="72" y="64" width="810" height="485" rx="16" fill="#D8DBDC" fill-opacity=".82" stroke="#8B9093" stroke-width="3" />
-                <rect x="124" y="112" width="695" height="379" rx="11" fill="#FFFFFF" fill-opacity=".09" stroke="#A9ADAF" />
+              <g v-if="isInstalled('side_panel')" class="interactive-part side-panel-part"
+                :class="partMotionClass('side_panel')" @pointerdown.stop="startSvgDrag('side_panel', $event)"
+                @click.stop="selectPart('side_panel')">
+                <rect x="72" y="64" width="810" height="485" rx="16" fill="#D8DBDC" fill-opacity=".82" stroke="#8B9093"
+                  stroke-width="3" />
+                <rect x="124" y="112" width="695" height="379" rx="11" fill="#FFFFFF" fill-opacity=".09"
+                  stroke="#A9ADAF" />
                 <path d="M102 92 H853 M102 523 H853" stroke="#F8F8F8" stroke-opacity=".55" stroke-width="3" />
-                <text x="478" y="302" text-anchor="middle" fill="#606467" font-size="17" font-weight="700" letter-spacing="3">SYSTEM UNIT SIDE PANEL</text>
+                <text x="478" y="302" text-anchor="middle" fill="#606467" font-size="17" font-weight="700"
+                  letter-spacing="3">SYSTEM UNIT SIDE PANEL</text>
               </g>
 
               <!-- Side panel screws -->
-              <g
-                v-if="isInstalled('side_panel_screws')"
-                class="interactive-part screw-group side-screw-group"
+              <g v-if="isInstalled('side_panel_screws')" class="interactive-part screw-group side-screw-group"
                 @pointerdown.stop="startSvgDrag('side_panel_screws', $event)"
-                @click.stop="selectPart('side_panel_screws')"
-              >
+                @click.stop="selectPart('side_panel_screws')">
                 <circle cx="857" cy="98" r="10" />
                 <circle cx="857" cy="513" r="10" />
               </g>
 
               <!-- AC cable outside chassis -->
-              <g
-                v-if="isInstalled('ac_power_cable')"
-                class="interactive-part cable-part"
-                :class="partMotionClass('ac_power_cable')"
-                @pointerdown.stop="startSvgDrag('ac_power_cable', $event)"
-                @click.stop="selectPart('ac_power_cable')"
-              >
-                <path d="M105 486 C45 498 26 544 61 605 C90 632 131 623 147 594" fill="none" stroke="#202224" stroke-width="15" stroke-linecap="round" />
+              <g v-if="isInstalled('ac_power_cable')" class="interactive-part cable-part"
+                :class="partMotionClass('ac_power_cable')" @pointerdown.stop="startSvgDrag('ac_power_cable', $event)"
+                @click.stop="selectPart('ac_power_cable')">
+                <path d="M105 486 C45 498 26 544 61 605 C90 632 131 623 147 594" fill="none" stroke="#202224"
+                  stroke-width="15" stroke-linecap="round" />
                 <rect x="84" y="475" width="28" height="24" rx="4" fill="#111314" stroke="#676B6E" />
                 <rect x="135" y="580" width="32" height="31" rx="5" fill="#1C1E20" stroke="#656A6D" />
                 <rect x="141" y="608" width="5" height="15" fill="#B9BBBC" />
@@ -613,23 +489,15 @@
         </section>
 
         <aside class="bench-column">
-          <section
-            ref="partsTrayRef"
-            class="tray-panel frost-panel"
+          <section ref="partsTrayRef" class="tray-panel frost-panel"
             :class="{ selected: selectedPart && itemType(selectedPart) !== 'cable' && itemType(selectedPart) !== 'fastener' }"
-            @click="handleTrayClick('parts_tray')"
-          >
+            @click="handleTrayClick('parts_tray')">
             <div class="tray-heading"><span>REMOVED HARDWARE</span><strong>{{ hardwareTray.length }}</strong></div>
             <div class="tray-list">
-              <button
-                v-for="item in hardwareTray"
-                :key="item.component_key"
-                type="button"
-                class="tray-item"
+              <button v-for="item in hardwareTray" :key="item.component_key" type="button" class="tray-item"
                 :class="{ chosen: selectedPart === item.component_key }"
                 @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)"
-              >
+                @click.stop="selectPart(item.component_key)">
                 <img v-if="item.image" :src="item.image" :alt="item.display_name" />
                 <span>{{ item.display_name }}</span><small v-if="item.quantity > 1">×{{ item.quantity }}</small>
               </button>
@@ -637,44 +505,26 @@
             </div>
           </section>
 
-          <section
-            ref="cableTrayRef"
-            class="tray-panel frost-panel"
-            @click="handleTrayClick('cable_tray')"
-          >
+          <section ref="cableTrayRef" class="tray-panel frost-panel" @click="handleTrayClick('cable_tray')">
             <div class="tray-heading"><span>DISCONNECTED CABLES</span><strong>{{ cableTray.length }}</strong></div>
             <div class="tray-list compact">
-              <button
-                v-for="item in cableTray"
-                :key="item.component_key"
-                type="button"
-                class="tray-item cable-card"
+              <button v-for="item in cableTray" :key="item.component_key" type="button" class="tray-item cable-card"
                 :class="{ chosen: selectedPart === item.component_key }"
                 @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)"
-              >
+                @click.stop="selectPart(item.component_key)">
                 <span>{{ item.display_name }}</span><small v-if="item.quantity > 1">×{{ item.quantity }}</small>
               </button>
               <p v-if="!cableTray.length" class="tray-empty">Empty</p>
             </div>
           </section>
 
-          <section
-            ref="screwTrayRef"
-            class="tray-panel frost-panel"
-            @click="handleTrayClick('screw_tray')"
-          >
+          <section ref="screwTrayRef" class="tray-panel frost-panel" @click="handleTrayClick('screw_tray')">
             <div class="tray-heading"><span>SCREWS / FASTENERS</span><strong>{{ screwQuantity }}</strong></div>
             <div class="tray-list compact">
-              <button
-                v-for="item in screwTray"
-                :key="item.component_key"
-                type="button"
-                class="tray-item screw-card"
+              <button v-for="item in screwTray" :key="item.component_key" type="button" class="tray-item screw-card"
                 :class="{ chosen: selectedPart === item.component_key }"
                 @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)"
-              >
+                @click.stop="selectPart(item.component_key)">
                 <span class="screw-icon">✣</span><span>{{ item.display_name }}</span><small>×{{ item.quantity }}</small>
               </button>
               <p v-if="!screwTray.length" class="tray-empty">Empty</p>
@@ -683,19 +533,16 @@
 
           <section class="attempt-note frost-panel">
             <strong>Assessment mode</strong>
-            <p>No procedure hints are shown. Incorrect actions are recorded and the unit remains unchanged until the action is valid.</p>
+            <p>No procedure hints are shown. Incorrect actions are recorded and the unit remains unchanged until the
+              action is valid.</p>
           </section>
         </aside>
       </main>
 
       <div v-else class="loading-card frost-panel">Loading practical assessment…</div>
 
-      <div
-        v-if="dragState"
-        class="drag-preview"
-        :style="{ left: `${dragState.x}px`, top: `${dragState.y}px` }"
-        aria-hidden="true"
-      >
+      <div v-if="dragState" class="drag-preview" :style="{ left: `${dragState.x}px`, top: `${dragState.y}px` }"
+        aria-hidden="true">
         <strong>{{ displayName(dragState.key) }}</strong>
         <small>{{ itemType(dragState.key) }}</small>
       </div>
@@ -938,7 +785,6 @@ async function load() {
     phase.value = started.data.phase || 'disassemble'
     completedActions.value = Number(started.data.completed_actions || 0)
     totalActions.value = Number(started.data.total_actions || totalActions.value)
-    mistakeCount.value = Number(started.data.mistake_count || 0)
 
     const history = Array.isArray(started.data.history) ? started.data.history : []
     actionCount.value = history.length
@@ -1169,7 +1015,7 @@ async function submitAttempt() {
 
     result.value = response.data
     submitted.value = true
-    mistakeCount.value = Number(response.data.mistake_count || mistakeCount.value)
+    mistakeCount.value = mistakeCount.value
     completedActions.value = Number(response.data.completed_actions || completedActions.value)
     emit('complete', response.data)
   } catch (error) {
@@ -1232,100 +1078,537 @@ onBeforeUnmount(() => {
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
-.hardware-page *, .hardware-page *::before, .hardware-page *::after { box-sizing: border-box; }
-button { font: inherit; }
-.page-shell { width: min(1500px, 100%); margin: auto; padding: 24px; }
-.frost-panel { border: 1px solid rgba(169,169,169,.38); background: rgba(255,255,255,.88); box-shadow: 0 16px 38px rgba(0,0,0,.055); backdrop-filter: blur(16px); }
-.page-header { display: flex; align-items: center; gap: 18px; margin-bottom: 18px; }
-.back-button { width: 43px; height: 43px; flex: 0 0 43px; border: 1px solid var(--light); border-radius: 11px; background: var(--white); cursor: pointer; }
-.heading-copy { min-width: 0; flex: 1; }
-.project-line { margin: 0 0 4px; display: flex; gap: 8px; color: var(--dim); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
-.heading-copy h1 { margin: 0; font-size: clamp(22px, 2.5vw, 31px); letter-spacing: -.04em; }
-.heading-copy > p:last-child { margin: 4px 0 0; color: var(--dim); font-size: 12px; }
-.performance-strip { display: grid; grid-template-columns: repeat(4, auto); gap: 9px; }
-.performance-strip > div { min-width: 84px; padding: 8px 10px; border: 1px solid var(--light); border-radius: 10px; background: rgba(255,255,255,.85); }
-.performance-strip small { display: block; margin-bottom: 2px; color: var(--silver); font-size: 7px; font-weight: 800; letter-spacing: .1em; }
-.performance-strip strong { font-size: 11px; }
-.lab-layout { display: grid; grid-template-columns: minmax(0, 1fr) 310px; gap: 14px; align-items: start; }
-.chassis-card { min-width: 0; padding: 18px; border-radius: 18px; }
-.lab-topline { display: flex; justify-content: space-between; gap: 20px; align-items: flex-start; margin-bottom: 13px; }
-.eyebrow { display: block; margin-bottom: 5px; color: var(--dim); font-size: 8px; font-weight: 800; letter-spacing: .12em; }
-.lab-topline h2 { margin: 0; font-size: 20px; }
-.lab-topline p { margin: 5px 0 0; color: var(--dim); font-size: 11px; }
-.submit-button { min-height: 39px; padding: 9px 14px; border: 1px solid var(--black); border-radius: 9px; background: var(--black); color: var(--white); font-weight: 700; font-size: 10px; cursor: pointer; }
-.submit-button:disabled { opacity: .38; cursor: not-allowed; }
-.warning-card { display: flex; flex-wrap: wrap; gap: 5px 10px; padding: 10px 12px; margin-bottom: 10px; border: 1px solid rgba(191,47,56,.38); border-radius: 10px; background: rgba(191,47,56,.05); color: #74232a; font-size: 10px; }
-.warning-card strong { color: var(--red); }
-.svg-wrap { overflow: hidden; border: 1px solid #d2d4d5; border-radius: 15px; background: linear-gradient(145deg,#fdfdfd,#e9ebec); }
-.chassis-svg { display: block; width: 100%; min-height: 520px; max-height: 720px; touch-action: none; user-select: none; }
-.interactive-part { cursor: grab; transition: opacity .22s ease, filter .18s ease, transform .22s ease; transform-box: fill-box; transform-origin: center; }
-.interactive-part:hover { filter: drop-shadow(0 0 8px rgba(0,0,0,.28)); }
-.interactive-part.selected { filter: drop-shadow(0 0 9px rgba(0,0,0,.4)); }
-.interactive-part:active { cursor: grabbing; }
-.interactive-part.moving-out { opacity: 0; transform: translate(110px, 55px) scale(.84); }
-.interactive-part.moving-in { animation: installPart .22s ease-out; }
-@keyframes installPart { from { opacity: .25; transform: translate(95px,55px) scale(.82); } to { opacity: 1; transform: none; } }
-.screw-group { fill: #8f9395; stroke: #46494b; stroke-width: 2; }
-.screw-group circle::after { content: ''; }
-.cable-part { cursor: grab; }
-.side-panel-part { cursor: grab; }
-.bench-column { display: grid; gap: 10px; }
-.tray-panel { min-height: 125px; padding: 12px; border-radius: 14px; cursor: default; }
-.tray-panel:hover { border-color: var(--silver); }
-.tray-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 10px; color: var(--dim); font-size: 8px; font-weight: 800; letter-spacing: .08em; }
-.tray-heading strong { min-width: 24px; height: 24px; display: grid; place-items: center; border: 1px solid var(--light); border-radius: 7px; color: var(--black); background: var(--white); }
-.tray-list { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 6px; }
-.tray-list.compact { grid-template-columns: 1fr; }
-.tray-item { min-width: 0; min-height: 58px; padding: 7px; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; border: 1px solid #e0e0e0; border-radius: 9px; background: #fafafa; color: #333; cursor: grab; text-align: center; font-size: 9px; }
-.tray-item:hover, .tray-item.chosen { border-color: var(--black); background: var(--white); }
-.tray-item img { width: 42px; height: 42px; object-fit: contain; pointer-events: none; }
-.tray-item small { color: var(--dim); }
-.cable-card, .screw-card { min-height: 43px; flex-direction: row; justify-content: flex-start; text-align: left; }
-.screw-icon { width: 20px; height: 20px; display: grid; place-items: center; border: 1px solid var(--light); border-radius: 50%; }
-.tray-empty { grid-column: 1/-1; margin: 18px 0; color: var(--silver); text-align: center; font-size: 10px; }
-.attempt-note { padding: 12px; border-radius: 14px; }
-.attempt-note strong { font-size: 10px; }
-.attempt-note p { margin: 5px 0 0; color: var(--dim); font-size: 9px; line-height: 1.55; }
-.drag-preview { position: fixed; z-index: 1000; width: 140px; transform: translate(-50%,-50%); pointer-events: none; padding: 9px 10px; border: 1px solid var(--silver); border-radius: 10px; background: rgba(255,255,255,.96); box-shadow: 0 13px 30px rgba(0,0,0,.16); }
-.drag-preview strong, .drag-preview small { display: block; }
-.drag-preview strong { font-size: 10px; }
-.drag-preview small { margin-top: 2px; color: var(--dim); font-size: 8px; text-transform: uppercase; }
-.loading-card { padding: 40px; border-radius: 18px; text-align: center; color: var(--dim); }
-.result-overlay { position: fixed; z-index: 1100; inset: 0; display: grid; place-items: center; padding: 20px; background: rgba(0,0,0,.35); backdrop-filter: blur(4px); }
-.result-card { width: min(420px,100%); padding: 27px; border-radius: 18px; text-align: center; }
-.result-card h2 { margin: 5px 0; }
-.result-score { display: block; margin: 10px 0; font-size: 42px; letter-spacing: -.06em; }
-.result-card p { color: var(--dim); font-size: 11px; }
-.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0,0,0,0); white-space: nowrap; }
+.hardware-page *,
+.hardware-page *::before,
+.hardware-page *::after {
+  box-sizing: border-box;
+}
+
+button {
+  font: inherit;
+}
+
+.page-shell {
+  width: min(1500px, 100%);
+  margin: auto;
+  padding: 24px;
+}
+
+.frost-panel {
+  border: 1px solid rgba(169, 169, 169, .38);
+  background: rgba(255, 255, 255, .88);
+  box-shadow: 0 16px 38px rgba(0, 0, 0, .055);
+  backdrop-filter: blur(16px);
+}
+
+.page-header {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  margin-bottom: 18px;
+}
+
+.back-button {
+  width: 43px;
+  height: 43px;
+  flex: 0 0 43px;
+  border: 1px solid var(--light);
+  border-radius: 11px;
+  background: var(--white);
+  cursor: pointer;
+}
+
+.heading-copy {
+  min-width: 0;
+  flex: 1;
+}
+
+.project-line {
+  margin: 0 0 4px;
+  display: flex;
+  gap: 8px;
+  color: var(--dim);
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: .08em;
+}
+
+.heading-copy h1 {
+  margin: 0;
+  font-size: clamp(22px, 2.5vw, 31px);
+  letter-spacing: -.04em;
+}
+
+.heading-copy>p:last-child {
+  margin: 4px 0 0;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.performance-strip {
+  display: grid;
+  grid-template-columns: repeat(4, auto);
+  gap: 9px;
+}
+
+.performance-strip>div {
+  min-width: 84px;
+  padding: 8px 10px;
+  border: 1px solid var(--light);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .85);
+}
+
+.performance-strip small {
+  display: block;
+  margin-bottom: 2px;
+  color: var(--silver);
+  font-size: 7px;
+  font-weight: 800;
+  letter-spacing: .1em;
+}
+
+.performance-strip strong {
+  font-size: 11px;
+}
+
+.lab-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 310px;
+  gap: 14px;
+  align-items: start;
+}
+
+.chassis-card {
+  min-width: 0;
+  padding: 18px;
+  border-radius: 18px;
+}
+
+.lab-topline {
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: flex-start;
+  margin-bottom: 13px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 5px;
+  color: var(--dim);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.lab-topline h2 {
+  margin: 0;
+  font-size: 20px;
+}
+
+.lab-topline p {
+  margin: 5px 0 0;
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.submit-button {
+  min-height: 39px;
+  padding: 9px 14px;
+  border: 1px solid var(--black);
+  border-radius: 9px;
+  background: var(--black);
+  color: var(--white);
+  font-weight: 700;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.submit-button:disabled {
+  opacity: .38;
+  cursor: not-allowed;
+}
+
+.warning-card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px 10px;
+  padding: 10px 12px;
+  margin-bottom: 10px;
+  border: 1px solid rgba(191, 47, 56, .38);
+  border-radius: 10px;
+  background: rgba(191, 47, 56, .05);
+  color: #74232a;
+  font-size: 10px;
+}
+
+.warning-card strong {
+  color: var(--red);
+}
+
+.svg-wrap {
+  overflow: hidden;
+  border: 1px solid #d2d4d5;
+  border-radius: 15px;
+  background: linear-gradient(145deg, #fdfdfd, #e9ebec);
+}
+
+.chassis-svg {
+  display: block;
+  width: 100%;
+  min-height: 520px;
+  max-height: 720px;
+  touch-action: none;
+  user-select: none;
+}
+
+.interactive-part {
+  cursor: grab;
+  transition: opacity .22s ease, filter .18s ease, transform .22s ease;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+.interactive-part:hover {
+  filter: drop-shadow(0 0 8px rgba(0, 0, 0, .28));
+}
+
+.interactive-part.selected {
+  filter: drop-shadow(0 0 9px rgba(0, 0, 0, .4));
+}
+
+.interactive-part:active {
+  cursor: grabbing;
+}
+
+.interactive-part.moving-out {
+  opacity: 0;
+  transform: translate(110px, 55px) scale(.84);
+}
+
+.interactive-part.moving-in {
+  animation: installPart .22s ease-out;
+}
+
+@keyframes installPart {
+  from {
+    opacity: .25;
+    transform: translate(95px, 55px) scale(.82);
+  }
+
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.screw-group {
+  fill: #8f9395;
+  stroke: #46494b;
+  stroke-width: 2;
+}
+
+.screw-group circle::after {
+  content: '';
+}
+
+.cable-part {
+  cursor: grab;
+}
+
+.side-panel-part {
+  cursor: grab;
+}
+
+.bench-column {
+  display: grid;
+  gap: 10px;
+}
+
+.tray-panel {
+  min-height: 125px;
+  padding: 12px;
+  border-radius: 14px;
+  cursor: default;
+}
+
+.tray-panel:hover {
+  border-color: var(--silver);
+}
+
+.tray-heading {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+  color: var(--dim);
+  font-size: 8px;
+  font-weight: 800;
+  letter-spacing: .08em;
+}
+
+.tray-heading strong {
+  min-width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--light);
+  border-radius: 7px;
+  color: var(--black);
+  background: var(--white);
+}
+
+.tray-list {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.tray-list.compact {
+  grid-template-columns: 1fr;
+}
+
+.tray-item {
+  min-width: 0;
+  min-height: 58px;
+  padding: 7px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border: 1px solid #e0e0e0;
+  border-radius: 9px;
+  background: #fafafa;
+  color: #333;
+  cursor: grab;
+  text-align: center;
+  font-size: 9px;
+}
+
+.tray-item:hover,
+.tray-item.chosen {
+  border-color: var(--black);
+  background: var(--white);
+}
+
+.tray-item img {
+  width: 42px;
+  height: 42px;
+  object-fit: contain;
+  pointer-events: none;
+}
+
+.tray-item small {
+  color: var(--dim);
+}
+
+.cable-card,
+.screw-card {
+  min-height: 43px;
+  flex-direction: row;
+  justify-content: flex-start;
+  text-align: left;
+}
+
+.screw-icon {
+  width: 20px;
+  height: 20px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--light);
+  border-radius: 50%;
+}
+
+.tray-empty {
+  grid-column: 1/-1;
+  margin: 18px 0;
+  color: var(--silver);
+  text-align: center;
+  font-size: 10px;
+}
+
+.attempt-note {
+  padding: 12px;
+  border-radius: 14px;
+}
+
+.attempt-note strong {
+  font-size: 10px;
+}
+
+.attempt-note p {
+  margin: 5px 0 0;
+  color: var(--dim);
+  font-size: 9px;
+  line-height: 1.55;
+}
+
+.drag-preview {
+  position: fixed;
+  z-index: 1000;
+  width: 140px;
+  transform: translate(-50%, -50%);
+  pointer-events: none;
+  padding: 9px 10px;
+  border: 1px solid var(--silver);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, .96);
+  box-shadow: 0 13px 30px rgba(0, 0, 0, .16);
+}
+
+.drag-preview strong,
+.drag-preview small {
+  display: block;
+}
+
+.drag-preview strong {
+  font-size: 10px;
+}
+
+.drag-preview small {
+  margin-top: 2px;
+  color: var(--dim);
+  font-size: 8px;
+  text-transform: uppercase;
+}
+
+.loading-card {
+  padding: 40px;
+  border-radius: 18px;
+  text-align: center;
+  color: var(--dim);
+}
+
+.result-overlay {
+  position: fixed;
+  z-index: 1100;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(4px);
+}
+
+.result-card {
+  width: min(420px, 100%);
+  padding: 27px;
+  border-radius: 18px;
+  text-align: center;
+}
+
+.result-card h2 {
+  margin: 5px 0;
+}
+
+.result-score {
+  display: block;
+  margin: 10px 0;
+  font-size: 42px;
+  letter-spacing: -.06em;
+}
+
+.result-card p {
+  color: var(--dim);
+  font-size: 11px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+}
 
 @media (max-width: 1120px) {
-  .lab-layout { grid-template-columns: 1fr; }
-  .bench-column { grid-template-columns: repeat(3,minmax(0,1fr)); }
-  .attempt-note { grid-column: 1/-1; }
-  .chassis-svg { min-height: 480px; }
+  .lab-layout {
+    grid-template-columns: 1fr;
+  }
+
+  .bench-column {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .attempt-note {
+    grid-column: 1/-1;
+  }
+
+  .chassis-svg {
+    min-height: 480px;
+  }
 }
 
 @media (max-width: 760px) {
-  .page-shell { padding: 12px; }
-  .page-header { align-items: flex-start; flex-wrap: wrap; }
-  .performance-strip { width: 100%; grid-template-columns: repeat(4,1fr); }
-  .performance-strip > div { min-width: 0; }
-  .lab-topline { flex-direction: column; }
-  .submit-button { width: 100%; }
-  .bench-column { grid-template-columns: 1fr; }
-  .attempt-note { grid-column: auto; }
-  .chassis-card { padding: 11px; }
-  .chassis-svg { min-height: auto; }
-  .tray-list { grid-template-columns: repeat(2,minmax(0,1fr)); }
+  .page-shell {
+    padding: 12px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .performance-strip {
+    width: 100%;
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .performance-strip>div {
+    min-width: 0;
+  }
+
+  .lab-topline {
+    flex-direction: column;
+  }
+
+  .submit-button {
+    width: 100%;
+  }
+
+  .bench-column {
+    grid-template-columns: 1fr;
+  }
+
+  .attempt-note {
+    grid-column: auto;
+  }
+
+  .chassis-card {
+    padding: 11px;
+  }
+
+  .chassis-svg {
+    min-height: auto;
+  }
+
+  .tray-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
 }
 
 @media (max-width: 440px) {
-  .performance-strip { grid-template-columns: repeat(2,1fr); }
-  .tray-list { grid-template-columns: 1fr; }
-  .heading-copy h1 { font-size: 20px; }
+  .performance-strip {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tray-list {
+    grid-template-columns: 1fr;
+  }
+
+  .heading-copy h1 {
+    font-size: 20px;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .interactive-part { transition: none; animation: none !important; }
+  .interactive-part {
+    transition: none;
+    animation: none !important;
+  }
 }
 </style>

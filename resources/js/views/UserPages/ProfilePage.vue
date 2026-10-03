@@ -71,7 +71,7 @@
             <i class="fas fa-clipboard-list"></i>
 
             <span>
-              Quizzes Taken
+              Assessments Taken
             </span>
           </div>
           <span class="detail-value">
@@ -690,11 +690,8 @@ onMounted(async () => {
 
   font-size: 0.68rem;
 
-  font-weight: 700;
-
   letter-spacing: 0.04em;
 
-  text-transform: uppercase;
 
   line-height: 1.3;
 }

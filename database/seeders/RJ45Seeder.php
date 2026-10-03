@@ -14,16 +14,7 @@ class RJ45Seeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            $quiz = Quiz::updateOrCreate(
-                ['title' => 'RJ-45 Cable Termination'],
-                [
-                    'description' => 'Arrange, insert, crimp, test, and submit an RJ-45 cable termination attempt.',
-                    'quiz_type' => 'rj45_hands_on',
-                    'coc_number' => 1,
-                    'difficulty' => 'Medium',
-                    'category' => 'Network Cabling',
-                ]
-            );
+            $quiz = Quiz::findOrFail(2);
 
             /*
              * AssessmentTypeController currently treats assessments.coc_id
@@ -46,7 +37,7 @@ class RJ45Seeder extends Seeder
                         'pins' => 8,
                     ]),
                     // Change only if your Vue router uses a different path.
-                    'path' => '/user/quizzes/rj45/' . $quiz->coc_number,
+                    'path' => '/rj45',
                     'available' => true,
                 ]
             );

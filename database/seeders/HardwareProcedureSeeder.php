@@ -30,10 +30,10 @@ class HardwareProcedureSeeder extends Seeder
                 'meta' => json_encode([
                     'mode' => 'free_assessment',
                     'hidden_procedure' => true,
-                    'disassembly_actions' => 37,
-                    'assembly_actions' => 37,
-                    'total_actions' => 74,
-                    'passing_score' => 75,
+                    'disassembly_actions' => 37, // 37 disassembly actions
+                    'assembly_actions' => 37, // 37 assembly actions
+                    'total_actions' => 74, // total actions = disassembly + assembly
+                    'passing_score' => 75, // 75% percent
                     'visual' => 'realistic_svg_system_unit',
                 ]),
                 'path' => "assemble",
