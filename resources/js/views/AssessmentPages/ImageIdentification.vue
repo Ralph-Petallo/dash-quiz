@@ -40,34 +40,6 @@
             </section>
             <!-- QUIZ -->
             <section v-if="items.length" class="quiz-layout">
-                <!-- ITEM NAVIGATION -->
-                <aside class="item-list">
-                    <div class="item-list-header">
-                        <span>Assessment Items</span>
-                        <small>{{ collectedAnswers.length }}/{{ items.length }}</small>
-                    </div>
-                    <button v-for="(item, index) in items" :key="item.id" type="button" class="item-row" :class="{
-                        selected: selectedItem?.id === item.id,
-                        complete: hasAnsweredQuestion(item.id)
-                    }" @click="selectItem(item)">
-                        <span class="item-number">
-                            {{ String(index + 1).padStart(2, '0') }}
-                        </span>
-                        <span class="item-text">
-                            <strong>
-                                {{ item.item_name }}
-                            </strong>
-                            <small>
-                                {{
-                                    hasAnsweredQuestion(item.id)
-                                        ? 'Answered'
-                                        : 'Not answered yet'
-                                }}
-                            </small>
-                        </span>
-                        <i v-if="hasAnsweredQuestion(item.id)" class="fas fa-check"></i>
-                    </button>
-                </aside>
                 <!-- DETAIL -->
                 <section class="detail">
                     <!-- IMAGE -->
@@ -675,8 +647,7 @@ onMounted(() => {
    ========================================================= */
 
 .quiz-layout {
-    display: grid;
-    grid-template-columns: 270px minmax(0, 1fr);
+    display: flex;
     gap: 20px;
 
     margin-top: 30px;
