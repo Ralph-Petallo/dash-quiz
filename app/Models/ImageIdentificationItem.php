@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Model;
 class ImageIdentificationItem extends Model
 {
     use HasFactory;
+    public $table = 'image_identification_items';
 
     protected $fillable = [
         'quiz_id',

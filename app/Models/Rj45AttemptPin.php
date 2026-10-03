@@ -9,6 +9,8 @@ class Rj45AttemptPin extends Model
 {
     use HasFactory;
 
+    public $table = 'rj45_attempt_pins';
+
     protected $fillable = [
         'rj45_attempt_id',
         'pin_number',

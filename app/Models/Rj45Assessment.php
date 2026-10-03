@@ -9,6 +9,8 @@ class Rj45Assessment extends Model
 {
     use HasFactory;
 
+    public $table = 'rj45_assessments';
+
     protected $fillable = [
         'quiz_id',
         'app_name',

@@ -9,6 +9,8 @@ class Rj45Pinout extends Model
 {
     use HasFactory;
 
+    public $table = 'rj45_pinouts';
+
     protected $fillable = [
         'rj45_assessment_id',
         'standard',

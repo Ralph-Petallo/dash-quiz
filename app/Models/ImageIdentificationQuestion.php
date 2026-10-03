@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 class ImageIdentificationQuestion extends Model
 {
     use HasFactory;
+    public $table = 'image_identification_questions';
 
     protected $fillable = [
         'quiz_id',

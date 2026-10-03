@@ -5,63 +5,59 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-class DragDropAttempt extends Model
+class Rj45Attempt extends Model
 {
     use HasFactory;
 
-    protected $table = 'drag_drop_attempts';
+    public $table = 'rj45_attempts';
 
     protected $fillable = [
-        'quiz_id',
-        'question_id',
-        'quiz_record_id',
-        'user_id',
-        'completed_steps',
-        'correct_steps',
-        'total_steps',
-        'mistake_count',
-        'percentage',
-        'passed',
-        'elapsed_time',
-        'completed_at',
-    ];
+    'rj45_assessment_id',
+    'quiz_record_id',
+    'quiz_id',
+    'user_id',
+    'standard',
+    'wiring',
+    'correct_pins',
+    'score_percent',
+    'passed',
+    'duration_ms',
+    'started_at',
+    'submitted_at',
+];
 
     protected $casts = [
-        'completed_steps' => 'integer',
-        'correct_steps' => 'integer',
-        'total_steps' => 'integer',
-        'mistake_count' => 'integer',
-        'percentage' => 'decimal:2',
+        'wiring' => 'array',
+        'correct_pins' => 'integer',
+        'score_percent' => 'decimal:2',
         'passed' => 'boolean',
-        'elapsed_time' => 'integer',
-        'completed_at' => 'datetime',
+        'duration_ms' => 'integer',
+        'started_at' => 'datetime',
+        'submitted_at' => 'datetime',
     ];
+
+    public function assessment()
+    {
+        return $this->belongsTo(Rj45Assessment::class, 'rj45_assessment_id');
+    }
 
     public function quiz()
     {
-        return $this->belongsTo(Quiz::class, 'quiz_id');
+        return $this->belongsTo(Quiz::class);
     }
 
-    public function question()
+    public function user()
     {
-        return $this->belongsTo(Question::class, 'question_id');
+        return $this->belongsTo(User::class);
+    }
+
+    public function pins()
+    {
+        return $this->hasMany(Rj45AttemptPin::class)->orderBy('pin_number');
     }
 
     public function record()
     {
         return $this->belongsTo(QuizRecord::class, 'quiz_record_id');
-    }
-
-    public function user()
-    {
-        return $this->belongsTo(Dasher::class, 'user_id');
-    }
-
-    public function steps()
-    {
-        return $this->hasMany(
-            DragDropAttemptStep::class,
-            'drag_drop_attempt_id'
-        )->orderBy('sequence_number');
     }
 }
