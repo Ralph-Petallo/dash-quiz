@@ -1,280 +1,185 @@
 <?php
 
-
-
 namespace App\Http\Controllers\Api;
 
-
-
 use App\Http\Controllers\Controller;
+use App\Models\Assessment;
 use App\Models\Dasher;
 use App\Models\Quiz;
 use App\Models\QuizRecord;
-use App\Models\Rj45Assessment;
-use App\Models\Assessment;
-use Illuminate\Http\Request;
-
+use App\Services\PerformanceService;
 use Illuminate\Http\JsonResponse;
-
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
-
-
 
 class UserApiController extends Controller
 {
+    private const PASSING_SCORE = 75.00;
 
+    private const LEADERBOARD_SCAN_LIMIT = 2000;
+
+    public function __construct(private PerformanceService $performance) {}
     /**
-
      * ────────────────────────────────────────────────────
 
      * USER PROFILE ENDPOINTS
 
      * ────────────────────────────────────────────────────
-
-     */
-
-
-
-    /**
-
-     * Get authenticated user profile with statistics
-
-     *
-
-     * @return JsonResponse
-
      */
 
     /**
-
      * Get authenticated user profile with statistics
-
-     *
-
-     * @return JsonResponse
-
      */
 
+    /**
+     * Get authenticated user profile with statistics
+     */
     public function profile(): JsonResponse
     {
+        // Same guard as the other API endpoints, so auth behaves the same everywhere.
+        $user = auth('sanctum')->user();
 
-        $user = Auth::guard('dasher')->user();
-
-
-
-        if (!$user) {
-
+        if (! $user) {
             return response()->json([
-
                 'status' => 'error',
-
-                'message' => 'Unauthenticated.'
-
+                'message' => 'Unauthenticated.',
             ], 401);
-
         }
 
-
-
+        // Tracking activity should never block the profile from loading.
         try {
-
-            // Update user activity
-
-            $user->update([
-
-                'active_status' => 1,
-
+            $user->forceFill([
+                'active_status' => true,
                 'last_activity' => now(),
-
+            ])->saveQuietly();
+        } catch (\Throwable $e) {
+            \Log::warning('Failed to update user activity', [
+                'user_id' => $user->id,
+                'error' => $e->getMessage(),
             ]);
-
-
-
-            if ($user->last_activity < now()->subMinutes(5)) {
-
-                $user->update(['last_activity' => now()]);
-
-            }
-
-
-
-        } catch (\Exception $e) {
-
-            \Log::error('Profile update failed', ['error' => $e->getMessage()]);
-
-
-
-            return response()->json([
-
-                'status' => 'error',
-
-                'message' => 'Failed to update user activity.'
-
-            ], 500);
-
         }
 
-
-
-        // Get statistics (consider caching if queries are expensive)
-
-        $userId = $user->id;
-
-        $quizzesTaken = QuizRecord::where('user_id', $userId)->count();
-
-        $averageScore = QuizRecord::where('user_id', $userId)->avg('percentage') ?? 0;
-
-        $totalAttempts = QuizRecord::where('user_id', $userId)->sum('attempt_count') ?? 0;
-
-
+        // Same summary used by Home, Records, and the leaderboard.
+        $summary = $this->performance->summary(userId: (int) $user->id);
 
         return response()->json([
-
             'status' => 'success',
-
             'results' => [
-
-                'id' => $user->id,
-
-                'first_name' => $user->first_name,
-
-                'last_name' => $user->last_name,
-
-                'full_name' => trim("{$user->first_name} {$user->last_name}"),
-
+                'id' => (int) $user->id,
                 'role' => $user->role,
-
+                'first_name' => $user->first_name,
+                'last_name' => $user->last_name,
+                'full_name' => trim("{$user->first_name} {$user->last_name}"),
                 'email' => $user->email,
-
                 'profile_photo' => $user->profile_photo ?? 'default.png',
-
                 'created_at' => $user->created_at?->format('F j, Y'),
-
-                'active_status' => $user->active_status,
+                'last_activity' => $user->last_activity?->toISOString(),
 
                 'statistics' => [
-
-                    'quizzes_taken' => $quizzesTaken,
-
-                    'average_score' => round($averageScore, 2),
-
-                    'total_attempts' => $totalAttempts,
-
-                ]
-
-            ]
-
+                    'total_attempts' => $summary['total_attempts'],
+                    'passed' => $summary['passed'],
+                ],
+            ],
         ]);
-
     }
 
-
-
     /**
-
      * ────────────────────────────────────────────────────
 
      * QUIZ ENDPOINTS
 
      * ────────────────────────────────────────────────────
-
      */
-
-
 
     /**
-
-     * Get list of available quizzes with metadata
-
-     *
-
-     * @return JsonResponse
-
+     * Get list of available assessments with metadata
      */
-
-    public function quizzes(): JsonResponse
+    public function coc(): JsonResponse
     {
-
-        $quizzes = Quiz::with('questions')
-
-            ->orderBy('title')
-
+        $cocs = Quiz::query()
+            ->where('quiz_type', 'coc')
+            ->with([
+                'assessments' => function ($query) {
+                    $query->orderByDesc('available')
+                        ->orderBy('id');
+                },
+            ])
+            ->withCount([
+                'assessments',
+                'assessments as available_assessments_count' => function ($query) {
+                    $query->where('available', true);
+                },
+            ])
+            ->orderBy('coc_number')
             ->get()
-
-            ->map(function ($quiz) {
-
+            ->map(function (Quiz $coc) {
                 return [
+                    'id' => (int) $coc->id,
+                    'title' => $coc->title,
+                    'description' => $coc->description,
+                    'quiz_type' => $coc->quiz_type,
+                    'coc_number' => (int) $coc->coc_number,
+                    'difficulty' => $coc->difficulty,
+                    'category' => $coc->category,
 
-                    'id' => $quiz->id,
+                    'assessment_count' => (int) $coc->assessments_count,
+                    'available_assessment_count' => (int) $coc->available_assessments_count,
 
-                    'title' => $quiz->title,
-
-                    'description' => $quiz->description,
-
-                    'total_questions' => $quiz->questions->count(),
-
-                    'quiz_type' => $quiz->quiz_type,
-
-                    'coc_number' => $quiz->coc_number,
-
-                    'difficulty' => $quiz->difficulty,
-
-                    'category' => $quiz->category,
-
-                    'passing_score' => $quiz->passing_score ?? 70,
-
+                    'assessments' => $coc->assessments
+                        ->map(function (Assessment $assessment) {
+                            return [
+                                'id' => (int) $assessment->id,
+                                'type' => $assessment->type,
+                                'title' => $assessment->title,
+                                'icon' => $assessment->icon,
+                                'description' => $assessment->description,
+                                'category' => $assessment->category,
+                                'difficulty' => $assessment->difficulty,
+                                'meta' => $assessment->meta ?? [],
+                                'path' => $assessment->path,
+                                'available' => (bool) $assessment->available,
+                            ];
+                        })
+                        ->values(),
                 ];
-
             })
-
             ->values();
 
-
-
         return response()->json([
-
             'status' => 'success',
-
-            'data' => $quizzes
-
+            'data' => $cocs,
+            'meta' => [
+                'qualification' => 'Computer Systems Servicing NC II',
+                'system' => 'CSS Prep',
+                'coc_count' => $cocs->count(),
+                'available_assessments' => $cocs->sum('available_assessment_count'),
+            ],
         ]);
-
     }
 
-
-
     /**
-
      * ────────────────────────────────────────────────────
 
      * RECORD ENDPOINTS - LISTING & RETRIEVAL
 
      * ────────────────────────────────────────────────────
-
      */
 
-
-
     /**
-
      * Get all quiz records for authenticated user
 
      *
 
      * @param Request request
-
-     * @return JsonResponse
-
      */
 
     // Get assessment history of the logged-in user
 
     public function records(Request $request): JsonResponse
     {
-        /** @var Dasher|null $user */
         $user = auth('sanctum')->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -286,7 +191,7 @@ class UserApiController extends Controller
 
         $query = QuizRecord::query()
             ->with([
-                'quiz',
+                'quiz.assessments',
                 'attempts.question.options',
                 'attempts.selectedOption',
             ])
@@ -300,16 +205,12 @@ class UserApiController extends Controller
             ->paginate($perPage, ['*'], 'page', $page);
 
         $rows = collect($paginator->items())
-            ->map(fn(QuizRecord $record) => $this->formatRecord($record, true))
+            ->map(fn (QuizRecord $record) => $this->formatRecord($record, true))
             ->values();
 
         return response()->json([
             'status' => 'success',
-
-            // New aligned response.
             'data' => $rows,
-
-            // Temporary compatibility for any old page still reading `results`.
             'results' => $rows,
 
             'pagination' => [
@@ -333,46 +234,23 @@ class UserApiController extends Controller
         ]);
     }
 
-
-
     /**
-
      * Get paginated records for user
-
-     *
-
-     * @param Request $request
-
-     * @return JsonResponse
-
      */
-
     public function recordsPaginated(Request $request): JsonResponse
     {
         // Backward-compatible alias. The main records() endpoint is now paginated.
         return $this->records($request);
     }
 
-
-
     /**
-
      * Get single record by ID
-
-     *
-
-     * @param int $id
-
-     * @return JsonResponse
-
      */
-
-    public function record(int $id): JsonResponse
+    public function preview(int $id): JsonResponse
     {
-        /** @var Dasher|null $user */
         $user = auth('sanctum')->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -389,7 +267,7 @@ class UserApiController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (!$record) {
+        if (! $record) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Record not found.',
@@ -402,52 +280,27 @@ class UserApiController extends Controller
         ]);
     }
 
-    public function preview(int $id): JsonResponse
-    {
-        // Backward-compatible alias for older frontend code.
-        return $this->record($id);
-    }
-
-
-
     /**
-
      * Get recent quiz records
-
-     *
-
-     * @param Request $request
-
-     * @return JsonResponse
-
      */
-
     public function recentRecords(Request $request): JsonResponse
     {
 
-        /** @var Dasher|null $user */
-
         $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
+        if (! $user) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
 
             ], 401);
 
         }
 
-
-
         $limit = $request->get('limit', 5);
-
-
 
         $records = QuizRecord::with([
 
@@ -455,7 +308,7 @@ class UserApiController extends Controller
 
             'attempts.question.options',
 
-            'attempts.selectedOption'
+            'attempts.selectedOption',
 
         ])
 
@@ -473,191 +326,36 @@ class UserApiController extends Controller
 
             });
 
-
-
         return response()->json([
 
             'status' => 'success',
 
-            'data' => $records
+            'data' => $records,
 
         ]);
 
     }
 
-
-
     /**
-
-     * ────────────────────────────────────────────────────
-
-     * RECORD ENDPOINTS - ANALYTICS & STATISTICS
-
-     * ────────────────────────────────────────────────────
-
-     */
-
-
-
-    /**
-
-     * Get comprehensive record statistics for user
-
-     *
-
-     * @return JsonResponse
-
-     */
-
-    public function recordsStatistics(): JsonResponse
-    {
-        /** @var Dasher|null $user */
-        $user = auth('sanctum')->user();
-
-        if (!$user) {
-            return response()->json([
-                'status' => 'error',
-                'message' => 'Unauthenticated.',
-            ], 401);
-        }
-
-        /*
-         * All supported assessments now write their official result to
-         * quiz_records. The assessments table is configuration metadata,
-         * so it must not be queried by user_id for performance history.
-         */
-        $records = QuizRecord::query()
-            ->with('quiz')
-            ->where('user_id', $user->id)
-            ->get();
-
-        $isPassed = function (QuizRecord $record): bool {
-            $percentage = (float) ($record->percentage ?? 0);
-            $passingScore = (float) ($record->passing_score ?? $record->quiz?->passing_score ?? 70);
-            $status = strtolower((string) ($record->status ?? ''));
-
-            if (str_contains($status, 'pass') || str_contains($status, 'complete')) {
-                return true;
-            }
-
-            if (str_contains($status, 'fail')) {
-                return false;
-            }
-
-            return $percentage >= $passingScore;
-        };
-
-        $total = $records->count();
-        $passed = $records->filter($isPassed)->count();
-        $failed = $total - $passed;
-        $average = (float) ($records->avg('percentage') ?? 0);
-        $best = (float) ($records->max('percentage') ?? 0);
-        $worst = (float) ($records->min('percentage') ?? 0);
-
-        $byCategory = $records
-            ->groupBy(fn(QuizRecord $record) => $record->category ?: $record->quiz?->category ?: 'Uncategorized')
-            ->map(function ($group) use ($isPassed) {
-                $groupTotal = $group->count();
-                $groupPassed = $group->filter($isPassed)->count();
-
-                return [
-                    'total' => $groupTotal,
-                    'average_score' => round((float) ($group->avg('percentage') ?? 0), 2),
-                    'passed' => $groupPassed,
-                    'failed' => $groupTotal - $groupPassed,
-                    'pass_rate' => $groupTotal > 0
-                        ? round(($groupPassed / $groupTotal) * 100, 2)
-                        : 0,
-                ];
-            });
-
-        $byType = $records
-            ->groupBy(fn(QuizRecord $record) => $record->quiz_type ?: $record->quiz?->quiz_type ?: 'assessment')
-            ->map(function ($group) use ($isPassed) {
-                $groupTotal = $group->count();
-                $groupPassed = $group->filter($isPassed)->count();
-
-                return [
-                    'total' => $groupTotal,
-                    'average_score' => round((float) ($group->avg('percentage') ?? 0), 2),
-                    'passed' => $groupPassed,
-                    'failed' => $groupTotal - $groupPassed,
-                    'pass_rate' => $groupTotal > 0
-                        ? round(($groupPassed / $groupTotal) * 100, 2)
-                        : 0,
-                ];
-            });
-
-        return response()->json([
-            'status' => 'success',
-            'data' => [
-                'user' => [
-                    'id' => (int) $user->id,
-                    'name' => trim("{$user->first_name} {$user->last_name}"),
-                ],
-                'overview' => [
-                    'total_assessments' => $total,
-                    'passed' => $passed,
-                    'failed' => $failed,
-                    'pass_rate' => $total > 0
-                        ? round(($passed / $total) * 100, 2)
-                        : 0,
-                ],
-                'quiz' => [
-                    'total' => $total,
-                    'passed' => $passed,
-                    'failed' => $failed,
-                    'pass_rate' => $total > 0
-                        ? round(($passed / $total) * 100, 2)
-                        : 0,
-                    'average' => round($average, 2),
-                    'best' => $best,
-                    'worst' => $worst,
-                    'by_category' => $byCategory,
-                    'by_type' => $byType,
-                ],
-            ],
-        ]);
-    }
-
-
-
-
-
-    /**
-
      * Get records filtered by category
-
-     *
-
-     * @param string $category
-
-     * @return JsonResponse
-
      */
-
     public function recordsByCategory(string $category): JsonResponse
     {
 
         /** @var Dasher|null $user */
-
         $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
+        if (! $user) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
 
             ], 401);
 
         }
-
-
 
         $records = QuizRecord::with([
 
@@ -665,7 +363,7 @@ class UserApiController extends Controller
 
             'attempts.question.options',
 
-            'attempts.selectedOption'
+            'attempts.selectedOption',
 
         ])
 
@@ -687,54 +385,37 @@ class UserApiController extends Controller
 
             });
 
-
-
         return response()->json([
 
             'status' => 'success',
 
             'category' => $category,
 
-            'data' => $records
+            'data' => $records,
 
         ]);
 
     }
 
-
-
     /**
-
      * Get records for a specific quiz (all attempts)
-
-     *
-
-     * @param int $quizId
-
-     * @return JsonResponse
-
      */
-
     public function recordsByQuiz(int $quizId): JsonResponse
     {
 
-        $user = auth('dasher')->user();
+        $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
+        if (! $user) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
 
             ], 401);
 
         }
-
-
 
         $records = QuizRecord::with([
 
@@ -742,7 +423,7 @@ class UserApiController extends Controller
 
             'attempts.question.options',
 
-            'attempts.selectedOption'
+            'attempts.selectedOption',
 
         ])
 
@@ -760,21 +441,17 @@ class UserApiController extends Controller
 
             });
 
-
-
         if ($records->isEmpty()) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'No records found for this quiz.'
+                'message' => 'No records found for this quiz.',
 
             ], 404);
 
         }
-
-
 
         return response()->json([
 
@@ -784,527 +461,214 @@ class UserApiController extends Controller
 
             'total_attempts' => $records->count(),
 
-            'data' => $records
+            'data' => $records,
 
         ]);
 
     }
 
-
-
     /**
-
      * Get comparison between attempts on same quiz
-
-     *
-
-     * @param int $quizId
-
-     * @return JsonResponse
-
      */
-
     public function quizAttemptComparison(int $quizId): JsonResponse
     {
-
-        /** @var Dasher|null $user */
-
         $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
-
+        if (! $user) {
             return response()->json([
-
                 'status' => 'error',
-
-                'message' => 'Unauthenticated.'
-
+                'message' => 'Unauthenticated.',
             ], 401);
-
         }
 
-
-
-        $records = QuizRecord::with(['quiz', 'attempts'])
-
+        // Attempts are summarised from quiz_records only, so no question rows are loaded.
+        $records = QuizRecord::with('quiz:id,title')
             ->where('user_id', $user->id)
-
             ->where('quiz_id', $quizId)
-
-            ->latest()
-
+            ->latest('id')
             ->get();
 
-
-
         if ($records->isEmpty()) {
-
             return response()->json([
-
                 'status' => 'error',
-
-                'message' => 'No attempts found for this quiz.'
-
+                'message' => 'No attempts found for this quiz.',
             ], 404);
-
         }
 
-
-
-        $comparison = $records->map(function ($record, $index) {
+        $comparison = $records->values()->map(function (QuizRecord $record, int $index) {
+            $date = $record->completed_at ?? $record->created_at;
 
             return [
-
                 'attempt_number' => $index + 1,
-
-                'score' => $record->percentage ?? 0,
-
-                'correct_answers' => $record->correct_answers,
-
-                'total_questions' => $record->total_questions,
-
-                'status' => $record->percentage >= 70 ? 'Passed' : 'Failed',
-
-                'date' => $record->created_at->format('Y-m-d H:i:s'),
-
-                'elapsed_time' => $record->elapsed_time,
-
+                'quiz_type' => $record->quiz_type,
+                'score' => $this->performance->percentage($record),
+                'correct_answers' => (int) $record->correct_answers,
+                'total_questions' => (int) $record->total_questions,
+                'passed' => $this->performance->passed($record),
+                'status' => $this->performance->passed($record) ? 'Passed' : 'Failed',
+                'date' => $date?->format('Y-m-d H:i:s'),
+                'elapsed_time' => $record->elapsed_time !== null ? (int) $record->elapsed_time : null,
             ];
-
         });
 
+        // Oldest to newest, so "improvement" means later minus earlier.
+        $ordered = $comparison->reverse()->values();
 
-
-        $improvement = $comparison->count() > 1
-
-            ? $comparison->last()['score'] - $comparison->first()['score']
-
+        $improvement = $ordered->count() > 1
+            ? round($ordered->last()['score'] - $ordered->first()['score'], 2)
             : 0;
 
-
-
         return response()->json([
-
             'status' => 'success',
-
             'quiz_id' => $quizId,
-
-            'quiz_title' => $records->first()->quiz->title,
-
-            'total_attempts' => $comparison->count(),
-
+            'quiz_title' => $records->first()->quiz?->title ?? 'Assessment',
+            'total_attempts' => $ordered->count(),
             'improvement' => $improvement,
-
-            'attempts' => $comparison
-
+            'attempts' => $ordered,
         ]);
-
     }
 
-
-
     /**
-
      * ────────────────────────────────────────────────────
 
      * RECORD ENDPOINTS - LEADERSHIP & COMPARISON
 
      * ────────────────────────────────────────────────────
-
      */
-
-
 
     /**
-
      * Get top users based on quiz scores (Global Leaderboard)
-
-     *
-
-     * @param Request $request
-
-     * @return JsonResponse
-
      */
-
     public function leaderboard(Request $request): JsonResponse
     {
+        $validated = $request->validate([
+            'assessment_id' => ['nullable', 'integer', 'exists:assessments,id'],
+            'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+        ]);
 
-        $limit = max(1, min((int) $request->get('limit', 200), 500));
+        $limit = (int) ($validated['limit'] ?? 100);
 
-
-
-        $category = $request->filled('category')
-
-            ? trim((string) $request->get('category'))
-
-            : null;
-
-
-
-        $quizId = $request->filled('quiz_id')
-
-            ? (int) $request->get('quiz_id')
-
-            : null;
-
-
-
-        $query = QuizRecord::query()
-
-            ->with([
-
-                'user',
-
-                'quiz',
-
-            ])
-
-            ->whereHas('user')
-
-            ->whereHas('quiz')
-
-            ->whereNotNull('completed_at');
-
-
-
-        if ($quizId) {
-
-            $query->where('quiz_id', $quizId);
-
-        }
-
-
-
-        if ($category) {
-
-            $query->where(function ($q) use ($category) {
-
-                $q->where('category', $category)
-
-                    ->orWhereHas('quiz', function ($quizQuery) use ($category) {
-
-                        $quizQuery->where('category', $category);
-
-                    });
-
-            });
-
-        }
-
-
-
-        $records = $query
-
-            ->orderByDesc('percentage')
-
-            ->orderByDesc('score')
-
-            ->orderByRaw(
-
-                'CASE WHEN elapsed_time IS NULL THEN 1 ELSE 0 END ASC'
-
-            )
-
-            ->orderBy('elapsed_time')
-
-            ->orderByDesc('completed_at')
-
-            ->orderByDesc('id')
-
-            ->limit($limit)
-
+        // Assessments that have at least one completed result.
+        $assessments = Assessment::query()
+            ->whereExists(function ($query) {
+                $query->selectRaw('1')
+                    ->from('quiz_records')
+                    ->whereColumn('quiz_records.quiz_id', 'assessments.coc_id')
+                    ->whereColumn('quiz_records.quiz_type', 'assessments.type')
+                    ->whereNotNull('quiz_records.completed_at');
+            })
+            ->with('coc:id,title,coc_number')
+            ->orderBy('title')
             ->get();
 
-
-
-        $leaders = $records
-
-            ->map(function (QuizRecord $record) {
-
-                $user = $record->user;
-
-                $quiz = $record->quiz;
-
-
-
-                $fullName = trim(
-
-                    ((string) ($user?->first_name ?? ''))
-
-                    . ' '
-
-                    . ((string) ($user?->last_name ?? ''))
-
-                );
-
-
-
-                return [
-
-                    'id' => (int) $record->id,
-
-                    'record_id' => (int) $record->id,
-
-
-
-                    'user_id' => (int) $record->user_id,
-
-                    'name' => $fullName !== ''
-
-                        ? $fullName
-
-                        : 'Student',
-
-                    'profile_photo' => $user?->profile_photo,
-
-
-
-                    'quiz_id' => (int) $record->quiz_id,
-
-                    'quiz_title' => $quiz?->title ?? 'Assessment',
-
-                    'quiz_type' => $record->quiz_type
-
-                        ?: $quiz?->quiz_type,
-
-                    'category' => $record->category
-
-                        ?: $quiz?->category,
-
-                    'coc_number' => $quiz?->coc_number,
-
-
-
-                    'score' => (int) ($record->score ?? 0),
-
-                    'correct_answers' => (int) ($record->correct_answers ?? 0),
-
-                    'total_questions' => (int) ($record->total_questions ?? 0),
-
-                    'percentage' => (float) ($record->percentage ?? 0),
-
-                    'passing_score' => (float) ($record->passing_score ?? 75),
-
-                    'status' => $record->status,
-
-
-
-                    'attempt_count' => (int) ($record->attempt_count ?? 0),
-
-                    'elapsed_time' => $record->elapsed_time !== null
-
-                        ? (int) $record->elapsed_time
-
-                        : null,
-
-
-
-                    'completed_at' => optional(
-
-                        $record->completed_at
-
-                    )?->toISOString(),
-
-                ];
-
-            })
-
-            ->values();
-
-
-
-        return response()->json([
-
-            'status' => 'success',
-
-            'data' => $leaders,
-
-            'meta' => [
-
-                'returned' => $leaders->count(),
-
-                'limit' => $limit,
-
-                'filters' => [
-
-                    'category' => $category,
-
-                    'quiz_id' => $quizId,
-
-                ],
-
-            ],
-
-        ]);
-
-    }
-
-
-
-
-
-    /**
-
-     * Get user ranking in global leaderboard
-
-     *
-
-     * @return JsonResponse
-
-     */
-
-    public function userRank(): JsonResponse
-    {
-
-        /** @var Dasher|null $user */
-
-        $user = auth('sanctum')->user();
-
-
-
-        if (!$user) {
-
+        $filterOptions = [
+            'cocs' => $assessments->pluck('coc')->filter()->unique('id')->sortBy('coc_number')->values()
+                ->map(fn (Quiz $coc) => [
+                    'id' => (int) $coc->id,
+                    'label' => $coc->coc_number !== null ? "COC {$coc->coc_number} · {$coc->title}" : $coc->title,
+                ]),
+
+            'assessments' => $assessments->map(fn (Assessment $a) => [
+                'id' => (int) $a->id,
+                'coc_id' => (int) $a->coc_id,
+                'type' => $a->type,
+                'title' => $a->title,
+            ]),
+        ];
+
+        $selected = $assessments->firstWhere('id', $validated['assessment_id'] ?? null);
+
+        if (! $selected) {
             return response()->json([
-
-                'status' => 'error',
-
-                'message' => 'Unauthenticated.'
-
-            ], 401);
-
+                'status' => 'success',
+                'data' => [],
+                'meta' => [
+                    'returned' => 0,
+                    'limit' => $limit,
+                    'filters' => ['assessment_id' => null],
+                    'filter_options' => $filterOptions,
+                ],
+            ]);
         }
 
+        $currentUserId = (int) $request->user()->id;
+        $leaders = $this->performance
+            ->leaderboard((int) $selected->coc_id, $selected->type, $limit)
+            ->values()
+            ->map(function (QuizRecord $record, int $index) use ($currentUserId) {
+                $user = $record->user;
+                $name = trim(($user?->first_name ?? '').' '.($user?->last_name ?? ''));
+                $passed = $this->performance->passed($record);
 
-
-        $userAverageScore = QuizRecord::where('user_id', $user->id)
-
-            ->avg('percentage') ?? 0;
-
-
-
-        $rank = QuizRecord::selectRaw('user_id, AVG(percentage) as avg_score')
-
-            ->groupBy('user_id')
-
-            ->having('avg_score', '>', $userAverageScore)
-
-            ->count() + 1;
-
-
-
-        $totalUsers = QuizRecord::selectRaw('DISTINCT user_id')
-
-            ->count();
-
-
+                return [
+                    'rank' => $index + 1,
+                    'is_you' => (int) $record->user_id === $currentUserId,
+                    'name' => $name !== '' ? $name : 'Student',
+                    'profile_photo' => $user?->profile_photo,
+                    'score' => (int) ($record->score ?? 0),
+                    'percentage' => $this->performance->percentage($record),
+                    'passed' => $passed,
+                ];
+            });
 
         return response()->json([
-
             'status' => 'success',
-
-            'data' => [
-
-                'user_id' => $user->id,
-
-                'rank' => $rank,
-
-                'total_users' => $totalUsers,
-
-                'average_score' => round($userAverageScore, 2),
-
-                'percentile' => round(((($totalUsers - $rank) / $totalUsers) * 100), 2),
-
-            ]
-
+            'data' => $leaders,
+            'meta' => [
+                'returned' => $leaders->count(),
+                'limit' => $limit,
+                'filters' => ['assessment_id' => (int) $selected->id],
+                'filter_options' => $filterOptions,
+            ],
         ]);
-
     }
 
-
-
     /**
-
      * ────────────────────────────────────────────────────
-
      * RECORD ENDPOINTS - MANAGEMENT
-
      * ────────────────────────────────────────────────────
-
      */
-
-
-
     /**
-
      * Delete a quiz record
-
-     *
-
-     * @param int $recordId
-
-     * @return JsonResponse
-
      */
-
     public function deleteRecord(int $recordId): JsonResponse
     {
 
-        /** @var Dasher|null $user */
-
         $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
-
+        if (! $user) {
             return response()->json([
-
                 'status' => 'error',
-
-                'message' => 'Unauthenticated.'
-
+                'message' => 'Unauthenticated.',
             ], 401);
 
         }
 
-
-
         $record = QuizRecord::where('id', $recordId)
-
             ->where('user_id', $user->id)
-
             ->first();
 
-
-
-        if (!$record) {
+        if (! $record) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'Record not found.'
+                'message' => 'Record not found.',
 
             ], 404);
 
         }
 
-
-
         try {
 
             $record->delete();
-
-
 
             return response()->json([
 
                 'status' => 'success',
 
-                'message' => 'Record deleted successfully.'
+                'message' => 'Record deleted successfully.',
 
             ]);
 
@@ -1316,7 +680,7 @@ class UserApiController extends Controller
 
                 'message' => 'Failed to delete record.',
 
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
 
             ], 500);
 
@@ -1324,46 +688,27 @@ class UserApiController extends Controller
 
     }
 
-
-
     /**
-
      * Delete multiple records
-
-     *
-
-     * @param Request $request
-
-     * @return JsonResponse
-
      */
-
     public function deleteMultipleRecords(Request $request): JsonResponse
     {
 
-        /** @var Dasher|null $user */
-
         $user = auth('sanctum')->user();
 
-
-
-        if (!$user) {
+        if (! $user) {
 
             return response()->json([
 
                 'status' => 'error',
 
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
 
             ], 401);
 
         }
 
-
-
         $recordIds = $request->input('record_ids', []);
-
-
 
         if (empty($recordIds)) {
 
@@ -1371,13 +716,11 @@ class UserApiController extends Controller
 
                 'status' => 'error',
 
-                'message' => 'No record IDs provided.'
+                'message' => 'No record IDs provided.',
 
             ], 400);
 
         }
-
-
 
         try {
 
@@ -1387,15 +730,13 @@ class UserApiController extends Controller
 
                 ->delete();
 
-
-
             return response()->json([
 
                 'status' => 'success',
 
                 'message' => "{$deleted} record(s) deleted successfully.",
 
-                'deleted_count' => $deleted
+                'deleted_count' => $deleted,
 
             ]);
 
@@ -1407,7 +748,7 @@ class UserApiController extends Controller
 
                 'message' => 'Failed to delete records.',
 
-                'error' => $e->getMessage()
+                'error' => $e->getMessage(),
 
             ], 500);
 
@@ -1415,56 +756,34 @@ class UserApiController extends Controller
 
     }
 
-
-
     /**
-
      * ────────────────────────────────────────────────────
 
      * HELPER METHODS
 
      * ────────────────────────────────────────────────────
-
      */
-
-
 
     /**
-
      * Format a QuizRecord with calculated fields
-
-     *
-
-     * @param QuizRecord $record
-
-     * @param bool $includeDetails
-
-     * @return array
-
      */
-
     private function formatRecord(QuizRecord $record, bool $includeDetails = false): array
     {
+        // quizzes.id (the COC-level quiz this record belongs to)
         $quiz = $record->quiz;
+
+        // assessments.id, matched by type so each record gets its own assessment
+        $assessment = $quiz?->assessments?->firstWhere('type', $record->quiz_type);
 
         $correctAnswers = (int) ($record->correct_answers ?? $record->score ?? 0);
         $score = (int) ($record->score ?? $correctAnswers);
         $totalQuestions = (int) ($record->total_questions ?? 0);
 
-        $percentage = $record->percentage !== null
-            ? (float) $record->percentage
-            : ($totalQuestions > 0
-                ? round(($correctAnswers / $totalQuestions) * 100, 2)
-                : 0.0);
-
-        $passingScore = (float) (
-            $record->passing_score
-            ?? $quiz?->passing_score
-            ?? 70
-        );
-
-        $status = $record->status
-            ?: ($percentage >= $passingScore ? 'Passed' : 'Failed');
+        // Same rules as Home, the leaderboard, and the profile.
+        $percentage = $this->performance->percentage($record);
+        $passed = $this->performance->passed($record);
+        $passingScore = (float) ($record->passing_score ?? PerformanceService::DEFAULT_PASSING_SCORE);
+        $status = $passed ? 'Passed' : 'Failed';
 
         $questions = collect();
 
@@ -1473,19 +792,23 @@ class UserApiController extends Controller
                 ->map(function ($attempt) {
                     $question = $attempt->question;
 
-                    if (!$question) {
+                    if (! $question) {
                         return null;
                     }
 
-                    $correctOption = $question->options
-                        ? $question->options->firstWhere('is_correct', true)
-                        : null;
+                    $correctOption = $question->options?->firstWhere('is_correct', true);
 
                     return [
                         'question_id' => (int) $question->id,
-                        'question' => $question->question_text,
-                        'user_answer' => $attempt->selectedOption?->option_text ?? 'No answer',
-                        'correct_answer' => $correctOption?->option_text ?? 'N/A',
+                        'question' => $question->question_text
+                            ?? $question->text
+                            ?? 'Question unavailable',
+                        'user_answer' => $attempt->selectedOption?->option_text
+                            ?? $attempt->selectedOption?->text
+                            ?? 'No answer',
+                        'correct_answer' => $correctOption?->option_text
+                            ?? $correctOption?->text
+                            ?? 'N/A',
                         'is_correct' => (bool) $attempt->is_correct,
                     ];
                 })
@@ -1495,24 +818,27 @@ class UserApiController extends Controller
 
         return [
             'id' => (int) $record->id,
+            'record_id' => (int) $record->id,
             'user_id' => (int) $record->user_id,
-            'quiz_id' => (int) $record->quiz_id,
 
-            // COC is a quiz property. quiz_id is NOT the COC number.
+            // quizzes.id
+            'quiz_id' => $record->quiz_id !== null ? (int) $record->quiz_id : null,
+
+            // assessments.id
+            'assessment_id' => $assessment?->id !== null ? (int) $assessment->id : null,
+
+            // COC identifiers
+            'coc_id' => $quiz?->id !== null ? (int) $quiz->id : null,
             'coc_number' => $quiz?->coc_number,
 
-            // Temporary compatibility for old frontend references.
-            'coc_id' => $quiz?->coc_number,
+            // Prefer the assessment's own title and description. Both assessments
+            // under one COC share the quiz title, so the COC title would be ambiguous.
+            'quiz_title' => $assessment?->title ?? $quiz?->title ?? 'Untitled Assessment',
+            'quiz_description' => $assessment?->description ?? $quiz?->description,
 
-            'quiz_title' => $quiz?->title ?? 'Untitled Assessment',
-            'quiz_description' => $quiz?->description,
+            'quiz_type' => $record->quiz_type ?? $quiz?->quiz_type ?? $assessment?->type ?? 'unknown',
 
-            'quiz_type' => $record->quiz_type
-                ?: $quiz?->quiz_type
-                ?: 'assessment',
-
-            'category' => $record->category
-                ?: $quiz?->category,
+            'category' => $record->category ?? $quiz?->category ?? $assessment?->category,
 
             'score' => $score,
             'correct_answers' => $correctAnswers,
@@ -1520,21 +846,15 @@ class UserApiController extends Controller
             'percentage' => $percentage,
             'accuracy' => $percentage,
             'passing_score' => $passingScore,
+            'passed' => $passed,
             'status' => $status,
 
             'attempt_count' => max(1, (int) ($record->attempt_count ?? 1)),
-            'attempt' => max(1, (int) ($record->attempt_count ?? 1)),
-            'elapsed_time' => $record->elapsed_time !== null
-                ? (int) $record->elapsed_time
-                : null,
 
-            'review_type' => $questions->isNotEmpty()
-                ? 'questions'
-                : 'summary',
+            'elapsed_time' => $record->elapsed_time !== null ? (int) $record->elapsed_time : null,
 
-            'questions' => $includeDetails
-                ? $questions->all()
-                : [],
+            'review_type' => $questions->isNotEmpty() ? 'questions' : 'summary',
+            'questions' => $includeDetails ? $questions->all() : [],
 
             'created_at' => $record->created_at?->toISOString(),
             'completed_at' => ($record->completed_at ?? $record->created_at)?->toISOString(),
@@ -1543,22 +863,13 @@ class UserApiController extends Controller
         ];
     }
 
-
-
     /**
-
      * Apply common filters to record queries
 
      *
 
-     * @param mixed $query
-
-     * @param Request $request
-
-     * @return void
-
+     * @param  mixed  $query
      */
-
     private function applyRecordFilters(&$query, Request $request): void
     {
         if ($request->filled('search')) {
@@ -1587,7 +898,7 @@ class UserApiController extends Controller
                     ->orWhere(function ($fallback) use ($category) {
                         $fallback
                             ->whereNull('category')
-                            ->whereHas('quiz', fn($quizQuery) => $quizQuery->where('category', $category));
+                            ->whereHas('quiz', fn ($quizQuery) => $quizQuery->where('category', $category));
                     });
             });
         }
@@ -1601,7 +912,7 @@ class UserApiController extends Controller
                     ->orWhere(function ($fallback) use ($quizType) {
                         $fallback
                             ->whereNull('quiz_type')
-                            ->whereHas('quiz', fn($quizQuery) => $quizQuery->where('quiz_type', $quizType));
+                            ->whereHas('quiz', fn ($quizQuery) => $quizQuery->where('quiz_type', $quizType));
                     });
             });
         }
@@ -1638,8 +949,6 @@ class UserApiController extends Controller
         }
     }
 
-
-
     private function recordFilterOptions(int $userId): array
     {
         $records = QuizRecord::query()
@@ -1653,14 +962,14 @@ class UserApiController extends Controller
             ]);
 
         $types = $records
-            ->map(fn(QuizRecord $record) => $record->quiz_type ?: $record->quiz?->quiz_type)
+            ->map(fn (QuizRecord $record) => $record->quiz_type ?: $record->quiz?->quiz_type)
             ->filter()
             ->unique()
             ->sort()
             ->values();
 
         $categories = $records
-            ->map(fn(QuizRecord $record) => $record->category ?: $record->quiz?->category)
+            ->map(fn (QuizRecord $record) => $record->category ?: $record->quiz?->category)
             ->filter()
             ->unique()
             ->sort()
@@ -1678,162 +987,60 @@ class UserApiController extends Controller
 |--------------------------------------------------------------------------
 */
 
-   public function dashboardOverview(): JsonResponse
-{
-    /** @var Dasher|null $user */
-    $user = auth('sanctum')->user();
+    public function dashboardOverview(): JsonResponse
+    {
+        $user = auth('sanctum')->user();
 
-    if (! $user) {
+        if (! $user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        // Same summary the profile, admin, and leaderboard pages will use.
+        $summary = $this->performance->summary(userId: (int) $user->id);
+
+        $recentActivity = QuizRecord::query()
+            ->with('quiz:id,title,coc_number,quiz_type,category')
+            ->where('user_id', $user->id)
+            ->whereNotNull('completed_at')
+            ->orderByDesc('completed_at')
+            ->orderByDesc('id')
+            ->limit(5)
+            ->get()
+            ->map(function (QuizRecord $record) {
+                $passed = $this->performance->passed($record);
+
+                return [
+                    'id' => (int) $record->id,
+                    'quiz_id' => (int) $record->quiz_id,
+                    'quiz_title' => $record->quiz?->title ?? 'Assessment',
+                    'quiz_type' => $record->quiz_type ?: 'assessment',
+                    'category' => $record->category ?: $record->quiz?->category,
+                    'coc_number' => $record->quiz?->coc_number,
+                    'percentage' => $this->performance->percentage($record),
+                    'passing_score' => (float) (
+                        $record->passing_score
+                        ?? PerformanceService::DEFAULT_PASSING_SCORE
+                    ),
+                    'passed' => $passed,
+                    'status' => $passed ? 'Passed' : 'Failed',
+                    'elapsed_time' => $record->elapsed_time !== null
+                        ? (int) $record->elapsed_time
+                        : null,
+                    'attempt_count' => (int) ($record->attempt_count ?? 1),
+                    'completed_at' => $record->completed_at?->toISOString(),
+                ];
+            })
+            ->values();
+
         return response()->json([
-            'status' => 'error',
-            'message' => 'Unauthenticated.',
-        ], 401);
-    }
-
-    $records = QuizRecord::query()
-        ->with('quiz')
-        ->where('user_id', $user->id)
-        ->orderByDesc('completed_at')
-        ->orderByDesc('created_at')
-        ->orderByDesc('id')
-        ->get();
-
-    $percentageFor = static function (QuizRecord $record): float {
-        if ($record->percentage !== null) {
-            return max(0, min(100, (float) $record->percentage));
-        }
-
-        $correct = (int) (
-            $record->correct_answers
-            ?? $record->score
-            ?? 0
-        );
-
-        $total = (int) ($record->total_questions ?? 0);
-
-        if ($total <= 0) {
-            return 0.0;
-        }
-
-        return round(($correct / $total) * 100, 2);
-    };
-
-    $passingScoreFor = static function (QuizRecord $record): float {
-        return (float) (
-            $record->passing_score
-            ?? $record->quiz?->passing_score
-            ?? 70
-        );
-    };
-
-    $isPassed = static function (QuizRecord $record) use (
-        $percentageFor,
-        $passingScoreFor
-    ): bool {
-        $status = strtolower(trim((string) ($record->status ?? '')));
-
-        if (str_contains($status, 'pass')) {
-            return true;
-        }
-
-        if (
-            str_contains($status, 'fail') ||
-            str_contains($status, 'incomplete')
-        ) {
-            return false;
-        }
-
-        return $percentageFor($record) >= $passingScoreFor($record);
-    };
-
-    $percentages = $records->map(
-        fn (QuizRecord $record) => $percentageFor($record)
-    );
-
-    $totalAttempts = $records->count();
-
-    $averageScore = $percentages->isNotEmpty()
-        ? round((float) $percentages->avg(), 1)
-        : 0.0;
-
-    $bestScore = $percentages->isNotEmpty()
-        ? round((float) $percentages->max(), 1)
-        : 0.0;
-
-    $passedAttempts = $records->filter($isPassed)->count();
-
-    $recentActivity = $records
-        ->take(5)
-        ->map(function (QuizRecord $record) use (
-            $percentageFor,
-            $passingScoreFor,
-            $isPassed
-        ) {
-            $percentage = $percentageFor($record);
-            $passingScore = $passingScoreFor($record);
-            $status = trim((string) ($record->status ?? ''));
-
-            if ($status === '') {
-                $status = $isPassed($record)
-                    ? 'passed'
-                    : 'failed';
-            }
-
-            return [
-                'id' => (int) $record->id,
-                'quiz_id' => (int) $record->quiz_id,
-                'quiz_title' => $record->quiz?->title ?? 'Assessment',
-                'quiz_type' => $record->quiz_type
-                    ?: $record->quiz?->quiz_type
-                    ?: 'assessment',
-                'category' => $record->category
-                    ?: $record->quiz?->category,
-                'coc_number' => $record->quiz?->coc_number,
-                'score' => (int) (
-                    $record->score
-                    ?? $record->correct_answers
-                    ?? 0
-                ),
-                'correct_answers' => (int) (
-                    $record->correct_answers
-                    ?? $record->score
-                    ?? 0
-                ),
-                'total_questions' => (int) (
-                    $record->total_questions
-                    ?? 0
-                ),
-                'percentage' => $percentage,
-                'passing_score' => $passingScore,
-                'status' => $status,
-                'elapsed_time' => $record->elapsed_time !== null
-                    ? (int) $record->elapsed_time
-                    : null,
-                'attempt_count' => (int) (
-                    $record->attempt_count
-                    ?? 1
-                ),
-                'completed_at' => optional(
-                    $record->completed_at
-                    ?? $record->created_at
-                )?->toISOString(),
-            ];
-        })
-        ->values();
-
-    return response()->json([
-        'status' => 'success',
-        'data' => [
-            'summary' => [
-                'average_score' => $averageScore,
-                'best_score' => $bestScore,
-                'passed' => $passedAttempts,
-                'total_attempts' => $totalAttempts,
+            'status' => 'success',
+            'data' => [
+                'summary' => $summary,
+                'recent_activity' => $recentActivity,
             ],
-            'recent_activity' => $recentActivity,
-        ],
-    ]);
-}
-
-
+        ]);
+    }
 }

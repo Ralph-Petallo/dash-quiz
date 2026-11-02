@@ -1,714 +1,637 @@
 <template>
-  <div class="dashboard-wrapper">
-
+  <main class="dashboard-wrapper">
     <section class="admin-section">
-
-      <!-- HEADER -->
-      <div class="page-header">
-
-        <div class="page-heading">
-          <div class="title-row">
-            <div class="title-icon">
-              <i class="fa-solid fa-users"></i>
-            </div>
-
-            <div>
-              <h3 class="section-title">
-                Registered Dashers
-              </h3>
-
-              <p class="section-subtitle">
-                Manage student accounts and activity
-              </p>
-            </div>
-          </div>
+      <header class="page-header">
+        <div>
+          <p class="eyebrow">ADMINISTRATION</p>
+          <h1 class="section-title">Registered students</h1>
+          <p class="section-subtitle">
+            Track student assessment progress across all COCs. Progress is
+            based on each learner's best result per assessment.
+          </p>
         </div>
 
         <div class="header-tools">
-
-          <div class="user-count">
-            <span class="count-value">
-              {{ filteredUsers.length }}
-            </span>
-
-            <span class="count-label">
-              {{ filteredUsers.length === 1 ? 'User' : 'Users' }}
-            </span>
+          <div class="user-count" aria-live="polite">
+            <strong>{{ filteredUsers.length }}</strong>
+            <span>{{ filteredUsers.length === 1 ? 'student' : 'students' }}</span>
           </div>
 
-          <div class="search-wrapper">
-            <i class="fas fa-search"></i>
+          <label class="search-wrapper">
+            <i class="fa-solid fa-magnifying-glass" aria-hidden="true"></i>
+            <input v-model="searchQuery" type="search" class="search-input" placeholder="Search name, email, or ID"
+              aria-label="Search students" />
+          </label>
 
-            <input type="text" v-model="searchQuery" placeholder="Search users..." class="search-input" />
-          </div>
-
+          <button class="icon-button" type="button" aria-label="Refresh students" title="Refresh students"
+            :disabled="loading" @click="fetchUsers">
+            <i class="fa-solid fa-rotate" :class="{ spinning: loading }" aria-hidden="true"></i>
+          </button>
         </div>
+      </header>
 
-      </div>
+      <section class="overview-grid" aria-label="Student progress overview">
+        <article v-for="card in overviewCards" :key="card.label" class="overview-card">
+          <span class="overview-icon" :class="card.tone">
+            <i :class="card.icon" aria-hidden="true"></i>
+          </span>
+          <div>
+            <span class="overview-label">{{ card.label }}</span>
+            <strong>{{ card.value }}</strong>
+          </div>
+        </article>
+      </section>
 
-
-      <!-- SUCCESS / NOTIFICATION -->
       <transition name="fade">
-        <div v-if="successMessage" class="alert-success">
-          {{ successMessage }}
+        <div v-if="successMessage" class="inline-alert" role="status">
+          <i class="fa-solid fa-circle-check" aria-hidden="true"></i>
+          <span>{{ successMessage }}</span>
+          <button type="button" aria-label="Dismiss notification" @click="successMessage = ''">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
         </div>
       </transition>
 
-
-      <!-- LOADING -->
-      <div v-if="loading" class="table-card">
-
-        <div class="loading-state">
-
-          <div class="spinner"></div>
-
-          <p>
-            Loading users...
-          </p>
-
-        </div>
-
+      <div v-if="errorMessage" class="inline-alert error-alert" role="alert">
+        <i class="fa-solid fa-triangle-exclamation" aria-hidden="true"></i>
+        <span>{{ errorMessage }}</span>
+        <button type="button" class="retry-button" @click="fetchUsers">Retry</button>
       </div>
 
+      <section v-if="loading && !users.length" class="table-card loading-card">
+        <div class="loading-state">
+          <span class="spinner" aria-hidden="true"></span>
+          <strong>Loading students</strong>
+          <span>Getting the latest student accounts…</span>
+        </div>
+      </section>
 
-      <!-- USERS TABLE -->
-      <div v-else class="table-card">
-
-        <!-- TABLE HEADER -->
+      <section v-else class="table-card">
         <div class="table-toolbar">
-
-          <div class="toolbar-title">
-            <span>All Accounts</span>
-
-            <small>
-              {{ users.length }} registered
-            </small>
+          <div>
+            <h2>Student accounts</h2>
+            <p>Showing {{ filteredUsers.length }} of {{ users.length }} students</p>
           </div>
 
-          <div class="toolbar-info">
-            <i class="fa-solid fa-circle-info"></i>
-            Click a column to sort
-          </div>
+          <div class="toolbar-controls">
+            <label class="readiness-filter">
+              <span>Progress</span>
+              <select v-model="readinessFilter" aria-label="Filter by student progress">
+                <option value="">All students</option>
+                <option value="on_track">On track</option>
+                <option value="needs_improvement">Needs improvement</option>
+                <option value="getting_started">Getting started</option>
+                <option value="not_started">Not started</option>
+              </select>
+            </label>
 
+            <label class="page-size">
+              <span>Rows</span>
+              <select v-model.number="perPage" aria-label="Rows per page">
+                <option :value="10">10</option>
+                <option :value="25">25</option>
+                <option :value="50">50</option>
+              </select>
+            </label>
+          </div>
         </div>
 
-
-        <!-- TABLE -->
+        <!-- Desktop table -->
         <div class="table-scroll">
-
-          <table class="styled-table">
-
+          <table class="users-table">
             <thead>
-
               <tr>
-
-                <th class="id-column" @click="sortBy('id')">
-                  <span>ID</span>
-                  <i class="fas fa-sort"></i>
-                </th>
-
-
-                <th @click="sortBy('full_name')">
-                  <span>User</span>
-                  <i class="fas fa-sort"></i>
-                </th>
-
-
-                <th @click="sortBy('email')">
-                  <span>Email</span>
-                  <i class="fas fa-sort"></i>
-                </th>
-
-
-                <th @click="sortBy('quizzes_taken')">
-                  <span>Assessments</span>
-                  <i class="fas fa-sort"></i>
-                </th>
-
-
                 <th>
-                  <span>Status</span>
+                  <button type="button" @click="sortBy('id')">
+                    ID <i :class="sortIcon('id')" aria-hidden="true"></i>
+                  </button>
                 </th>
-
-
-                <th @click="sortBy('created_at')">
-                  <span>Joined</span>
-                  <i class="fas fa-sort"></i>
+                <th>
+                  <button type="button" @click="sortBy('full_name')">
+                    Student <i :class="sortIcon('full_name')" aria-hidden="true"></i>
+                  </button>
                 </th>
-
-
-                <th class="actions-header">
-                  <span>Actions</span>
+                <th>
+                  <button type="button" @click="sortBy('email')">
+                    Email <i :class="sortIcon('email')" aria-hidden="true"></i>
+                  </button>
                 </th>
-
+                <th class="center">
+                  <button type="button" @click="sortBy('quizzes_taken')">
+                    Assessments <i :class="sortIcon('quizzes_taken')" aria-hidden="true"></i>
+                  </button>
+                </th>
+                <th>
+                  <button type="button" @click="sortBy('average_score')">
+                    Progress <i :class="sortIcon('average_score')" aria-hidden="true"></i>
+                  </button>
+                </th>
+                <th>
+                  <button type="button" @click="sortBy('created_at')">
+                    Joined <i :class="sortIcon('created_at')" aria-hidden="true"></i>
+                  </button>
+                </th>
+                <th class="actions-heading">Actions</th>
               </tr>
-
             </thead>
 
-
             <tbody>
-
-              <!-- EMPTY -->
               <tr v-if="paginatedUsers.length === 0">
-
-                <td colspan="7" class="empty-state">
-
-                  <i class="fa-solid fa-user-slash"></i>
-
-                  <strong>
-                    No users found
-                  </strong>
-
-                  <span>
-                    Try another search term.
-                  </span>
-
-                </td>
-
-              </tr>
-
-
-              <!-- USERS -->
-              <tr v-for="user in paginatedUsers" :key="user.id">
-
-                <!-- ID -->
-                <td class="id-cell">
-                  #{{ user.id }}
-                </td>
-
-
-                <!-- USER -->
-                <td class="user-cell">
-
-                  <div class="user-box">
-
-                    <img :src="setProfileURL(user)" :alt="user.first_name + ' ' + user.last_name" class="user-avatar" />
-
-                    <div class="user-details">
-
-                      <span class="user-name">
-                        {{ user.first_name }}
-                        {{ user.last_name }}
-                      </span>
-
-                      <span class="user-role">
-                        Dasher
-                      </span>
-
-                    </div>
-
+                <td colspan="7">
+                  <div class="empty-state">
+                    <span class="empty-icon">
+                      <i class="fa-regular fa-folder-open" aria-hidden="true"></i>
+                    </span>
+                    <strong>No students found</strong>
+                    <span>Try adjusting your search or filters.</span>
+                    <button v-if="searchQuery || readinessFilter" type="button" class="clear-search-button"
+                      @click="clearFilters">
+                      Clear filters
+                    </button>
                   </div>
-
                 </td>
-
-
-                <!-- EMAIL -->
-                <td class="email-cell">
-
-                  <span>
-                    {{ user.email }}
-                  </span>
-
-                </td>
-
-
-                <!-- ASSESSMENTS -->
-                <td class="assessment-cell">
-
-                  <span class="assessment-count">
-                    {{ user.quizzes_taken ?? 0 }}
-                  </span>
-
-                  <span class="assessment-label">
-                    taken
-                  </span>
-
-                </td>
-
-
-                <!-- STATUS -->
-                <td>
-
-                  <span class="status-badge" :class="user.active_status ? 'active' : 'inactive'">
-
-                    <span class="status-dot"></span>
-
-                    {{
-                      user.active_status
-                        ? 'Active'
-                        : 'Inactive'
-                    }}
-
-                  </span>
-
-                </td>
-
-
-                <!-- JOINED -->
-                <td class="date-cell">
-
-                  {{ formatDate(user.created_at) }}
-
-                </td>
-
-
-                <!-- ACTIONS -->
-                <td class="actions-col">
-
-                  <button @click="openEdit(user)" class="action-btn edit" title="Edit user">
-                    <i class="fas fa-pen"></i>
-                  </button>
-
-
-                  <button @click="confirmDelete(user.id)" class="action-btn delete" title="Delete user">
-                    <i class="fas fa-trash"></i>
-                  </button>
-
-                </td>
-
               </tr>
 
+              <tr v-for="user in paginatedUsers" :key="user.id">
+                <td><span class="id-value">#{{ user.id }}</span></td>
+
+                <td>
+                  <div class="student-cell">
+                    <img class="student-avatar" :src="profileImageUrl(user)" :alt="fullName(user)"
+                      @error="useFallbackImage" />
+                    <div class="student-copy">
+                      <strong>{{ fullName(user) }}</strong>
+                      <span>Student account</span>
+                    </div>
+                  </div>
+                </td>
+
+                <td><span class="email-value">{{ user.email || '—' }}</span></td>
+
+                <td class="center">
+                  <span class="assessment-count">{{ Number(user.quizzes_taken ?? 0) }}</span>
+                  <span class="assessment-caption">
+                    {{ Number(user.quizzes_taken ?? 0) === 1 ? 'assessment' : 'assessments' }}
+                  </span>
+                </td>
+
+                <td>
+                  <span class="readiness-badge" :class="`readiness-${getReadinessStatus(user)}`"
+                    :title="readinessDescription(user)">
+                    <span class="readiness-dot"></span>
+                    {{ readinessLabel(user) }}
+                  </span>
+                  <small class="average-score">
+                    Avg. {{ formatAverage(user.average_score) }}
+                    <template v-if="Number(user.quizzes_taken) > 0">
+                      · {{ Number(user.passed ?? 0) }} passed
+                    </template>
+                  </small>
+                </td>
+
+                <td><span class="date-value">{{ formatDate(user.created_at) }}</span></td>
+
+                <td>
+                  <div class="row-actions">
+                    <button class="action-button view-action" type="button" title="View records"
+                      :aria-label="`View records for ${fullName(user)}`" @click="viewRecords(user)">
+                      <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+                    </button>
+
+                    <button class="action-button edit-action" type="button" title="Edit student"
+                      :aria-label="`Edit ${fullName(user)}`" @click="openEdit(user)">
+                      <i class="fa-solid fa-pen" aria-hidden="true"></i>
+                    </button>
+
+                    <button class="action-button delete-action" type="button" title="Delete student"
+                      :aria-label="`Delete ${fullName(user)}`" @click="openDeleteConfirmation(user)">
+                      <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
             </tbody>
-
           </table>
-
         </div>
 
+        <!-- Mobile cards -->
+        <div class="student-cards">
+          <p v-if="paginatedUsers.length === 0" class="cards-empty">No students found.</p>
 
-        <!-- PAGINATION -->
-        <div v-if="totalPages > 1" class="pagination">
+          <article v-for="user in paginatedUsers" :key="`card-${user.id}`" class="student-card">
+            <div class="student-card-head">
+              <img class="student-avatar" :src="profileImageUrl(user)" :alt="fullName(user)"
+                @error="useFallbackImage" />
+              <div class="student-copy">
+                <strong>{{ fullName(user) }}</strong>
+                <span class="email-value">{{ user.email || '—' }}</span>
+              </div>
+              <span class="id-value">#{{ user.id }}</span>
+            </div>
 
-          <button :disabled="currentPage === 1" @click="currentPage--" class="page-btn">
-            <i class="fas fa-chevron-left"></i>
-            Prev
-          </button>
+            <div class="student-card-meta">
+              <span class="readiness-badge" :class="`readiness-${getReadinessStatus(user)}`">
+                <span class="readiness-dot"></span>
+                {{ readinessLabel(user) }}
+              </span>
+              <span class="card-stat">
+                <strong>{{ Number(user.quizzes_taken ?? 0) }}</strong> assessments
+              </span>
+              <span class="card-stat">
+                Avg <strong>{{ formatAverage(user.average_score) }}</strong>
+              </span>
+              <span class="card-stat">
+                Joined <strong>{{ formatDate(user.created_at) }}</strong>
+              </span>
+            </div>
 
+            <div class="row-actions card-actions">
+              <button class="action-button view-action" type="button" :aria-label="`View records for ${fullName(user)}`"
+                @click="viewRecords(user)">
+                <i class="fa-solid fa-clipboard-list" aria-hidden="true"></i>
+              </button>
+              <button class="action-button edit-action" type="button" :aria-label="`Edit ${fullName(user)}`"
+                @click="openEdit(user)">
+                <i class="fa-solid fa-pen" aria-hidden="true"></i>
+              </button>
+              <button class="action-button delete-action" type="button" :aria-label="`Delete ${fullName(user)}`"
+                @click="openDeleteConfirmation(user)">
+                <i class="fa-regular fa-trash-can" aria-hidden="true"></i>
+              </button>
+            </div>
+          </article>
+        </div>
 
-          <div class="page-indicator">
+        <footer class="table-footer">
+          <span class="pagination-summary">
+            <template v-if="filteredUsers.length">
+              {{ pageStart + 1 }}–{{ Math.min(pageStart + perPage, filteredUsers.length) }}
+              of {{ filteredUsers.length }} students
+            </template>
+            <template v-else>0 students</template>
+          </span>
 
-            <strong>
-              {{ currentPage }}
-            </strong>
+          <div class="pagination-controls">
+            <button type="button" aria-label="Previous page" :disabled="currentPage <= 1" @click="currentPage--">
+              <i class="fa-solid fa-chevron-left" aria-hidden="true"></i>
+            </button>
 
-            <span>
-              /
-            </span>
+            <span>Page <strong>{{ currentPage }}</strong> of {{ totalPages }}</span>
 
-            <span>
-              {{ totalPages }}
-            </span>
-
+            <button type="button" aria-label="Next page" :disabled="currentPage >= totalPages" @click="currentPage++">
+              <i class="fa-solid fa-chevron-right" aria-hidden="true"></i>
+            </button>
           </div>
-
-
-          <button :disabled="currentPage === totalPages" @click="currentPage++" class="page-btn">
-            Next
-            <i class="fas fa-chevron-right"></i>
-          </button>
-
-        </div>
-
-      </div>
-
+        </footer>
+      </section>
     </section>
 
-
-    <!-- TOAST -->
     <ToastNotification :message="notification.message" :type="notification.type" @clear="notification.message = ''" />
 
+    <EditUserModal :show="openEditModal" :user="selectedUser" :saving="saving" :error="saveError" :errors="saveErrors"
+      @close="openEditModal = false" @save="handleSave" />
 
-    <!-- EDIT USER -->
-    <EditUserModal :user="selectedUser" :show="openEditModal" @close="openEditModal = false" @notif="handleNotify"
-      @save="handleSave" />
+    <Teleport to="body">
+      <div v-if="userToDelete" class="modal-backdrop" @click.self="closeDeleteConfirmation">
+        <section class="confirm-modal" role="alertdialog" aria-modal="true" aria-labelledby="delete-title"
+          aria-describedby="delete-description" @keydown.esc="closeDeleteConfirmation">
+          <div class="confirm-icon">
+            <i class="fa-solid fa-trash-can" aria-hidden="true"></i>
+          </div>
 
-  </div>
+          <button class="confirm-close" type="button" aria-label="Close confirmation" :disabled="deleting"
+            @click="closeDeleteConfirmation">
+            <i class="fa-solid fa-xmark" aria-hidden="true"></i>
+          </button>
+
+          <p class="confirm-eyebrow">DELETE STUDENT</p>
+          <h2 id="delete-title">Delete this account?</h2>
+
+          <p id="delete-description" class="confirm-copy">
+            You're about to delete
+            <strong>{{ fullName(userToDelete) }}</strong>
+            <span v-if="userToDelete.email">({{ userToDelete.email }})</span>.
+            This action can't be undone.
+          </p>
+
+          <div class="confirm-warning">
+            <i class="fa-solid fa-circle-info" aria-hidden="true"></i>
+            <span>The student account and its associated data may be permanently removed.</span>
+          </div>
+
+          <div class="confirm-actions">
+            <button class="cancel-button" type="button" :disabled="deleting" @click="closeDeleteConfirmation">
+              Cancel
+            </button>
+            <button class="confirm-delete-button" type="button" :disabled="deleting" @click="deleteUser">
+              <span v-if="deleting" class="button-spinner" aria-hidden="true"></span>
+              <i v-else class="fa-regular fa-trash-can" aria-hidden="true"></i>
+              {{ deleting ? 'Deleting…' : 'Delete account' }}
+            </button>
+          </div>
+        </section>
+      </div>
+    </Teleport>
+  </main>
 </template>
 
-
 <script setup>
+import { computed, onMounted, ref, watch } from 'vue'
+import { useRouter } from 'vue-router'
+import api from '@/bootstrap'
 
-import {
-  ref,
-  computed,
-  onMounted,
-  watch
-} from 'vue'
+import ToastNotification from '@/components/ToastNotification.vue'
+import EditUserModal from '@/components/AdminSide/EditUserModal.vue'
 
-import axios from 'axios'
+const router = useRouter()
 
-import ToastNotification
-  from "@/components/ToastNotification.vue"
-
-import EditUserModal
-  from '@/components/AdminSide/EditUserModal.vue'
-
+const PASSING_SCORE = 75
+const FALLBACK_IMAGE = '/storage/images/profiles/default.png'
 
 const users = ref([])
-
 const loading = ref(true)
-
+const errorMessage = ref('')
+const successMessage = ref('')
 
 const openEditModal = ref(false)
-
 const selectedUser = ref(null)
+const userToDelete = ref(null)
+const deleting = ref(false)
 
+// Edit state: the request is sent from here, so the modal only reports results.
+const saving = ref(false)
+const saveError = ref('')
+const saveErrors = ref({})
 
 const currentPage = ref(1)
+const perPage = ref(10)
 
-const perPage = 10
-
-
-const sortKey = ref('id')
-
-const sortOrder = ref('asc')
-
+const sortKey = ref('created_at')
+const sortOrder = ref('desc')
 
 const searchQuery = ref('')
+const readinessFilter = ref('')
 
+const notification = ref({ message: '', type: 'success' })
 
-const notification = ref({
-  message: '',
-  type: 'success'
+const readinessLabels = {
+  on_track: 'On track',
+  needs_improvement: 'Needs improvement',
+  getting_started: 'Getting started',
+  not_started: 'Not started',
+}
+
+const readinessDescriptions = {
+  on_track: `Two or more assessments taken, with an average score of at least ${PASSING_SCORE}%.`,
+  needs_improvement: `Two or more assessments taken, with an average score below ${PASSING_SCORE}%.`,
+  getting_started: 'One assessment taken so far.',
+  not_started: 'No assessments taken yet.',
+}
+
+const fullName = (user) => {
+  const name = [user?.first_name, user?.last_name].filter(Boolean).join(' ').trim()
+  return name || `User #${user?.id ?? '—'}`
+}
+
+const profileImageUrl = (user) => {
+  const photo = user?.profile_photo
+  if (!photo) return FALLBACK_IMAGE
+  if (/^https?:\/\//i.test(photo) || String(photo).startsWith('/')) return photo
+  return `/storage/images/profiles/${String(photo).replace(/^\/+/, '')}`
+}
+
+const useFallbackImage = (event) => {
+  event.target.onerror = null
+  event.target.src = FALLBACK_IMAGE
+}
+
+// Trust the server's readiness_status. Fall back only if it's missing.
+const getReadinessStatus = (user) => {
+  const backendStatus = user?.readiness_status
+  if (backendStatus && readinessLabels[backendStatus]) return backendStatus
+
+  const count = Number(user?.quizzes_taken ?? 0)
+  const average = user?.average_score == null ? null : Number(user.average_score)
+
+  if (count === 0) return 'not_started'
+  if (count === 1) return 'getting_started'
+  if (average === null || !Number.isFinite(average)) return 'getting_started'
+  return average < PASSING_SCORE ? 'needs_improvement' : 'on_track'
+}
+
+const readinessLabel = (user) => readinessLabels[getReadinessStatus(user)]
+const readinessDescription = (user) => readinessDescriptions[getReadinessStatus(user)]
+
+const formatAverage = (value) => {
+  if (value === null || value === undefined || value === '') return '—'
+  const number = Number(value)
+  return Number.isFinite(number) ? `${number.toFixed(1)}%` : '—'
+}
+
+const formatDate = (value) => {
+  if (!value) return '—'
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) return '—'
+  return new Intl.DateTimeFormat('en', { day: '2-digit', month: 'short', year: 'numeric' }).format(date)
+}
+
+const statusCounts = computed(() => {
+  const counts = { on_track: 0, needs_improvement: 0, getting_started: 0, not_started: 0 }
+  for (const user of users.value) counts[getReadinessStatus(user)]++
+  return counts
 })
 
-
-/* =========================================================
-   PROFILE
-========================================================= */
-
-const setProfileURL = (user) => {
-
-  const profilepath =
-    `/storage/images/profiles`
-
-  return user?.profile_photo
-    ? `${profilepath}/${user.profile_photo}`
-    : `${profilepath}/default.png`
-
-}
-
-
-/* =========================================================
-   FETCH USERS
-========================================================= */
+const overviewCards = computed(() => [
+  { label: 'Total students', value: users.value.length, icon: 'fa-solid fa-users', tone: 'icon-neutral' },
+  { label: 'On track', value: statusCounts.value.on_track, icon: 'fa-solid fa-arrow-trend-up', tone: 'icon-track' },
+  { label: 'Needs improvement', value: statusCounts.value.needs_improvement, icon: 'fa-solid fa-arrows-rotate', tone: 'icon-improvement' },
+  { label: 'Getting started', value: statusCounts.value.getting_started, icon: 'fa-solid fa-shoe-prints', tone: 'icon-started' },
+  { label: 'Not started', value: statusCounts.value.not_started, icon: 'fa-regular fa-clock', tone: 'icon-pending' },
+])
 
 const fetchUsers = async () => {
+  loading.value = true
+  errorMessage.value = ''
 
   try {
-
-    const response =
-      await axios.get('/api/admin/user')
-
-    users.value =
-      response.data?.data ?? []
-
-    console.log(
-      'Fetched users:',
-      users.value
-    )
-
+    const response = await api.get('/api/admin/user')
+    users.value = Array.isArray(response.data?.data) ? response.data.data : []
   } catch (error) {
-
-    console.error(
-      'Error fetching users:',
-      error
-    )
-
+    console.error('Error fetching users:', error)
+    errorMessage.value = error.response?.data?.message || 'Unable to load student accounts. Please try again.'
   } finally {
-
     loading.value = false
-
   }
-
 }
 
-
-/* =========================================================
-   NOTIFICATION
-========================================================= */
-
-const showToast = (
-  msg,
-  type = 'success'
-) => {
-
-  notification.value.message = msg
-
-  notification.value.type = type
-
-  setTimeout(() => {
-
-    notification.value.message = ''
-
-  }, 2500)
-
+// Opens the records page filtered to this learner.
+const viewRecords = (user) => {
+  router.push({ path: '/admin/records', query: { user_id: user.id } })
 }
 
+const showToast = (message, type = 'success') => {
+  notification.value = { message, type }
+  window.setTimeout(() => {
+    if (notification.value.message === message) notification.value.message = ''
+  }, 3000)
+}
 
 /* =========================================================
-   EDIT
+   EDIT STUDENT
+   The modal emits the form payload. This page sends the request,
+   keeps the modal open on errors, and refreshes the list on success.
 ========================================================= */
 
 const openEdit = (user) => {
-
   selectedUser.value = user
-
+  saveError.value = ''
+  saveErrors.value = {}
   openEditModal.value = true
-
 }
 
+const handleSave = async (payload) => {
+  if (!selectedUser.value || saving.value) return
 
-/* =========================================================
-   DELETE
-========================================================= */
-
-const confirmDelete = async (id) => {
-
-  if (
-    !confirm(
-      `Delete user ID: ${id}?`
-    )
-  ) {
-    return
-  }
+  saving.value = true
+  saveError.value = ''
+  saveErrors.value = {}
 
   try {
+    await api.put(`/api/admin/user/update/${selectedUser.value.id}`, payload)
 
-    await axios.delete(
-      `/api/admin/user/delete/${id}`
-    )
-
-    showToast(
-      "User deleted",
-      "success"
-    )
-
+    openEditModal.value = false
     await fetchUsers()
-
+    showToast('Student details updated.')
   } catch (error) {
-
-    console.error(
-      "Delete user failed:",
-      error
-    )
-
-    showToast(
-      "Failed to delete user",
-      "error"
-    )
-
+    if (error.response?.status === 422) {
+      saveErrors.value = error.response.data?.errors ?? {}
+      saveError.value = error.response.data?.message || 'Please check the highlighted fields.'
+    } else {
+      console.error('Update user failed:', error)
+      saveError.value = 'Could not save the changes. Please try again.'
+    }
+  } finally {
+    saving.value = false
   }
-
 }
 
-
 /* =========================================================
-   DATE
+   DELETE STUDENT
 ========================================================= */
 
-const formatDate = (date) => {
-
-  if (!date) {
-    return '—'
-  }
-
-  return new Date(date)
-    .toLocaleDateString(
-      'en-US',
-      {
-        day: '2-digit',
-        month: 'short',
-        year: 'numeric'
-      }
-    )
-
+const openDeleteConfirmation = (user) => {
+  userToDelete.value = user
 }
 
+const closeDeleteConfirmation = () => {
+  if (deleting.value) return
+  userToDelete.value = null
+}
+
+const deleteUser = async () => {
+  if (!userToDelete.value || deleting.value) return
+  deleting.value = true
+
+  try {
+    const deletedName = fullName(userToDelete.value)
+    await api.delete(`/api/admin/user/delete/${userToDelete.value.id}`)
+    userToDelete.value = null
+    await fetchUsers()
+    showToast(`${deletedName} was deleted.`)
+  } catch (error) {
+    console.error('Delete user failed:', error)
+    showToast(error.response?.data?.message || 'Failed to delete the student account.', 'error')
+  } finally {
+    deleting.value = false
+  }
+}
 
 /* =========================================================
-   FILTER
+   FILTER, SORT, PAGINATE
 ========================================================= */
 
 const filteredUsers = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
 
-  const q =
-    searchQuery.value
-      .toLowerCase()
-      .trim()
+  const result = users.value.filter((user) => {
+    const matchesSearch =
+      !query ||
+      fullName(user).toLowerCase().includes(query) ||
+      String(user.email ?? '').toLowerCase().includes(query) ||
+      String(user.id ?? '').includes(query)
 
-  let result =
-    users.value.filter(user => {
+    const matchesReadiness =
+      !readinessFilter.value || getReadinessStatus(user) === readinessFilter.value
 
-      const fullName =
-        `${user.first_name} ${user.last_name}`
-          .toLowerCase()
-
-      return (
-        fullName.includes(q) ||
-        user.email
-          ?.toLowerCase()
-          .includes(q)
-      )
-
-    })
-
-
-  /* SORT */
-
-  result.sort((a, b) => {
-
-    let valueA
-    let valueB
-
-
-    if (sortKey.value === 'full_name') {
-
-      valueA =
-        `${a.first_name} ${a.last_name}`
-          .toLowerCase()
-
-      valueB =
-        `${b.first_name} ${b.last_name}`
-          .toLowerCase()
-
-    } else {
-
-      valueA =
-        a[sortKey.value]
-
-      valueB =
-        b[sortKey.value]
-
-    }
-
-
-    if (
-      sortKey.value === 'created_at'
-    ) {
-
-      valueA =
-        new Date(valueA).getTime()
-
-      valueB =
-        new Date(valueB).getTime()
-
-    }
-
-
-    if (
-      typeof valueA === 'string'
-    ) {
-
-      return sortOrder.value === 'asc'
-        ? valueA.localeCompare(valueB)
-        : valueB.localeCompare(valueA)
-
-    }
-
-
-    return sortOrder.value === 'asc'
-      ? (valueA ?? 0) - (valueB ?? 0)
-      : (valueB ?? 0) - (valueA ?? 0)
-
+    return matchesSearch && matchesReadiness
   })
 
+  const getSortValue = (user) => {
+    switch (sortKey.value) {
+      case 'full_name':
+        return fullName(user).toLowerCase()
+      case 'created_at': {
+        const time = new Date(user.created_at).getTime()
+        return Number.isFinite(time) ? time : 0
+      }
+      case 'quizzes_taken':
+        return Number(user.quizzes_taken ?? 0)
+      case 'average_score':
+        return Number(user.average_score ?? -1)
+      case 'id':
+        return Number(user.id ?? 0)
+      default:
+        return String(user[sortKey.value] ?? '').toLowerCase()
+    }
+  }
 
-  return result
-
+  return result.sort((a, b) => {
+    const left = getSortValue(a)
+    const right = getSortValue(b)
+    const comparison =
+      typeof left === 'string' || typeof right === 'string'
+        ? String(left).localeCompare(String(right))
+        : Number(left) - Number(right)
+    return sortOrder.value === 'asc' ? comparison : -comparison
+  })
 })
 
-
-/* =========================================================
-   PAGINATION
-========================================================= */
-
-const totalPages = computed(() => {
-
-  return Math.ceil(
-    filteredUsers.value.length /
-    perPage
-  )
-
-})
-
-
-const paginatedUsers = computed(() => {
-
-  const start =
-    (currentPage.value - 1) *
-    perPage
-
-  return filteredUsers.value.slice(
-    start,
-    start + perPage
-  )
-
-})
-
-
-/* =========================================================
-   SORT
-========================================================= */
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredUsers.value.length / perPage.value)))
+const pageStart = computed(() => (currentPage.value - 1) * perPage.value)
+const paginatedUsers = computed(() =>
+  filteredUsers.value.slice(pageStart.value, pageStart.value + perPage.value)
+)
 
 const sortBy = (key) => {
-
   if (sortKey.value === key) {
-
-    sortOrder.value =
-      sortOrder.value === 'asc'
-        ? 'desc'
-        : 'asc'
-
+    sortOrder.value = sortOrder.value === 'asc' ? 'desc' : 'asc'
   } else {
-
     sortKey.value = key
-
-    sortOrder.value = 'asc'
-
+    sortOrder.value = key === 'created_at' ? 'desc' : 'asc'
   }
-
+  currentPage.value = 1
 }
 
+const sortIcon = (key) => {
+  if (sortKey.value !== key) return 'fa-solid fa-sort'
+  return sortOrder.value === 'asc' ? 'fa-solid fa-sort-up' : 'fa-solid fa-sort-down'
+}
 
-/* =========================================================
-   SEARCH RESET
-========================================================= */
+const clearFilters = () => {
+  searchQuery.value = ''
+  readinessFilter.value = ''
+  currentPage.value = 1
+}
 
-watch(
-  searchQuery,
-  () => {
+watch([searchQuery, readinessFilter, perPage], () => {
+  currentPage.value = 1
+})
 
-    currentPage.value = 1
+watch(totalPages, (pages) => {
+  if (currentPage.value > pages) currentPage.value = pages
+})
 
-  }
-)
-
-
-watch(
-  filteredUsers,
-  () => {
-
-    if (
-      currentPage.value >
-      totalPages.value
-    ) {
-
-      currentPage.value = 1
-
-    }
-
-  }
-)
-
-
-/* =========================================================
-   LIFECYCLE
-========================================================= */
-
-onMounted(
-  fetchUsers
-)
-
+onMounted(fetchUsers)
 </script>
 
 <style scoped>
@@ -718,783 +641,994 @@ onMounted(
   box-sizing: border-box;
 }
 
-
-/* =========================================================
-   WRAPPER
-========================================================= */
-
 .dashboard-wrapper {
-  width: 100%;
-  min-height: 100%;
-
-  padding: 1rem;
-
-  background: #fafafa;
+  min-height: 100vh;
+  padding: 24px;
+  background: #f7f8fa;
+  color: #202329;
 }
 
 .admin-section {
-  width: 100%;
-  max-width: 1400px;
-
+  width: min(100%, 1440px);
   margin: 0 auto;
 }
-
-
-/* =========================================================
-   PAGE HEADER
-========================================================= */
 
 .page-header {
   display: flex;
   align-items: flex-end;
   justify-content: space-between;
-
-  gap: 20px;
-
-  margin-bottom: 14px;
+  gap: 24px;
+  margin-bottom: 20px;
 }
 
-.title-row {
-  display: flex;
-  align-items: center;
-
-  gap: 12px;
-}
-
-.title-icon {
-  width: 42px;
-  height: 42px;
-
-  display: grid;
-  place-items: center;
-
-  background: #111;
-  color: #fff;
-
-  border-radius: 8px;
-
-  font-size: 0.9rem;
+.eyebrow {
+  margin: 0 0 6px;
+  color: #8b9099;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
 }
 
 .section-title {
   margin: 0;
-
-  color: #111;
-
-  font-size: 1.05rem;
-  font-weight: 750;
+  color: #202329;
+  font-size: 24px;
+  font-weight: 720;
+  letter-spacing: -0.045em;
 }
 
 .section-subtitle {
-  margin: 4px 0 0;
-
-  color: #888;
-
-  font-size: 0.75rem;
+  max-width: 680px;
+  margin: 6px 0 0;
+  color: #858b95;
+  font-size: 13px;
+  line-height: 1.5;
 }
-
-
-/* =========================================================
-   HEADER TOOLS
-========================================================= */
 
 .header-tools {
   display: flex;
   align-items: center;
+  gap: 9px;
+}
 
-  gap: 10px;
+.user-count,
+.search-wrapper,
+.icon-button {
+  height: 40px;
+  border: 1px solid #e4e7eb;
+  border-radius: 8px;
+  background: #fff;
 }
 
 .user-count {
-  height: 36px;
-
   display: flex;
   align-items: center;
-
-  gap: 5px;
-
-  padding: 0 11px;
-
-  background: #fff;
-
-  border: 1px solid #e5e5e5;
-  border-radius: 7px;
-
+  gap: 6px;
+  padding: 0 12px;
   white-space: nowrap;
 }
 
-.count-value {
-  color: #111;
-
-  font-size: 0.78rem;
-  font-weight: 750;
+.user-count strong {
+  color: #252930;
+  font-size: 13px;
 }
 
-.count-label {
-  color: #999;
-
-  font-size: 0.7rem;
+.user-count span {
+  color: #858b95;
+  font-size: 11px;
 }
 
 .search-wrapper {
-  width: 240px;
-  height: 36px;
-
+  width: 270px;
   display: flex;
   align-items: center;
-
-  gap: 8px;
-
-  padding: 0 11px;
-
-  background: #fff;
-
-  border: 1px solid #ddd;
-  border-radius: 7px;
-
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  gap: 9px;
+  padding: 0 12px;
+  color: #8b9099;
 }
 
 .search-wrapper:focus-within {
-  border-color: #111;
-
-  box-shadow:
-    0 0 0 2px rgba(0, 0, 0, 0.05);
-}
-
-.search-wrapper i {
-  color: #999;
-
-  font-size: 0.7rem;
+  border-color: #aeb5bf;
+  box-shadow: 0 0 0 3px rgb(30 41 59 / 5%);
 }
 
 .search-input {
   width: 100%;
-
-  border: none;
-  outline: none;
-
+  min-width: 0;
+  border: 0;
+  outline: 0;
   background: transparent;
-
-  color: #111;
-
-  font-size: 0.75rem;
+  color: #202329;
+  font: inherit;
+  font-size: 12px;
 }
 
 .search-input::placeholder {
-  color: #aaa;
+  color: #a1a6ae;
 }
 
-
-/* =========================================================
-   SUCCESS
-========================================================= */
-
-.alert-success {
-  margin-bottom: 12px;
-
-  padding: 9px 12px;
-
-  background: #f3f3f3;
-
-  border: 1px solid #ddd;
-  border-radius: 7px;
-
-  color: #333;
-
-  font-size: 0.75rem;
-}
-
-
-/* =========================================================
-   TABLE CARD
-========================================================= */
-
-.table-card {
-  width: 100%;
-
-  background: #fff;
-
-  border: 1px solid #e4e4e4;
-  border-radius: 9px;
-
-  overflow: hidden;
-}
-
-
-/* =========================================================
-   TABLE TOOLBAR
-========================================================= */
-
-.table-toolbar {
-  min-height: 48px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-
-  gap: 12px;
-
-  padding: 0 14px;
-
-  border-bottom: 1px solid #ededed;
-}
-
-.toolbar-title {
-  display: flex;
-  align-items: center;
-
-  gap: 8px;
-
-  color: #222;
-
-  font-size: 0.75rem;
-  font-weight: 700;
-}
-
-.toolbar-title small {
-  color: #aaa;
-
-  font-size: 0.65rem;
-  font-weight: 500;
-}
-
-.toolbar-info {
-  display: flex;
-  align-items: center;
-
-  gap: 5px;
-
-  color: #aaa;
-
-  font-size: 0.65rem;
-}
-
-.toolbar-info i {
-  font-size: 0.6rem;
-}
-
-
-/* =========================================================
-   TABLE SCROLL
-========================================================= */
-
-.table-scroll {
-  width: 100%;
-
-  overflow-x: auto;
-}
-
-.table-scroll::-webkit-scrollbar {
-  height: 5px;
-}
-
-.table-scroll::-webkit-scrollbar-track {
-  background: #fafafa;
-}
-
-.table-scroll::-webkit-scrollbar-thumb {
-  background: #d5d5d5;
-  border-radius: 5px;
-}
-
-
-/* =========================================================
-   TABLE
-========================================================= */
-
-.styled-table {
-  width: 100%;
-
-  min-width: 850px;
-
-  border-collapse: collapse;
-
-  table-layout: fixed;
-}
-
-.styled-table th {
-  height: 42px;
-
-  padding: 0 12px;
-
-  background: #fafafa;
-
-  border-bottom: 1px solid #e8e8e8;
-
-  color: #888;
-
-  font-size: 0.66rem;
-  font-weight: 700;
-
-  text-align: left;
-
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-
-  cursor: pointer;
-  user-select: none;
-
-  white-space: nowrap;
-}
-
-.styled-table th:hover {
-  color: #111;
-}
-
-.styled-table th i {
-  margin-left: 4px;
-
-  color: #aaa;
-
-  font-size: 0.58rem;
-}
-
-.styled-table th:nth-child(1) {
-  width: 65px;
-}
-
-.styled-table th:nth-child(2) {
-  width: 22%;
-}
-
-.styled-table th:nth-child(3) {
-  width: 25%;
-}
-
-.styled-table th:nth-child(4) {
-  width: 115px;
-}
-
-.styled-table th:nth-child(5) {
-  width: 100px;
-}
-
-.styled-table th:nth-child(6) {
-  width: 115px;
-}
-
-.styled-table th:nth-child(7) {
-  width: 100px;
-}
-
-.styled-table td {
-  height: 58px;
-
-  padding: 8px 12px;
-
-  border-bottom: 1px solid #f0f0f0;
-
-  color: #333;
-
-  font-size: 0.75rem;
-
-  text-align: left;
-
-  vertical-align: middle;
-}
-
-.styled-table tbody tr {
-  transition:
-    background 0.15s ease;
-}
-
-.styled-table tbody tr:hover {
-  background: #fafafa;
-}
-
-.styled-table tbody tr:last-child td {
-  border-bottom: none;
-}
-
-
-/* =========================================================
-   ID
-========================================================= */
-
-.id-cell {
-  color: #999 !important;
-
-  font-family: monospace;
-
-  font-size: 0.7rem !important;
-}
-
-
-/* =========================================================
-   USER
-========================================================= */
-
-.user-cell {
-  min-width: 180px;
-}
-
-.user-box {
-  display: flex;
-  align-items: center;
-
-  gap: 9px;
-}
-
-.user-avatar {
-  width: 34px;
-  height: 34px;
-
-  flex: 0 0 34px;
-
-  object-fit: cover;
-
-  border-radius: 50%;
-
-  border: 1px solid #ddd;
-
-  background: #f5f5f5;
-}
-
-.user-details {
-  min-width: 0;
-
-  display: flex;
-  flex-direction: column;
-
-  gap: 3px;
-}
-
-.user-name {
-  color: #222;
-
-  font-size: 0.75rem;
-  font-weight: 650;
-
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.user-role {
-  color: #aaa;
-
-  font-size: 0.62rem;
-}
-
-
-/* =========================================================
-   EMAIL
-========================================================= */
-
-.email-cell {
-  color: #666 !important;
-
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-
-/* =========================================================
-   ASSESSMENTS
-========================================================= */
-
-.assessment-cell {
-  display: table-cell;
-}
-
-.assessment-count {
-  color: #111;
-
-  font-size: 0.78rem;
-  font-weight: 700;
-}
-
-.assessment-label {
-  margin-left: 4px;
-
-  color: #aaa;
-
-  font-size: 0.65rem;
-}
-
-
-/* =========================================================
-   STATUS
-========================================================= */
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-
-  gap: 6px;
-
-  padding: 4px 7px;
-
-  border-radius: 5px;
-
-  font-size: 0.62rem;
-  font-weight: 650;
-}
-
-.status-badge.active {
-  background: #f2f2f2;
-  color: #222;
-}
-
-.status-badge.inactive {
-  background: #f7f7f7;
-  color: #999;
-}
-
-.status-dot {
-  width: 5px;
-  height: 5px;
-
-  border-radius: 50%;
-
-  background: currentColor;
-}
-
-
-/* =========================================================
-   DATE
-========================================================= */
-
-.date-cell {
-  color: #777 !important;
-
-  white-space: nowrap;
-}
-
-
-/* =========================================================
-   ACTIONS
-========================================================= */
-
-.actions-header {
-  text-align: center !important;
-}
-
-.actions-col {
-  text-align: center !important;
-}
-
-.action-btn {
-  width: 30px;
-  height: 30px;
-
-  display: inline-grid;
+.icon-button {
+  width: 40px;
+  display: grid;
   place-items: center;
-
-  margin: 0 2px;
-
-  border: 1px solid #ddd;
-  border-radius: 6px;
-
-  background: #fff;
-
-  cursor: pointer;
-
-  transition:
-    background 0.15s ease,
-    color 0.15s ease,
-    border-color 0.15s ease;
-}
-
-.action-btn i {
-  font-size: 0.68rem;
-}
-
-.action-btn.edit {
-  color: #555;
-}
-
-.action-btn.edit:hover {
-  background: #111;
-  border-color: #111;
-  color: #fff;
-}
-
-.action-btn.delete {
-  color: #888;
-}
-
-.action-btn.delete:hover {
-  background: #111;
-  border-color: #111;
-  color: #fff;
-}
-
-
-/* =========================================================
-   PAGINATION
-========================================================= */
-
-.pagination {
-  min-height: 52px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  gap: 12px;
-
-  padding: 8px 14px;
-
-  border-top: 1px solid #ededed;
-}
-
-.page-btn {
-  height: 30px;
-
-  display: flex;
-  align-items: center;
-
-  gap: 6px;
-
-  padding: 0 10px;
-
-  background: #fff;
-
-  border: 1px solid #ddd;
-  border-radius: 6px;
-
-  color: #555;
-
-  font-size: 0.68rem;
-  font-weight: 600;
-
+  color: #5f6670;
   cursor: pointer;
 }
 
-.page-btn:hover:not(:disabled) {
-  background: #111;
-  border-color: #111;
-  color: #fff;
+.icon-button:hover {
+  background: #f4f5f7;
 }
 
-.page-btn:disabled {
-  opacity: 0.35;
-
+.icon-button:disabled {
   cursor: not-allowed;
+  opacity: 0.55;
 }
 
-.page-indicator {
-  display: flex;
-  align-items: center;
-
-  gap: 5px;
-
-  color: #aaa;
-
-  font-size: 0.7rem;
-}
-
-.page-indicator strong {
-  color: #111;
-}
-
-
-/* =========================================================
-   EMPTY
-========================================================= */
-
-.empty-state {
-  height: 180px !important;
-
-  text-align: center !important;
-
-  vertical-align: middle !important;
-}
-
-.empty-state i {
-  display: block;
-
-  margin-bottom: 8px;
-
-  color: #bbb;
-
-  font-size: 1.1rem;
-}
-
-.empty-state strong {
-  display: block;
-
-  margin-bottom: 3px;
-
-  color: #555;
-
-  font-size: 0.75rem;
-}
-
-.empty-state span {
-  display: block;
-
-  color: #aaa;
-
-  font-size: 0.65rem;
-}
-
-
-/* =========================================================
-   LOADING
-========================================================= */
-
-.loading-state {
-  min-height: 280px;
-
-  display: flex;
-  flex-direction: column;
-
-  align-items: center;
-  justify-content: center;
-
-  gap: 10px;
-
-  color: #999;
-
-  font-size: 0.75rem;
-}
-
-.spinner {
-  width: 28px;
-  height: 28px;
-
-  border: 3px solid #e8e8e8;
-
-  border-top-color: #111;
-
-  border-radius: 50%;
-
+.spinning {
   animation: spin 0.8s linear infinite;
 }
 
-@keyframes spin {
+/* OVERVIEW */
 
+.overview-grid {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.overview-card {
+  min-height: 82px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 15px;
+  border: 1px solid #e7e9ed;
+  border-radius: 10px;
+  background: #fff;
+  min-width: 0;
+}
+
+.overview-icon {
+  width: 38px;
+  height: 38px;
+  flex: 0 0 38px;
+  display: grid;
+  place-items: center;
+  border-radius: 9px;
+  font-size: 14px;
+}
+
+.icon-neutral {
+  background: #f0f2f5;
+  color: #59616c;
+}
+
+.icon-track {
+  background: #edf7f1;
+  color: #357b57;
+}
+
+.icon-improvement {
+  background: #fff1ef;
+  color: #b65345;
+}
+
+.icon-started {
+  background: #eef4ff;
+  color: #496da8;
+}
+
+.icon-pending {
+  background: #fff6e9;
+  color: #a66b1e;
+}
+
+.overview-card>div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.overview-label {
+  color: #858b95;
+  font-size: 11px;
+  line-height: 1.3;
+}
+
+.overview-card strong {
+  color: #252930;
+  font-size: 20px;
+  line-height: 1;
+}
+
+/* ALERTS */
+
+.inline-alert {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+  margin-bottom: 14px;
+  padding: 11px 13px;
+  border: 1px solid #dcece2;
+  border-radius: 8px;
+  background: #f3faf5;
+  color: #347650;
+  font-size: 12px;
+}
+
+.inline-alert>span {
+  flex: 1;
+}
+
+.inline-alert>button {
+  border: 0;
+  background: transparent;
+  color: inherit;
+  cursor: pointer;
+}
+
+.error-alert {
+  border-color: #f0dada;
+  background: #fff6f6;
+  color: #a44747;
+}
+
+.retry-button {
+  padding: 5px 9px;
+  border: 1px solid #e9caca;
+  border-radius: 6px;
+  background: #fff;
+  color: inherit;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+/* TABLE CARD */
+
+.table-card {
+  overflow: hidden;
+  border: 1px solid #e6e8ec;
+  border-radius: 10px;
+  background: #fff;
+}
+
+.table-toolbar {
+  min-height: 68px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px 16px;
+  padding: 12px 16px;
+  border-bottom: 1px solid #eceef1;
+}
+
+.table-toolbar h2 {
+  margin: 0;
+  color: #292d33;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.table-toolbar p {
+  margin: 5px 0 0;
+  color: #8b9099;
+  font-size: 11px;
+}
+
+.toolbar-controls {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 14px;
+}
+
+.readiness-filter,
+.page-size {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: #858b95;
+  font-size: 11px;
+}
+
+.readiness-filter select,
+.page-size select {
+  height: 32px;
+  padding: 0 9px;
+  border: 1px solid #e2e5e9;
+  border-radius: 7px;
+  outline: none;
+  background: #fff;
+  color: #3b4149;
+  font: inherit;
+  font-size: 11px;
+}
+
+.readiness-filter select:focus,
+.page-size select:focus {
+  border-color: #aeb5bf;
+}
+
+.page-size select {
+  width: 62px;
+}
+
+/* DESKTOP TABLE */
+
+.table-scroll {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.users-table {
+  width: 100%;
+  min-width: 930px;
+  border-collapse: collapse;
+  table-layout: fixed;
+}
+
+.users-table th {
+  height: 42px;
+  padding: 0 13px;
+  border-bottom: 1px solid #eceef1;
+  background: #fafbfc;
+  color: #7e848e;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.055em;
+  text-align: left;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.users-table th button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  letter-spacing: inherit;
+  text-transform: inherit;
+  cursor: pointer;
+}
+
+.users-table th button:hover {
+  color: #252930;
+}
+
+.users-table th button i {
+  font-size: 9px;
+}
+
+.users-table th:nth-child(1) {
+  width: 75px;
+}
+
+.users-table th:nth-child(2) {
+  width: 22%;
+}
+
+.users-table th:nth-child(3) {
+  width: 24%;
+}
+
+.users-table th:nth-child(4) {
+  width: 13%;
+}
+
+.users-table th:nth-child(5) {
+  width: 17%;
+}
+
+.users-table th:nth-child(6) {
+  width: 12%;
+}
+
+.users-table th:nth-child(7) {
+  width: 120px;
+}
+
+.users-table td {
+  height: 68px;
+  padding: 10px 13px;
+  border-bottom: 1px solid #f0f1f3;
+  color: #343941;
+  font-size: 12px;
+  vertical-align: middle;
+}
+
+.users-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.users-table tbody tr:hover {
+  background: #fcfcfd;
+}
+
+.center {
+  text-align: center !important;
+}
+
+.id-value {
+  color: #858b95;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 11px;
+}
+
+.student-cell {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.student-avatar {
+  width: 36px;
+  height: 36px;
+  flex: 0 0 36px;
+  border: 1px solid #e5e7eb;
+  border-radius: 50%;
+  background: #f4f5f6;
+  object-fit: cover;
+}
+
+.student-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.student-copy strong {
+  overflow: hidden;
+  color: #292d33;
+  font-size: 11px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.student-copy span {
+  color: #9297a0;
+  font-size: 10px;
+}
+
+.email-value {
+  display: block;
+  overflow: hidden;
+  color: #626873;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.assessment-count {
+  color: #343941;
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.assessment-caption {
+  display: block;
+  margin-top: 3px;
+  color: #969ba3;
+  font-size: 9px;
+}
+
+.readiness-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 999px;
+  font-size: 10px;
+  font-weight: 650;
+  white-space: nowrap;
+}
+
+.readiness-on_track {
+  border-color: #dceee3;
+  background: #f0f8f3;
+  color: #347650;
+}
+
+.readiness-needs_improvement {
+  border-color: #f0d9d5;
+  background: #fff4f2;
+  color: #a94c40;
+}
+
+.readiness-getting_started {
+  border-color: #dce6f5;
+  background: #f1f6ff;
+  color: #496da8;
+}
+
+.readiness-not_started {
+  border-color: #e6e8ec;
+  background: #f5f6f8;
+  color: #727984;
+}
+
+.readiness-dot {
+  width: 6px;
+  height: 6px;
+  flex: 0 0 6px;
+  border-radius: 50%;
+  background: currentColor;
+}
+
+.average-score {
+  display: block;
+  margin-top: 5px;
+  color: #858b95;
+  font-size: 9px;
+}
+
+.date-value {
+  color: #707680;
+  font-size: 11px;
+  white-space: nowrap;
+}
+
+.actions-heading {
+  text-align: center !important;
+}
+
+.row-actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.action-button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e3e5e9;
+  border-radius: 7px;
+  background: #fff;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+}
+
+.action-button i {
+  font-size: 11px;
+}
+
+.view-action {
+  color: #496da8;
+}
+
+.view-action:hover {
+  border-color: #c9d6ee;
+  background: #f1f6ff;
+  color: #2f4f85;
+}
+
+.edit-action {
+  color: #626873;
+}
+
+.edit-action:hover {
+  border-color: #c9cdd3;
+  background: #f4f5f7;
+  color: #252930;
+}
+
+.delete-action {
+  color: #a24d4d;
+}
+
+.delete-action:hover {
+  border-color: #edcece;
+  background: #fff3f3;
+  color: #a13d3d;
+}
+
+/* MOBILE CARDS (hidden on desktop) */
+
+.student-cards {
+  display: none;
+}
+
+.student-card {
+  padding: 13px 14px;
+  border-bottom: 1px solid #f0f1f3;
+}
+
+.student-card:last-child {
+  border-bottom: 0;
+}
+
+.student-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 0;
+}
+
+.student-card-head .student-copy {
+  flex: 1;
+}
+
+.student-card-head .email-value {
+  font-size: 10px;
+  color: #858b95;
+}
+
+.student-card-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  margin: 10px 0;
+  color: #858b95;
+  font-size: 10px;
+}
+
+.student-card-meta strong {
+  color: #343941;
+}
+
+.card-actions {
+  justify-content: flex-end;
+}
+
+.cards-empty {
+  padding: 24px;
+  color: #858b95;
+  font-size: 12px;
+  text-align: center;
+}
+
+/* FOOTER */
+
+.table-footer {
+  min-height: 54px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 12px;
+  padding: 9px 15px;
+  border-top: 1px solid #eceef1;
+}
+
+.pagination-summary {
+  color: #858b95;
+  font-size: 10px;
+}
+
+.pagination-controls {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: #858b95;
+  font-size: 10px;
+}
+
+.pagination-controls strong {
+  color: #343941;
+}
+
+.pagination-controls button {
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #e2e5e9;
+  border-radius: 7px;
+  background: #fff;
+  color: #59616b;
+  cursor: pointer;
+}
+
+.pagination-controls button:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.pagination-controls button:hover:not(:disabled) {
+  background: #f5f6f7;
+}
+
+/* EMPTY / LOADING */
+
+.empty-state {
+  min-height: 230px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  text-align: center;
+}
+
+.empty-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  margin-bottom: 3px;
+  border-radius: 11px;
+  background: #f3f4f6;
+  color: #858b95;
+  font-size: 16px;
+}
+
+.empty-state strong {
+  color: #343941;
+  font-size: 12px;
+}
+
+.empty-state>span:last-of-type {
+  color: #858b95;
+  font-size: 11px;
+}
+
+.clear-search-button {
+  margin-top: 5px;
+  padding: 6px 10px;
+  border: 1px solid #e1e4e8;
+  border-radius: 6px;
+  background: #fff;
+  color: #4e555f;
+  font: inherit;
+  font-size: 10px;
+  cursor: pointer;
+}
+
+.loading-card {
+  min-height: 280px;
+}
+
+.loading-state {
+  min-height: 280px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: #858b95;
+}
+
+.loading-state strong {
+  color: #454b54;
+  font-size: 12px;
+}
+
+.loading-state>span:last-child {
+  font-size: 11px;
+}
+
+.spinner,
+.button-spinner {
+  width: 25px;
+  height: 25px;
+  border: 2px solid #e5e7eb;
+  border-top-color: #515862;
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.fade-enter-active,
+.fade-leave-active {
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.fade-enter-from,
+.fade-leave-to {
+  transform: translateY(-4px);
+  opacity: 0;
+}
+
+/* DELETE MODAL */
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 18px;
+  background: rgb(19 22 27 / 48%);
+  backdrop-filter: blur(2px);
+}
+
+.confirm-modal {
+  position: relative;
+  width: min(440px, 100%);
+  padding: 26px;
+  border: 1px solid #e8eaee;
+  border-radius: 14px;
+  background: #fff;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 18%);
+  text-align: center;
+}
+
+.confirm-icon {
+  width: 48px;
+  height: 48px;
+  display: grid;
+  place-items: center;
+  margin: 0 auto 15px;
+  border-radius: 14px;
+  background: #fff1f1;
+  color: #b34c4c;
+  font-size: 17px;
+}
+
+.confirm-close {
+  position: absolute;
+  top: 13px;
+  right: 13px;
+  width: 30px;
+  height: 30px;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-radius: 7px;
+  background: transparent;
+  color: #858b95;
+  cursor: pointer;
+}
+
+.confirm-close:hover {
+  background: #f4f5f7;
+  color: #343941;
+}
+
+.confirm-close:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+
+.confirm-eyebrow {
+  margin: 0 0 6px;
+  color: #a64b4b;
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: 0.12em;
+}
+
+.confirm-modal h2 {
+  margin: 0;
+  color: #252930;
+  font-size: 20px;
+  letter-spacing: -0.035em;
+}
+
+.confirm-copy {
+  margin: 10px 0 0;
+  color: #737984;
+  font-size: 12px;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
+}
+
+.confirm-copy strong {
+  color: #343941;
+}
+
+.confirm-warning {
+  display: flex;
+  align-items: flex-start;
+  gap: 9px;
+  margin-top: 18px;
+  padding: 11px;
+  border: 1px solid #f1e6d3;
+  border-radius: 8px;
+  background: #fffaf1;
+  color: #8c6a36;
+  font-size: 10px;
+  line-height: 1.5;
+  text-align: left;
+}
+
+.confirm-warning i {
+  margin-top: 1px;
+}
+
+.confirm-actions {
+  display: flex;
+  justify-content: center;
+  gap: 9px;
+  margin-top: 22px;
+}
+
+.cancel-button,
+.confirm-delete-button {
+  min-height: 38px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
+  border-radius: 7px;
+  font: inherit;
+  font-size: 11px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.cancel-button {
+  border: 1px solid #e0e3e7;
+  background: #fff;
+  color: #4f5660;
+}
+
+.cancel-button:hover {
+  background: #f5f6f7;
+}
+
+.confirm-delete-button {
+  border: 1px solid #a94343;
+  background: #ad4848;
+  color: #fff;
+}
+
+.confirm-delete-button:hover:not(:disabled) {
+  border-color: #963a3a;
+  background: #963a3a;
+}
+
+.cancel-button:disabled,
+.confirm-delete-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.button-spinner {
+  width: 13px;
+  height: 13px;
+  border-width: 2px;
+  border-color: rgb(255 255 255 / 40%);
+  border-top-color: #fff;
+}
+
+@keyframes spin {
   to {
     transform: rotate(360deg);
   }
-
 }
 
+/* RESPONSIVE */
 
-/* =========================================================
-   MOBILE
-========================================================= */
+@media (max-width: 1280px) {
+  .overview-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
 
-@media (max-width: 768px) {
+@media (max-width: 1024px) {
 
-  .dashboard-wrapper {
-    padding: 10px;
+  .users-table th:nth-child(3),
+  .users-table td:nth-child(3) {
+    display: none;
   }
 
+  .users-table {
+    min-width: 780px;
+  }
+}
+
+@media (max-width: 900px) {
   .page-header {
     align-items: stretch;
-
     flex-direction: column;
-
-    gap: 12px;
   }
 
   .header-tools {
@@ -1503,63 +1637,101 @@ onMounted(
 
   .search-wrapper {
     flex: 1;
-
     width: auto;
   }
+}
 
-  .user-count {
-    flex-shrink: 0;
-  }
-
-  .table-toolbar {
-    align-items: flex-start;
-
-    flex-direction: column;
-
-    justify-content: center;
-
-    gap: 4px;
-
-    padding: 10px 12px;
-  }
-
-  .toolbar-info {
+/* Switch to cards below 760px */
+@media (max-width: 760px) {
+  .table-scroll {
     display: none;
   }
 
+  .student-cards {
+    display: block;
+  }
 }
 
+@media (max-width: 650px) {
+  .dashboard-wrapper {
+    padding: 14px;
+  }
 
-/* =========================================================
-   SMALL MOBILE
-========================================================= */
+  .overview-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
 
-@media (max-width: 480px) {
+  .overview-card {
+    min-height: 74px;
+    gap: 8px;
+    padding: 10px;
+  }
 
-  .title-icon {
-    width: 38px;
-    height: 38px;
+  .overview-icon {
+    width: 32px;
+    height: 32px;
+    flex-basis: 32px;
+    font-size: 12px;
+  }
+
+  .overview-label {
+    font-size: 10px;
+  }
+
+  .overview-card strong {
+    font-size: 17px;
+  }
+
+  .toolbar-controls {
+    width: 100%;
+    justify-content: space-between;
+  }
+}
+
+@media (max-width: 420px) {
+  .dashboard-wrapper {
+    padding: 10px;
   }
 
   .section-title {
-    font-size: 0.95rem;
-  }
-
-  .section-subtitle {
-    font-size: 0.68rem;
+    font-size: 21px;
   }
 
   .header-tools {
-    align-items: stretch;
+    flex-wrap: wrap;
   }
 
   .user-count {
-    height: 34px;
+    flex: 1;
+    justify-content: center;
   }
 
   .search-wrapper {
-    height: 34px;
+    order: 3;
+    flex-basis: 100%;
   }
 
+  .icon-button {
+    flex-shrink: 0;
+  }
+
+  .table-footer {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .confirm-modal {
+    padding: 22px 18px;
+  }
+
+  .confirm-actions {
+    flex-direction: column-reverse;
+  }
+
+  .cancel-button,
+  .confirm-delete-button {
+    width: 100%;
+  }
 }
 </style>

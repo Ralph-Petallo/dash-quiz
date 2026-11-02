@@ -22,19 +22,14 @@ const leaderboardError = ref(null)
 const activeRequests = ref(0)
 const isLoading = computed(() => activeRequests.value > 0)
 
-const CACHE_TTL_MS = 60 * 1000
+const DASHBOARD_TTL_MS = 60 * 1000
+const LEADERBOARD_TTL_MS = 60 * 1000
+const leaderboardCache = new Map()
 
 let dashboardCache = {
     userId: null,
     expiresAt: 0,
     data: null,
-}
-
-let leaderboardCache = {
-    key: null,
-    expiresAt: 0,
-    data: null,
-    meta: null,
 }
 
 const beginRequest = () => {
@@ -45,43 +40,23 @@ const endRequest = () => {
     activeRequests.value = Math.max(0, activeRequests.value - 1)
 }
 
-const normalizeLeaderboard = (items, currentUserId) => {
+const normalizeLeaderboard = (items) => {
     const records = Array.isArray(items) ? items : []
 
-    return records.map((item) => {
+    return records.map((item, index) => {
         const score = Number(item.score ?? 0)
-        const totalQuestions = Number(item.total_questions ?? 0)
         const percentage = Number(item.percentage ?? 0)
-        const passingScore = Number(item.passing_score ?? 70)
 
         return {
-            ...item,
-            id: Number(item.id),
-            record_id: Number(item.record_id ?? item.id),
-            user_id: Number(item.user_id),
-            quiz_id: Number(item.quiz_id),
+            id: Number(item.rank ?? index + 1),
+            rank: Number(item.rank ?? index + 1),
+            isYou: Boolean(item.is_you),
+            name: item.name,
+            profile_photo: item.profile_photo,
             score: Number.isFinite(score) ? score : 0,
-            correct_answers: Number(item.correct_answers ?? score),
-            total_questions: Number.isFinite(totalQuestions)
-                ? totalQuestions
-                : 0,
-            percentage: Number.isFinite(percentage)
-                ? percentage
-                : 0,
-            passing_score: Number.isFinite(passingScore)
-                ? passingScore
-                : 70,
-            attempt_count: Number(item.attempt_count ?? 0),
-            elapsed_time:
-                item.elapsed_time !== null &&
-                    item.elapsed_time !== undefined
-                    ? Number(item.elapsed_time)
-                    : null,
-            isYou:
-                currentUserId !== null &&
-                Number(item.user_id) === Number(currentUserId),
-            displayName:
-                item.name?.trim() || "Unknown User",
+            percentage: Number.isFinite(percentage) ? percentage : 0,
+            passed: Boolean(item.passed),
+            displayName: item.name?.trim() || "Unknown User",
         }
     })
 }
@@ -115,7 +90,7 @@ export function useUserRequests() {
             dashboard.value = nextDashboard
             dashboardCache = {
                 userId: currentUserId,
-                expiresAt: Date.now() + CACHE_TTL_MS,
+                expiresAt: Date.now() + DASHBOARD_TTL_MS,
                 data: nextDashboard,
             }
 
@@ -133,68 +108,47 @@ export function useUserRequests() {
         }
     }
 
+    /**
+     * Load the leaderboard for one assessment.
+     * Call with no assessment_id to receive only the filter options.
+     */
     const getLeaderBoard = async (options = {}) => {
         const currentUserId = Number(user.value?.id ?? 0) || null
 
-        const params = {
-            limit: options.limit ?? 200,
+        const params = { limit: options.limit ?? 100 }
+
+        if (options.assessment_id) {
+            params.assessment_id = options.assessment_id
         }
 
-        if (options.category) {
-            params.category = options.category
-        }
-
-        if (options.quiz_id) {
-            params.quiz_id = options.quiz_id
-        }
-
-        const force = Boolean(options.force)
-        const cacheKey = JSON.stringify({
-            user_id: currentUserId,
-            ...params,
-        })
+        const cacheKey = JSON.stringify({ user_id: currentUserId, ...params })
 
         leaderboardError.value = null
 
-        if (
-            !force &&
-            leaderboardCache.data &&
-            leaderboardCache.key === cacheKey &&
-            leaderboardCache.expiresAt > Date.now()
-        ) {
-            leaderboard.value = normalizeLeaderboard(
-                leaderboardCache.data,
-                currentUserId
-            )
-            leaderboardMeta.value = leaderboardCache.meta ?? {}
+        const cached = leaderboardCache.get(cacheKey)
+
+        if (!options.force && cached && cached.expiresAt > Date.now()) {
+            leaderboard.value = normalizeLeaderboard(cached.data)
+            leaderboardMeta.value = cached.meta
             return leaderboard.value
         }
 
         beginRequest()
 
         try {
-            const { data } = await api.get(
-                "/api/dashboard/leaderboard",
-                { params }
-            )
+            const { data } = await api.get("/api/dashboard/leaderboard", { params })
 
-            const rawRecords = Array.isArray(data?.data)
-                ? data.data
-                : []
+            const rawRecords = Array.isArray(data?.data) ? data.data : []
+            const meta = data?.meta ?? {}
 
-            leaderboard.value = normalizeLeaderboard(
-                rawRecords,
-                currentUserId
-            )
+            leaderboard.value = normalizeLeaderboard(rawRecords)
+            leaderboardMeta.value = meta
 
-            leaderboardMeta.value = data?.meta ?? {}
-
-            leaderboardCache = {
-                key: cacheKey,
-                expiresAt: Date.now() + CACHE_TTL_MS,
+            leaderboardCache.set(cacheKey, {
+                expiresAt: Date.now() + LEADERBOARD_TTL_MS,
                 data: rawRecords,
-                meta: data?.meta ?? {},
-            }
+                meta,
+            })
 
             return leaderboard.value
         } catch (error) {
@@ -211,28 +165,15 @@ export function useUserRequests() {
     }
 
     const clearDashboardCache = () => {
-        dashboardCache = {
-            userId: null,
-            expiresAt: 0,
-            data: null,
-        }
-
-        leaderboardCache = {
-            key: null,
-            expiresAt: 0,
-            data: null,
-            meta: null,
-        }
+        dashboardCache = { userId: null, expiresAt: 0, data: null }
+        leaderboardCache.clear()
     }
 
     const updateProfile = async (formData) => {
         beginRequest()
 
         try {
-            const { data } = await api.put(
-                "/api/profile/update",
-                formData
-            )
+            const { data } = await api.put("/api/profile/update", formData)
 
             if (data.data && user.value) {
                 Object.assign(user.value, {
@@ -240,8 +181,7 @@ export function useUserRequests() {
                     last_name: data.data.last_name,
                     email: data.data.email,
                     profile_photo:
-                        data.data.profile_photo ??
-                        user.value.profile_photo,
+                        data.data.profile_photo ?? user.value.profile_photo,
                 })
             }
 

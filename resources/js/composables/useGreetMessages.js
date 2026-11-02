@@ -2,42 +2,25 @@ import { ref, computed } from 'vue'
 
 const messages = ref({
   morning: [
-    "Ready to Level Up?",
-    "Start Strong!",
-    "Rise and Grind!",
-    "Ready for a Challenge?",
-    "Let's Get Started!",
-    "Time to Power Up!",
-    "New Day, New Knowledge!",
-    "Your Next Challenge Awaits!",
-    "Let's Make Some Progress!",
-    "Ready to Test Yourself?"
+    "Start strong",
+    "Rise and grind",
+    "Let's get started",
   ],
 
   afternoon: [
-    "Keep the Momentum!",
-    "Keep Leveling Up!",
-    "Ready for the Next Challenge?",
-    "Don't Stop Now!",
-    "Keep Pushing!",
-    "Time to Test Your Skills!",
-    "You're Making Progress!",
-    "Stay on Track!",
-    "Keep Building Your Skills!",
-    "Let's Keep Going!"
+    "Keep the momentum",
+    "Keep leveling up",
+    "Don't stop now",
+    "Keep pushing",
+    "Stay on track",
+    "Let's keep going"
   ],
 
   evening: [
-    "Finish Strong!",
-    "One More Challenge?",
-    "Time to Level Up!",
-    "Keep Learning!",
-    "End the Day Strong!",
-    "Ready for One Last Challenge?",
-    "Another Step Toward Mastery!",
-    "Keep Pushing!",
-    "You've Got This!",
-    "Make Your Last Session Count!"
+    "Finish strong",
+    "Keep learning",
+    "Keep pushing",
+    "You've got this",
   ]
 })
 

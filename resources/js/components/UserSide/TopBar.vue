@@ -227,7 +227,7 @@ const isMobile = computed(() => screenWidth.value <= 768)
   align-items: center;
   gap: 5px;
 
-  color: #696969;
+  color: green;
 
   font-size: 10px;
   font-weight: 600;
@@ -242,7 +242,7 @@ const isMobile = computed(() => screenWidth.value <= 768)
 
   border-radius: 50%;
 
-  background: #696969;
+  background: green;
 }
 
 
@@ -318,7 +318,7 @@ const isMobile = computed(() => screenWidth.value <= 768)
   width: 8px;
   height: 8px;
 
-  background: #000000;
+  background: green;
 
   border: 2px solid #ffffff;
 

@@ -1,6 +1,6 @@
 import { ref } from "vue"
+import { useRouter, useRoute } from "vue-router"
 import { useUser } from "./useUser"
-import { useRouter } from "vue-router"
 import api from "../bootstrap"
 
 export function useHandleLogin() {
@@ -9,31 +9,32 @@ export function useHandleLogin() {
     const loading = ref(false)
     const errors = ref({})
     const generalError = ref("")
-
     const isLocked = ref(false)
     const showPassword = ref(false)
     const attempts = ref(0)
 
-    // ✅ Move useUser() and useRouter() to top level
     const router = useRouter()
+    const route = useRoute()
+    const { setUser, fetchUser } = useUser()
+
+    const homeFor = function (user) {
+        if (user?.role === "admin") {
+            return { name: "admin-dashboard" }
+        } else {
+            return { name: "user-home" }
+        }
+    }
+
 
     const handleLogin = async (email, password) => {
-        const { fetchUser } = useUser()
+
         errors.value = {}
         generalError.value = ""
 
-        // Basic validation
-        if (!email) {
-            errors.value.email = "Email is required."
-        }
+        if (!email) errors.value.email = "Email is required."
+        if (!password) errors.value.password = "Password is required."
 
-        if (!password) {
-            errors.value.password = "Password is required."
-        }
-
-        if (Object.keys(errors.value).length > 0) {
-            return
-        }
+        if (Object.keys(errors.value).length > 0) return
 
         if (isLocked.value) {
             generalError.value = "Too many failed attempts. Please try again later."
@@ -43,40 +44,51 @@ export function useHandleLogin() {
         loading.value = true
 
         try {
-            // Get Sanctum CSRF cookie first
+            // Sets the Sanctum session and XSRF cookies.
             await api.get("/sanctum/csrf-cookie")
 
-            // Login
-            const { data } = await api.post("/api/login", {
-                email,
-                password,
-            })
+            const { data } = await api.post("/api/login", { email, password })
 
-            // Login successful
-            attempts.value = 0
+            // Accept the user wherever the controller returns it.
+            const user = data?.user ?? data?.results ?? null
 
-            await fetchUser(true) // Force fetch user data after login
-
-            // Redirect according to role
-            if (data.role === "admin") {
-                await router.push("/admin")
-            } else {
-                await router.push("/user")
+            if (!user) {
+                throw new Error("Login response did not include a user.")
             }
 
+            attempts.value = 0
+            setUser(user)
+
+            // Replace it with the full profile (photo, stats, dates) before the page opens.
+            await fetchUser(true)
+
+            const redirect = route.query.redirect
+
+            if (typeof redirect === "string" && redirect.startsWith("/")) {
+                await router.push(redirect)
+            } else {
+                await router.push(homeFor(user))
+            }
         } catch (error) {
-            console.error("Login failed:", error)
+            console.error("Login failed:", {
+                url: error.config?.url,
+                status: error.response?.status,
+                data: error.response?.data,
+            })
 
             const status = error.response?.status
             const responseData = error.response?.data
 
-            // Laravel validation errors
             if (status === 422) {
                 errors.value = responseData?.errors ?? {}
                 generalError.value = responseData?.message ?? "Please check your information."
                 attempts.value++
-
-                // Unauthorized login
+            } else if (status === 403) {
+                // Account exists but the email is not confirmed. Send them to the resend step.
+                await router.push({
+                    name: "register",
+                    query: { step: "resend", email: responseData?.email ?? email },
+                })
             } else if (status === 401) {
                 attempts.value++
                 generalError.value = responseData?.message ?? "Invalid email or password."
@@ -91,30 +103,24 @@ export function useHandleLogin() {
                         generalError.value = ""
                     }, 30000)
                 }
-
-                // CSRF problem
             } else if (status === 419) {
                 generalError.value = "Your session expired. Please try again."
-
-                // Server error
             } else if (status >= 500) {
                 generalError.value = "Server error. Please try again later."
-
-                // Network / unknown error
             } else {
-                generalError.value = "Unable to login. Please check your connection and try again."
+                generalError.value = error.message || "Unable to login. Please check your connection and try again."
             }
-
         } finally {
             loading.value = false
         }
     }
 
-    const togglePassword = () => {
-        showPassword.value = !showPassword.value
-    }
+    const togglePassword = () => showPassword.value = !showPassword.value
 
-    const authGoogle = () => location.href = 'http://127.0.0.1:8000/auth/google/redirect'
+    // Relative path, so it works on localhost and on the ngrok domain.
+    const authGoogle = () => {
+        location.href = "/auth/google/redirect"
+    }
 
     return {
         loading,

@@ -1,95 +1,226 @@
 <template>
-  <div class="auth-wrapper">
-
-    <header class="auth-header">
-      <div class="header-inner">
-        <div class="brand">
-          <img src="/public/lightning.png" alt="Logo" width="32" height="32">
-          <span class="brand-name">CSS<span> Prep</span></span>
-        </div>
+  <div class="login">
+    <header class="top">
+      <div class="brand">
+        <img :src="logoUrl" alt="" width="28" height="28" />
+        <span>CSS Prep</span>
       </div>
     </header>
 
-    <main class="container">
+    <main class="layout">
+      <!-- INTRO -->
+      <aside class="intro">
+        <p class="eyebrow">NC II Readiness · Computer Systems Servicing</p>
+        <h1>Practice the skills before the national assessment.</h1>
+        <p class="lede">
+          Timed practicals, knowledge checks, and clear results, all in one place.
+        </p>
 
-      <section class="hero">
-        <h1>
-          Learning is <span>better</span><br />
-          when we do it <span>together</span>
-        </h1>
-        <p>Practice, learn, and improve your skills with CSS Prep.</p>
-      </section>
+        <ul class="points">
+          <li>
+            <i class="fas fa-screwdriver-wrench" aria-hidden="true"></i>
+            <span>Virtual hardware practicals with step-by-step checks</span>
+          </li>
+          <li>
+            <i class="fas fa-list-check" aria-hidden="true"></i>
+            <span>Knowledge checks and image identification</span>
+          </li>
+          <li>
+            <i class="fas fa-chart-line" aria-hidden="true"></i>
+            <span>Results saved to your records and tracked by competency</span>
+          </li>
+        </ul>
+      </aside>
 
-      <section class="form-section">
-        <form class="card" @submit.prevent="submitLogin">
-          <h2>Welcome{{ visited ? ' Back!' : '!' }}</h2>
-          <p class="subtitle">Sign in to your account</p>
+      <!-- FORM -->
+      <section class="panel" aria-labelledby="login-title">
+        <form class="form" novalidate @submit.prevent="submitLogin">
+          <header class="form-head">
+            <h2 id="login-title">{{ visited ? 'Welcome back' : 'Sign in' }}</h2>
+            <p>Use your CSS Prep account to continue.</p>
+          </header>
 
+          <!-- OFFLINE -->
+          <div v-if="!isOnline" class="notice notice-warn" role="status">
+            <i class="fas fa-wifi" aria-hidden="true"></i>
+            <span>You're offline. Connect to the internet to sign in.</span>
+          </div>
+
+          <!-- SESSION EXPIRED (from a redirect) -->
+          <div v-else-if="sessionExpired && !activeError && !success" class="notice" role="status">
+            <i class="fas fa-user-clock" aria-hidden="true"></i>
+            <span>Your session has expired. Sign in again to continue.</span>
+          </div>
+
+          <!-- SLOW NETWORK -->
+          <p v-if="loading && slowNetwork" class="slow-note" role="status">
+            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+            Still signing in. Your connection may be slow.
+          </p>
+
+          <!-- EMAIL -->
           <div class="field">
             <label for="email">Email address</label>
-            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="yourname@email.com"
-              :class="{ error: errors.email }" autocomplete="off" />
-            <small v-if="errors.email">{{ errors.email }}</small>
+            <input id="email" type="email" name="email" v-model.trim="form.email" placeholder="you@email.com"
+              autocomplete="username" :class="{ invalid: fieldError('email') }"
+              :aria-invalid="fieldError('email') ? 'true' : 'false'" aria-describedby="email-error"
+              :disabled="loading || success" />
+            <small v-if="fieldError('email')" id="email-error">{{ fieldError('email') }}</small>
           </div>
 
+          <!-- PASSWORD -->
           <div class="field">
-            <label for="password">Password</label>
-
-            <div @click="togglePassword" :class="errors.password ? 'error-pass' : 'eyeButton'">
-              <i :class="showPassword ? 'fas fa-eye' : 'fas fa-eye-slash'"></i>
+            <div class="field-row">
+              <label for="password">Password</label>
+              <router-link to="/forgot" class="text-link">Forgot password?</router-link>
             </div>
 
-            <input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password"
-              :class="{ error: errors.password }" placeholder="••••••" />
-            <small v-if="errors.password">{{ errors.password }}</small>
+            <div class="input-wrap">
+              <input id="password" :type="showPassword ? 'text' : 'password'" v-model="form.password"
+                placeholder="Your password" autocomplete="current-password" :class="{ invalid: fieldError('password') }"
+                :aria-invalid="fieldError('password') ? 'true' : 'false'" aria-describedby="password-error"
+                :disabled="loading || success" />
+
+              <button type="button" class="toggle-password"
+                :aria-label="showPassword ? 'Hide password' : 'Show password'" :aria-pressed="showPassword"
+                :disabled="loading || success" @click="togglePassword">
+                <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'" aria-hidden="true"></i>
+              </button>
+            </div>
+            <small v-if="fieldError('password')" id="password-error">{{ fieldError('password') }}</small>
           </div>
 
-          <div v-if="generalError" class="alert">
-            {{ generalError }}
+          <!-- SUCCESS -->
+          <div v-if="success" class="notice notice-ok" role="status">
+            <i class="fas fa-circle-check" aria-hidden="true"></i>
+            <span>Signed in. Taking you to your dashboard…</span>
           </div>
 
-          <button class="btn" type="submit" :disabled="loading || isLocked">
-            <span v-if="!loading"><i class="fa-solid fa-right-to-bracket"></i>&nbsp;Login</span>
-            <span v-else class="loader"></span>
+          <!-- ERROR -->
+          <div v-else-if="activeError" class="notice notice-error" :class="`tone-${activeError.tone}`" role="alert">
+            <i :class="activeError.icon" aria-hidden="true"></i>
+            <div>
+              <strong>{{ activeError.title }}</strong>
+              <span>{{ activeError.text }}</span>
+            </div>
+          </div>
+
+          <button class="btn-primary" type="submit" :disabled="loading || isLocked || success || !isOnline">
+            <span v-if="loading" class="loader" aria-hidden="true"></span>
+            <template v-else-if="success">
+              <i class="fas fa-check" aria-hidden="true"></i>
+              Signed in
+            </template>
+            <template v-else>Sign in</template>
           </button>
 
-          <div class="footer-links">
-            <div class="forgot-link">
-              <router-link to="/forgot">Forgot password?</router-link>
-            </div>
-            <div class="divider">
-              <div class="line"></div>or<div class="line"></div>
-            </div>
-            <a href="/register" class="btn-register">
-              <i class="fas fa-user-plus"></i>
-              &nbsp;Sign Up</a>
-            <a class="btn-google" href="/auth/google">
-              <img class="google-logo" src="/public/google logo.png" alt="Google Logo" width="20" height="20">
-              Sign up with Google
-            </a>
+          <div class="divider" aria-hidden="true">
+            <span></span>
+            <small>or</small>
+            <span></span>
           </div>
+
+          <a class="btn-secondary" href="/auth/google">
+            <img :src="googleLogoUrl" alt="" width="18" height="18" />
+            Continue with Google
+          </a>
+
+          <p class="switch">
+            New to CSS Prep?
+            <router-link to="/register">Create an account</router-link>
+          </p>
         </form>
       </section>
-
     </main>
 
-    <footer class="auth-footer">
-      © {{ new Date().getFullYear() }} CSS Prep • SNSU Capstone Project
+    <footer class="footer">
+      <nav>
+        <router-link to="/privacy">Privacy</router-link>
+        <router-link to="/terms">Terms</router-link>
+      </nav>
+      <p>© {{ currentYear }} CSS Prep · SNSU Capstone Project</p>
     </footer>
-
   </div>
 </template>
 
 <script setup>
-import { reactive, ref, onMounted } from 'vue'
-import { useHandleLogin } from '@/composables/useHandleLogin.js'
+import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { useRoute } from 'vue-router'
+import { useHandleLogin } from '@/composables/useHandleLogin'
+import logoUrl from '@/assets/lightning.png'
+import googleLogoUrl from '@/assets/google-logo.png'
 
+/* =========================================================
+   CONSTANTS AND MESSAGES
+========================================================= */
+
+const SLOW_AFTER_MS = 4000
+const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+const ERROR_STATES = {
+  offline: {
+    icon: 'fas fa-wifi',
+    title: "You're offline",
+    text: 'Check your internet connection, then try again.',
+    tone: 'warn',
+  },
+  network: {
+    icon: 'fas fa-plug-circle-xmark',
+    title: "Can't reach the server",
+    text: 'The connection failed. Check your network and try again.',
+    tone: 'error',
+  },
+  timeout: {
+    icon: 'fas fa-hourglass-half',
+    title: 'The request took too long',
+    text: 'Your network may be slow right now. Try again in a moment.',
+    tone: 'error',
+  },
+  permission: {
+    icon: 'fas fa-lock',
+    title: 'Access denied',
+    text: 'This account cannot sign in right now. Contact your instructor if this is a mistake.',
+    tone: 'error',
+  },
+  session: {
+    icon: 'fas fa-user-clock',
+    title: 'Your session has expired',
+    text: 'Sign in again to continue.',
+    tone: 'warn',
+  },
+  server: {
+    icon: 'fas fa-triangle-exclamation',
+    title: 'Sign-in is unavailable',
+    text: 'Something went wrong on our side. Please try again shortly.',
+    tone: 'error',
+  },
+}
+
+/* =========================================================
+   ROUTE, VISITOR, CONNECTION
+========================================================= */
+
+const route = useRoute()
+const currentYear = new Date().getFullYear()
 const visited = ref(false)
 
-const form = reactive({
-  email: '',
-  password: ''
-})
+const sessionExpired = computed(() =>
+  route.query.expired === '1' || route.query.reason === 'session-expired'
+)
+
+const isOnline = ref(navigator.onLine)
+const slowNetwork = ref(false)
+const success = ref(false)
+const requestError = ref(null)
+
+let slowTimer = null
+
+/* =========================================================
+   FORM STATE
+========================================================= */
+
+const form = reactive({ email: '', password: '' })
+const localErrors = reactive({ email: '', password: '' })
 
 const {
   loading,
@@ -99,535 +230,626 @@ const {
   showPassword,
   handleLogin,
   togglePassword,
-  authGoogle
 } = useHandleLogin()
 
-const submitLogin = async () => {
-  await handleLogin(form.email, form.password)
+// Laravel returns field errors as arrays, e.g. { email: ["..."] }.
+const serverFieldError = (field) => {
+  const value = errors.value?.[field]
+  return Array.isArray(value) ? value[0] : value || ''
 }
 
-function newVisitorCheck() {
+// Client-side messages come first, so the learner fixes the problem before a request is sent.
+const fieldError = (field) => localErrors[field] || serverFieldError(field)
+
+const hasServerFieldErrors = () => Object.keys(errors.value || {}).length > 0
+
+const activeError = computed(() => {
+  if (requestError.value) return requestError.value
+  if (generalError.value) return { ...ERROR_STATES.server, text: generalError.value }
+  return null
+})
+
+/* =========================================================
+   VALIDATION
+========================================================= */
+
+function validate() {
+  localErrors.email = !form.email
+    ? 'Enter your email address.'
+    : !EMAIL_PATTERN.test(form.email)
+      ? 'Enter a valid email, like name@email.com.'
+      : ''
+
+  localErrors.password = form.password ? '' : 'Enter your password.'
+
+  return !localErrors.email && !localErrors.password
+}
+
+// Clear a message as soon as the learner starts fixing that field.
+watch(() => form.email, () => { localErrors.email = '' })
+watch(() => form.password, () => { localErrors.password = '' })
+
+/* =========================================================
+   ERRORS AND SLOW NETWORK
+========================================================= */
+
+function classifyError(error) {
+  const code = error?.response?.status
+
+  if (code === 401 || code === 419) return ERROR_STATES.session
+  if (code === 403) return ERROR_STATES.permission
+  if (code >= 500 || error?.response) return ERROR_STATES.server
+  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') return ERROR_STATES.timeout
+  if (!navigator.onLine) return ERROR_STATES.offline
+
+  return ERROR_STATES.network
+}
+
+function startSlowTimer() {
+  slowNetwork.value = false
+  clearTimeout(slowTimer)
+  slowTimer = setTimeout(() => {
+    slowNetwork.value = true
+  }, SLOW_AFTER_MS)
+}
+
+function stopSlowTimer() {
+  clearTimeout(slowTimer)
+  slowNetwork.value = false
+}
+
+/* =========================================================
+   SUBMIT
+========================================================= */
+
+const submitLogin = async () => {
+  if (loading.value || isLocked.value || success.value) return
+
+  requestError.value = null
+
+  if (!isOnline.value) {
+    requestError.value = ERROR_STATES.offline
+    return
+  }
+
+  if (!validate()) return
+
+  startSlowTimer()
+
+  try {
+    await handleLogin(form.email, form.password)
+
+    // The composable reports failures through errors or generalError.
+    if (!generalError.value && !hasServerFieldErrors()) {
+      success.value = true
+    }
+  } catch (error) {
+    console.error('Login failed:', error)
+    requestError.value = classifyError(error)
+  } finally {
+    stopSlowTimer()
+  }
+}
+
+/* =========================================================
+   CONNECTION EVENTS AND MOUNT
+========================================================= */
+
+function handleOnline() {
+  isOnline.value = true
+  if (requestError.value === ERROR_STATES.offline) requestError.value = null
+}
+
+function handleOffline() {
+  isOnline.value = false
+}
+
+onMounted(() => {
   if (localStorage.getItem('visited')) {
     visited.value = true
   } else {
     localStorage.setItem('visited', 'true')
   }
-}
 
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
 
-
-onMounted(() => {
-  newVisitorCheck()
-
-  // Clear quiz-related caches when opening login page
-  Object.keys(localStorage).forEach(key => {
+  // Clear quiz caches when the login page opens.
+  Object.keys(localStorage).forEach((key) => {
     if (key.startsWith('dash-quiz') || key.startsWith('quiz')) {
       localStorage.removeItem(key)
     }
   })
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
+  clearTimeout(slowTimer)
+})
 </script>
 
 <style scoped>
 /* =========================================================
-   DASHQUIZ — FROSTED NOIR
-   #FFFFFF  White
-   #000000  Black
-   #A9A9A9  Gray
-   #D3D3D3  Light Gray
-   #696969  Dim Gray
+   CSS PREP LOGIN
+   Frosted noir: #FFFFFF #000000 #A9A9A9 #D3D3D3 #696969
    ========================================================= */
 
-* {
+.login {
+  --ink: #0a0a0a;
+  --mute: #5f5f5f;
+  --faint: #8c8c8c;
+  --line: #dcdcdc;
+  --paper: #f5f5f4;
+  --white: #ffffff;
+  --error: #b42318;
+  --error-bg: #fdf2f1;
+  --ok: #11813d;
+  --ok-bg: #eef8f1;
+  --warn: #7a5200;
+  --warn-bg: #fff8e6;
+  --warn-line: #e0b451;
+
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  flex-direction: column;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 15px;
+  line-height: 1.5;
+  text-align: left;
   box-sizing: border-box;
 }
 
-.auth-wrapper {
-  --white: #ffffff;
-  --black: #000000;
-  --gray: #a9a9a9;
-  --light-gray: #d3d3d3;
-  --dark-gray: #696969;
-
-  --page-bg: #f7f7f7;
-  --soft-bg: #333333;
-  --border: #d3d3d3;
-
-  --text-primary: #000000;
-  --text-secondary: #696969;
-  --text-muted: #a9a9a9;
-
-  min-height: 100vh;
-
-  display: flex;
-  flex-direction: column;
-
-  background: var(--page-bg);
-
-  color: var(--text-primary);
-
-  font-family:
-    "Inter",
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
+.login *,
+.login *::before,
+.login *::after {
+  box-sizing: border-box;
 }
 
-:root.dark-mode .auth-wrapper {
-  --white: #1a1a1a;
-  --black: #e5e5e5;
-  --gray: #555555;
-  --light-gray: #2a2a2a;
-  --dark-gray: #888888;
-
-  --page-bg: #0f0f0f;
-  --soft-bg: #2a2a2a;
-  --border: #2a2a2a;
-
-  --text-primary: #e5e5e5;
-  --text-secondary: #888888;
-  --text-muted: #666666;
+.login h1,
+.login h2,
+.login p {
+  margin: 0;
 }
 
-
-/* =========================================================
-   HEADER
-   ========================================================= */
-
-.auth-header {
-  width: 100%;
-
-  background: rgba(255, 255, 255, 0.94);
-
-  border-bottom: 1px solid var(--border);
-
-  position: sticky;
-  top: 0;
-  z-index: 100;
-
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
+.login button,
+.login input {
+  font: inherit;
 }
 
-:root.dark-mode .auth-header {
-  background: rgba(26, 26, 26, 0.94);
+.login :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
-.header-inner {
-  width: 100%;
-  max-width: 1100px;
+/* TOP BAR */
 
-  margin: 0 auto;
-
-  padding: 15px 20px;
-
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+.top {
+  padding: 18px clamp(16px, 4vw, 40px);
 }
-
-
-/* =========================================================
-   BRAND
-   ========================================================= */
 
 .brand {
-  display: flex;
+  display: inline-flex;
   align-items: center;
-
   gap: 10px;
+  font-size: 15px;
+  font-weight: 800;
+  letter-spacing: 0.02em;
 }
 
 .brand img {
-  width: 32px;
-  height: 32px;
-
+  width: 28px;
+  height: 28px;
   object-fit: contain;
 }
 
-.brand-name {
-  color: var(--black);
+/* LAYOUT */
 
-  font-size: 1rem;
-  font-weight: 800;
-
-  letter-spacing: 0.04em;
-}
-
-.brand-name span {
-  color: var(--dark-gray);
-}
-
-
-/* =========================================================
-   MAIN LAYOUT
-   ========================================================= */
-
-.container {
+.layout {
   flex: 1;
-
   width: 100%;
-  max-width: 1100px;
-
+  max-width: 1080px;
   margin: 0 auto;
-
-  padding: 3rem 20px;
-
+  padding: clamp(8px, 3vw, 32px) clamp(16px, 4vw, 40px) 48px;
   display: grid;
-
-  grid-template-columns: minmax(0, 1fr) minmax(340px, 380px);
-
-  gap: clamp(40px, 7vw, 90px);
-
+  grid-template-columns: minmax(0, 1fr) minmax(0, 400px);
+  gap: clamp(32px, 7vw, 96px);
   align-items: center;
 }
 
+/* INTRO */
 
-/* =========================================================
-   HERO
-   ========================================================= */
-
-.hero {
-  max-width: 540px;
+.intro {
+  max-width: 520px;
 }
 
-.hero h1 {
-  margin: 0;
+.eyebrow {
+  margin-bottom: 14px;
+  color: var(--mute);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
 
-  color: var(--black);
-
-  font-size: clamp(2.1rem, 4vw, 3.2rem);
-
+.intro h1 {
+  font-size: clamp(2rem, 3.6vw, 2.9rem);
   font-weight: 800;
-
-  line-height: 1.12;
-
-  letter-spacing: -0.045em;
+  line-height: 1.1;
+  letter-spacing: -0.035em;
 }
 
-.hero h1 span {
-  color: var(--dark-gray);
+.lede {
+  margin-top: 16px;
+  color: var(--mute);
+  font-size: 1rem;
+  line-height: 1.6;
 }
 
-.hero p {
-  max-width: 460px;
-
-  margin: 1.1rem 0 0;
-
-  color: var(--dark-gray);
-
-  font-size: 0.95rem;
-
-  line-height: 1.7;
+.points {
+  display: grid;
+  gap: 14px;
+  margin: 32px 0 0;
+  padding: 0;
+  list-style: none;
 }
 
-
-/* =========================================================
-   FORM SECTION
-   ========================================================= */
-
-.form-section {
-  width: 100%;
-
+.points li {
   display: flex;
-  align-items: center;
-  justify-content: center;
+  align-items: flex-start;
+  gap: 12px;
+  color: var(--ink);
+  font-size: 14px;
 }
 
-
-/* =========================================================
-   LOGIN CARD
-   ========================================================= */
-
-.card {
-  width: 100%;
-  max-width: 380px;
-
-  padding: 2rem;
-
+.points i {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  border-radius: 8px;
   background: var(--white);
+  font-size: 13px;
+}
 
-  border: 1px solid var(--border);
+/* PANEL */
 
-  border-radius: 16px;
+.panel {
+  width: 100%;
+  padding: clamp(24px, 4vw, 36px);
+  background: var(--white);
+  border: 1px solid var(--line);
+  border-radius: 14px;
+}
 
+.form {
   display: flex;
   flex-direction: column;
-
-  gap: 15px;
-
-  box-shadow:
-    0 8px 30px rgba(0, 0, 0, 0.05);
-
-  animation: cardEnter 0.35s ease-out both;
+  gap: 16px;
 }
 
-.card h2 {
-  margin: 0;
+.form-head {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 4px;
+}
 
-  color: var(--black);
-
-  font-size: 1.35rem;
-
+.form-head h2 {
+  font-size: 1.4rem;
   font-weight: 800;
-
-  letter-spacing: -0.025em;
+  letter-spacing: -0.02em;
 }
 
-.subtitle {
-  margin: -8px 0 3px;
-
-  color: var(--dark-gray);
-
-  font-size: 0.8rem;
+.form-head p {
+  color: var(--mute);
+  font-size: 14px;
 }
 
-
-/* =========================================================
-   FORM FIELDS
-   ========================================================= */
+/* FIELDS */
 
 .field {
-  position: relative;
-
   display: flex;
   flex-direction: column;
-
   gap: 6px;
 }
 
+.field-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .field label {
-  color: var(--dark-gray);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: left;
+}
 
-  font-size: 0.72rem;
+.text-link {
+  color: var(--mute);
+  font-size: 12.5px;
+  font-weight: 600;
+  text-decoration: none;
+}
 
-  font-weight: 700;
-
-  letter-spacing: 0.01em;
+.text-link:hover {
+  color: var(--ink);
+  text-decoration: underline;
 }
 
 .field input {
   width: 100%;
-
-  min-height: 44px;
-
-  padding: 11px 42px 11px 13px;
-
-  background: var(--page-bg);
-
-  border: 1px solid var(--border);
-
+  min-height: 46px;
+  padding: 11px 14px;
+  border: 1px solid var(--line);
   border-radius: 9px;
-
-  color: var(--black);
-
-  font-family: inherit;
-
-  font-size: 0.84rem;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  background: var(--white);
+  color: var(--ink);
+  font-size: 16px;
+  /* 16px stops iOS from zooming when the field is focused */
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
 }
 
 .field input::placeholder {
-  color: var(--gray);
+  color: var(--faint);
 }
 
-.field input:hover {
-  border-color: var(--gray);
+.field input:hover:not(:disabled) {
+  border-color: var(--faint);
 }
 
 .field input:focus {
   outline: none;
-
-  background: var(--white);
-
-  border-color: var(--dark-gray);
-
-  box-shadow:
-    0 0 0 3px rgba(105, 105, 105, 0.12);
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
 }
 
-.field input.error {
-  border-color: red;
-  box-shadow:
-    0 0 0 2px rgba(187, 49, 49, 0.1);
+.field input:disabled {
+  background: var(--paper);
+  opacity: 0.7;
+}
+
+.field input.invalid {
+  border-color: var(--error);
+}
+
+.field input.invalid:focus {
+  box-shadow: 0 0 0 3px rgba(180, 35, 24, 0.12);
 }
 
 .field small {
-  color: red;
-
-  font-size: 0.68rem;
-
+  color: var(--error);
+  font-size: 12.5px;
   line-height: 1.4;
 }
 
+.input-wrap {
+  position: relative;
+}
 
-/* =========================================================
-   PASSWORD TOGGLE
-   ========================================================= */
+.input-wrap input {
+  padding-right: 48px;
+}
 
-.field .eyeButton {
+.toggle-password {
   position: absolute;
-
-  right: 12px;
-  bottom: 11px;
-
-  width: 24px;
-  height: 24px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: var(--gray);
-
-  cursor: pointer;
-
-  z-index: 2;
-
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.field .error-pass {
-  position: absolute;
-
-  right: 12px;
-  bottom: 30px;
-
-  width: 24px;
-  height: 24px;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  color: var(--gray);
-
-  cursor: pointer;
-
-  z-index: 2;
-
-  transition:
-    color 0.2s ease,
-    transform 0.2s ease;
-}
-
-.field .eyeButton:hover {
-  color: var(--black);
-
-  transform: scale(1.05);
-}
-
-
-/* =========================================================
-   ALERT
-   ========================================================= */
-
-.alert {
-  padding: 10px 12px;
-
-  background: rgb(255, 217, 217);
-
-  border: 1px solid red;
-
+  top: 50%;
+  right: 6px;
+  transform: translateY(-50%);
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: 0;
   border-radius: 8px;
-
-  color: brown;
-
-  font-size: 0.7rem;
-
-  line-height: 1.45;
-}
-
-
-/* =========================================================
-   LOGIN BUTTON
-   ========================================================= */
-
-.btn {
-  width: 100%;
-
-  min-height: 44px;
-
-  padding: 11px 14px;
-
-  border: 1px solid var(--black);
-
-  border-radius: 9px;
-
-  background: var(--black);
-
-  color: var(--white);
-
-  font-family: inherit;
-
-  font-size: 0.84rem;
-
-  font-weight: 700;
-
+  background: transparent;
+  color: var(--mute);
   cursor: pointer;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  transition:
-    background 0.2s ease,
-    transform 0.15s ease,
-    box-shadow 0.2s ease;
 }
 
-:root.dark-mode .btn {
-  background: #e5e5e5;
-  color: #000000;
-  border-color: #e5e5e5;
+.toggle-password:hover:not(:disabled) {
+  background: var(--paper);
+  color: var(--ink);
 }
 
-.btn:hover:not(:disabled) {
-  background: var(--dark-gray);
-
-  box-shadow:
-    0 5px 15px rgba(0, 0, 0, 0.12);
-}
-
-:root.dark-mode .btn:hover:not(:disabled) {
-  background: #888888;
-  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-}
-
-.btn:active:not(:disabled) {
-  transform: scale(0.98);
-}
-
-.btn:disabled {
-  opacity: 0.55;
-
+.toggle-password:disabled {
+  opacity: 0.4;
   cursor: not-allowed;
 }
 
+/* NOTICES */
 
-/* =========================================================
-   LOADER
-   ========================================================= */
+.notice,
+.slow-note {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 11px 13px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--paper);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.notice i {
+  margin-top: 2px;
+}
+
+.notice div {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.notice strong {
+  font-weight: 700;
+}
+
+.notice-warn,
+.notice.tone-warn {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn);
+}
+
+.notice-error {
+  border-color: #efc2be;
+  background: var(--error-bg);
+  color: var(--error);
+}
+
+.notice-ok {
+  border-color: #bfe2cc;
+  background: var(--ok-bg);
+  color: var(--ok);
+}
+
+.slow-note {
+  align-items: center;
+  border: 0;
+  background: transparent;
+  color: var(--mute);
+  padding: 0;
+}
+
+/* BUTTONS */
+
+.btn-primary,
+.btn-secondary {
+  width: 100%;
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border-radius: 9px;
+  font-size: 15px;
+  font-weight: 700;
+  text-decoration: none;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.btn-primary {
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--white);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #262626;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  border: 1px solid var(--line);
+  background: var(--white);
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.btn-secondary:hover {
+  border-color: var(--ink);
+}
+
+.btn-secondary img {
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
 
 .loader {
-  width: 17px;
-  height: 17px;
-
-  border: 2px solid rgba(255, 255, 255, 0.35);
-
+  width: 18px;
+  height: 18px;
+  border: 2px solid rgba(255, 255, 255, 0.3);
   border-top-color: var(--white);
-
   border-radius: 50%;
-
   animation: spin 0.75s linear infinite;
 }
+
+/* DIVIDER AND SWITCH */
+
+.divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 2px 0;
+  color: var(--faint);
+}
+
+.divider span {
+  flex: 1;
+  height: 1px;
+  background: var(--line);
+}
+
+.divider small {
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.switch {
+  text-align: center;
+  color: var(--mute);
+  font-size: 14px;
+}
+
+.switch a {
+  margin-left: 4px;
+  color: var(--ink);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.switch a:hover {
+  text-decoration: underline;
+}
+
+/* FOOTER */
+
+.footer {
+  padding: 20px clamp(16px, 4vw, 40px);
+  border-top: 1px solid var(--line);
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  color: var(--mute);
+  font-size: 12.5px;
+}
+
+.footer nav {
+  display: flex;
+  gap: 16px;
+}
+
+.footer a {
+  color: var(--mute);
+  text-decoration: none;
+}
+
+.footer a:hover {
+  color: var(--ink);
+  text-decoration: underline;
+}
+
+/* ANIMATION */
 
 @keyframes spin {
   to {
@@ -635,396 +857,74 @@ onMounted(() => {
   }
 }
 
-
-/* =========================================================
-   FOOTER LINKS
-   ========================================================= */
-
-.footer-links {
-  display: flex;
-  flex-direction: column;
-
-  gap: 11px;
-}
-
-
-/* =========================================================
-   FORGOT PASSWORD
-   ========================================================= */
-
-.forgot-link {
-  display: flex;
-
-  justify-content: center;
-
-  font-size: 0.76rem;
-}
-
-.forgot-link a {
-  color: var(--dark-gray);
-
-  text-decoration: none;
-
-  font-weight: 600;
-
-  transition: color 0.2s ease;
-}
-
-.forgot-link a:hover {
-  color: var(--black);
-
-  text-decoration: underline;
-}
-
-
-/* =========================================================
-   DIVIDER
-   ========================================================= */
-
-.divider {
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  gap: 10px;
-
-  color: var(--gray);
-
-  font-size: 0.68rem;
-
-  text-transform: uppercase;
-
-  letter-spacing: 0.05em;
-}
-
-.line {
-  flex: 1;
-
-  height: 1px;
-
-  background: var(--border);
-}
-
-
-/* =========================================================
-   REGISTER
-   ========================================================= */
-
-.btn-register {
-  width: 100%;
-
-  min-height: 43px;
-
-  padding: 10px 13px;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  gap: 5px;
-
-  background: var(--white);
-
-  color: var(--black);
-
-  border: 1px solid var(--dark-gray);
-
-  border-radius: 9px;
-
-  text-decoration: none;
-
-  font-size: 0.82rem;
-
-  font-weight: 700;
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.15s ease;
-}
-
-.btn-register:hover {
-  background: var(--black);
-
-  color: var(--white);
-
-  transform: translateY(-1px);
-}
-
-
-/* =========================================================
-   GOOGLE
-   ========================================================= */
-
-.btn-google {
-  width: 100%;
-
-  min-height: 43px;
-
-  padding: 10px 13px;
-
-  display: flex;
-
-  align-items: center;
-  justify-content: center;
-
-  gap: 7px;
-
-  background: var(--white);
-
-  color: var(--black);
-
-  border: 1px solid var(--border);
-
-  border-radius: 9px;
-
-  text-decoration: none;
-
-  font-size: 0.82rem;
-
-  font-weight: 600;
-
-  cursor: pointer;
-
-  transition:
-    background 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.15s ease;
-}
-
-.btn-google:hover {
-  background: var(--page-bg);
-
-  border-color: var(--gray);
-
-  transform: translateY(-1px);
-}
-
-.google-logo {
-  width: 18px;
-  height: 18px;
-
-  object-fit: contain;
-
-  margin: 0;
-}
-
-
-/* =========================================================
-   FOOTER
-   ========================================================= */
-
-.auth-footer {
-  width: 100%;
-
-  padding: 13px 20px;
-
-  background: var(--black);
-
-  color: var(--gray);
-
-  text-align: center;
-
-  font-size: 0.68rem;
-
-  line-height: 1.5;
-}
-
-
-/* =========================================================
-   FOCUS
-   ========================================================= */
-
-.btn:focus-visible,
-.btn-register:focus-visible,
-.btn-google:focus-visible,
-.forgot-link a:focus-visible,
-.eyeButton:focus-visible {
-  outline: 2px solid var(--black);
-
-  outline-offset: 3px;
-}
-
-
-/* =========================================================
-   CARD ANIMATION
-   ========================================================= */
-
-@keyframes cardEnter {
-  from {
-    opacity: 0;
-
-    transform: translateY(12px);
-  }
-
-  to {
-    opacity: 1;
-
-    transform: translateY(0);
-  }
-}
-
-
-/* =========================================================
-   TABLET
-   ========================================================= */
+/* RESPONSIVE */
 
 @media (max-width: 900px) {
-  .container {
-    grid-template-columns: 1fr 360px;
-
-    gap: 35px;
-
-    padding: 2.5rem 20px;
+  .layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 32px;
   }
 
-  .hero h1 {
-    font-size: 2.3rem;
-  }
-}
-
-
-/* =========================================================
-   MOBILE
-   ========================================================= */
-
-@media (max-width: 768px) {
-  .header-inner {
-    padding: 13px 16px;
+  .intro {
+    max-width: 560px;
   }
 
-  .container {
-    grid-template-columns: 1fr;
-
-    gap: 2rem;
-
-    padding: 2rem 16px 2.5rem;
+  .points {
+    display: none;
   }
 
-  .hero {
-    width: 100%;
-
-    max-width: 600px;
-
-    margin: 0 auto;
-
-    text-align: center;
-  }
-
-  .hero h1 {
-    font-size: clamp(2rem, 8vw, 2.5rem);
-  }
-
-  .hero p {
-    margin-left: auto;
-    margin-right: auto;
-
-    font-size: 0.88rem;
-  }
-
-  .form-section {
-    width: 100%;
-  }
-
-  .card {
-    max-width: 430px;
+  .panel {
+    max-width: 480px;
   }
 }
-
-
-/* =========================================================
-   SMALL MOBILE
-   ========================================================= */
 
 @media (max-width: 480px) {
-  .header-inner {
-    padding: 12px 14px;
+  .layout {
+    padding-top: 4px;
+    gap: 24px;
   }
 
-  .brand-name {
-    font-size: 0.9rem;
+  .intro h1 {
+    font-size: 1.7rem;
   }
 
-  .brand img {
-    width: 29px;
-    height: 29px;
+  .lede {
+    margin-top: 10px;
+    font-size: 14px;
   }
 
-  .container {
-    padding: 1.5rem 12px 2rem;
-
-    gap: 1.5rem;
+  .panel {
+    padding: 22px 18px;
+    border-radius: 12px;
   }
 
-  .hero h1 {
-    font-size: 1.8rem;
-
-    letter-spacing: -0.035em;
-  }
-
-  .hero p {
-    margin-top: 0.8rem;
-
-    font-size: 0.8rem;
-  }
-
-  .card {
-    padding: 1.5rem;
-
-    border-radius: 14px;
-
+  .form {
     gap: 14px;
   }
 
-  .card h2 {
-    font-size: 1.2rem;
+  .btn-primary,
+  .btn-secondary {
+    min-height: 48px;
   }
 
-  .subtitle {
-    font-size: 0.76rem;
+  .footer {
+    justify-content: center;
+    text-align: center;
   }
 
-  .field input {
-    min-height: 43px;
-
-    font-size: 0.82rem;
-  }
-
-  .btn,
-  .btn-register,
-  .btn-google {
-    min-height: 42px;
-  }
-
-  .auth-footer {
-    padding: 11px 12px;
-
-    font-size: 0.62rem;
+  .footer nav {
+    width: 100%;
+    justify-content: center;
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
 
-/* =========================================================
-   VERY SMALL PHONES
-   ========================================================= */
-
-@media (max-width: 340px) {
-  .container {
-    padding-left: 8px;
-    padding-right: 8px;
-  }
-
-  .card {
-    padding: 1.25rem;
-  }
-
-  .hero h1 {
-    font-size: 1.6rem;
+  .login *,
+  .login *::before,
+  .login *::after {
+    animation: none !important;
+    transition: none !important;
   }
 }
 </style>

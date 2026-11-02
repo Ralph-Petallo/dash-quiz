@@ -1,25 +1,14 @@
 <template>
     <div class="assessment-layout">
-
-        <!-- =====================================================
-         ASSESSMENT CONTENT
-    ====================================================== -->
+        <!-- Assessment content -->
         <main class="assessment-main">
-
             <div class="assessment-content">
-
                 <router-view />
-
             </div>
-
         </main>
 
-
-        <!-- =====================================================
-         FOOTER STATUS
-    ====================================================== -->
+        <!-- Footer status -->
         <footer class="assessment-footer">
-
             <div class="footer-left">
                 <span class="connection-dot"></span>
                 <span>Assessment session active</span>
@@ -30,12 +19,9 @@
                 <span class="separator">•</span>
                 <span>NC II</span>
             </div>
-
         </footer>
-
     </div>
 </template>
-
 
 <script setup>
 import { computed, ref, onMounted, onUnmounted } from 'vue'
@@ -44,20 +30,11 @@ import { useRoute, useRouter } from 'vue-router'
 const route = useRoute()
 const router = useRouter()
 
-
-// =====================================================
-// STATE
-// =====================================================
-
+// Timer state
 const elapsedSeconds = ref(0)
-
 let timer = null
 
-
-// =====================================================
-// ASSESSMENT INFO
-// =====================================================
-
+// Assessment information
 const assessmentTitle = computed(() => {
     return route.meta?.assessmentTitle || 'Assessment'
 })
@@ -66,11 +43,7 @@ const assessmentType = computed(() => {
     return route.meta?.assessmentType || 'Competency Assessment'
 })
 
-
-// =====================================================
-// UI OPTIONS
-// =====================================================
-
+// UI options
 const showBackButton = computed(() => {
     return route.meta?.showBackButton ?? false
 })
@@ -79,307 +52,148 @@ const showTimer = computed(() => {
     return route.meta?.showTimer ?? false
 })
 
-
-// =====================================================
-// TIMER
-// =====================================================
-
+// Timer
 const formattedTime = computed(() => {
-
     const minutes = Math.floor(elapsedSeconds.value / 60)
     const seconds = elapsedSeconds.value % 60
 
     return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`
 })
 
-const timerWarning = computed(() => {
-    return false
-})
-
+const timerWarning = computed(() => false)
 
 const startTimer = () => {
-
-    if (!showTimer.value) {
-        return
-    }
+    if (!showTimer.value) return
 
     timer = setInterval(() => {
         elapsedSeconds.value++
     }, 1000)
 }
 
-
-// =====================================================
-// NAVIGATION
-// =====================================================
-
+// Navigation
 const handleBack = () => {
     router.back()
 }
 
-
 const handleExit = () => {
-
     const confirmed = window.confirm(
         'Are you sure you want to leave this assessment?'
     )
 
-    if (!confirmed) {
-        return
-    }
+    if (!confirmed) return
 
     router.push('/user/assessments')
 }
 
-
-// =====================================================
-// LIFECYCLE
-// =====================================================
-
+// Lifecycle
 onMounted(() => {
     startTimer()
 })
 
 onUnmounted(() => {
-
     if (timer) {
         clearInterval(timer)
         timer = null
     }
-
 })
 </script>
 
-
 <style scoped>
-/* =========================================================
-   LAYOUT
-========================================================= */
+/* Consistent sizing */
+.assessment-layout,
+.assessment-layout * {
+    box-sizing: border-box;
+}
 
+/* Main page wrapper */
 .assessment-layout {
-    min-height: 100vh;
     display: flex;
     flex-direction: column;
+
+    width: 100%;
+    max-width: 100%;
+    min-width: 0;
+
+    min-height: 100vh;
+    min-height: 100dvh;
+
     background: #f7f7f7;
     color: #111;
+
+    overflow-x: clip;
 }
 
+/* Allow assessment content to grow AND shrink */
+.assessment-main {
+    flex: 1 1 auto;
 
-
-/* =========================================================
-   HEADER SECTIONS
-========================================================= */
-
-.header-left,
-.header-right {
-    display: flex;
-    align-items: center;
-    gap: 9px;
-
+    width: 100%;
+    max-width: 100%;
     min-width: 0;
-}
+    min-height: 0;
 
-.header-center {
-    position: absolute;
-    left: 50%;
-    transform: translateX(-50%);
-}
-
-
-/* =========================================================
-   BRAND
-========================================================= */
-
-.brand {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-
-    min-width: 0;
-}
-
-.brand-mark {
-    width: 29px;
-    height: 29px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border-radius: 6px;
-
-    background: #111;
-    color: #fff;
-
-    font-size: 10px;
-}
-
-.brand-text {
     display: flex;
     flex-direction: column;
-
-    min-width: 0;
 }
 
-.brand-label {
-    color: #999;
-
-    font-size: 7px;
-    font-weight: 700;
-
-    letter-spacing: .12em;
-}
-
-.brand-title {
-    max-width: 230px;
-
-    overflow: hidden;
-
-    color: #222;
-
-    font-size: 10px;
-    font-weight: 700;
-
-    white-space: nowrap;
-    text-overflow: ellipsis;
-}
-
-
-/* =========================================================
-   TYPE
-========================================================= */
-
-.assessment-type {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    color: #777;
-
-    font-size: 8px;
-    font-weight: 600;
-
-    white-space: nowrap;
-}
-
-.type-dot {
-    width: 5px;
-    height: 5px;
-
-    border-radius: 50%;
-
-    background: #111;
-}
-
-
-/* =========================================================
-   BUTTON
-========================================================= */
-
-.header-button {
-    width: 29px;
-    height: 29px;
-
-    display: flex;
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #e2e2e2;
-    border-radius: 6px;
-
-    background: #fff;
-    color: #555;
-
-    font-size: 10px;
-
-    cursor: pointer;
-
-    transition:
-        background .15s ease,
-        border-color .15s ease,
-        color .15s ease;
-}
-
-.header-button:hover {
-    border-color: #111;
-    color: #111;
-}
-
-
-/* =========================================================
-   TIMER
-========================================================= */
-
-.timer {
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    padding: 6px 8px;
-
-    border: 1px solid #e1e1e1;
-    border-radius: 6px;
-
-    background: #fafafa;
-
-    color: #333;
-
-    font-size: 9px;
-    font-weight: 700;
-
-    font-variant-numeric: tabular-nums;
-}
-
-.timer i {
-    color: #888;
-    font-size: 8px;
-}
-
-.timer.warning {
-    background: #111;
-    border-color: #111;
-    color: #fff;
-}
-
-.timer.warning i {
-    color: #fff;
-}
-
-
-/* =========================================================
-   MAIN
-========================================================= */
-
-.assessment-main {
-    flex: 1;
-    width: 100%;
-}
-
+/* Router-view wrapper */
 .assessment-content {
+    flex: 1 1 auto;
+
     width: 100%;
-    max-width: 1200px;
+    max-width: 100%;
+    min-width: 0;
+    min-height: 0;
+
     margin: 0 auto;
 }
 
+/*
+ * Help rendered assessment components and their children
+ * respect their available width.
+ */
+.assessment-content :deep(*) {
+    box-sizing: border-box;
+    min-width: 0;
+}
 
-/* =========================================================
-   FOOTER
-========================================================= */
+.assessment-content :deep(img),
+.assessment-content :deep(video),
+.assessment-content :deep(canvas),
+.assessment-content :deep(svg) {
+    max-width: 100%;
+}
 
+.assessment-content :deep(input),
+.assessment-content :deep(select),
+.assessment-content :deep(textarea),
+.assessment-content :deep(button) {
+    max-width: 100%;
+}
+
+/* Footer */
 .assessment-footer {
-    min-height: 32px;
-
     display: flex;
+    flex: 0 0 auto;
+
+    width: 100%;
+    min-width: 0;
+    min-height: 36px;
+
     align-items: center;
     justify-content: space-between;
-    padding: 0 18px;
+    gap: 12px;
+
+    padding: 6px 18px;
+    padding-bottom: max(6px, env(safe-area-inset-bottom));
+
     border-top: 1px solid #e7e7e7;
     background: #fff;
     color: #999;
-    font-size: 7px;
-    font-weight: 600;
 
-    letter-spacing: .03em;
+    font-size: 8px;
+    font-weight: 600;
+    letter-spacing: 0.03em;
 }
 
 .footer-left,
@@ -387,14 +201,22 @@ onUnmounted(() => {
     display: flex;
     align-items: center;
     gap: 5px;
+
+    min-width: 0;
+}
+
+.footer-left {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .connection-dot {
-    width: 5px;
-    height: 5px;
+    width: 6px;
+    height: 6px;
+    flex: 0 0 6px;
 
     border-radius: 50%;
-
     background: #111;
 }
 
@@ -402,95 +224,57 @@ onUnmounted(() => {
     color: #ccc;
 }
 
-
-/* =========================================================
-   TABLET
-========================================================= */
-
+/* Tablets */
 @media (max-width: 768px) {
-
-    .assessment-header {
-        height: 52px;
-        padding: 0 12px;
-    }
-
-    .brand-mark {
-        width: 27px;
-        height: 27px;
-    }
-
-    .brand-title {
-        max-width: 160px;
-    }
-
-    .header-center {
-        display: none;
-    }
-
-    .assessment-main {
-        padding: 15px 12px 24px;
-    }
-
     .assessment-footer {
-        padding: 0 12px;
+        padding-right: 12px;
+        padding-left: 12px;
     }
-
 }
 
-
-/* =========================================================
-   MOBILE
-========================================================= */
-
+/* Phones */
 @media (max-width: 480px) {
-
-    .assessment-header {
-        height: 50px;
-    }
-
-    .brand-label {
-        font-size: 6px;
-    }
-
-    .brand-title {
-        max-width: 130px;
-        font-size: 9px;
-    }
-
-    .header-button {
-        width: 27px;
-        height: 27px;
-    }
-
-    .timer {
-        padding: 5px 7px;
-    }
-
-    .assessment-main {
-        padding: 12px 9px 20px;
-    }
-
     .assessment-footer {
-        min-height: 28px;
-        font-size: 6px;
+        min-height: 32px;
+        gap: 8px;
+
+        padding: 6px 10px;
+        padding-bottom: max(6px, env(safe-area-inset-bottom));
+
+        font-size: 7px;
     }
 
+    .footer-left {
+        flex: 1 1 auto;
+    }
+
+    .footer-right {
+        flex: 0 0 auto;
+        white-space: nowrap;
+    }
 }
 
-
-/* =========================================================
-   VERY SMALL
-========================================================= */
-
+/* Very narrow phones */
 @media (max-width: 360px) {
-
-    .brand-title {
-        max-width: 100px;
+    .assessment-footer {
+        font-size: 6px;
     }
 
     .footer-right {
         display: none;
     }
+}
 
+/* Respect reduced-motion preferences */
+@media (prefers-reduced-motion: reduce) {
+
+    .assessment-layout *,
+    .assessment-layout *::before,
+    .assessment-layout *::after {
+        scroll-behavior: auto !important;
+        animation-duration: 0.01ms !important;
+        animation-iteration-count: 1 !important;
+        transition-duration: 0.01ms !important;
+    }
 }
 </style>

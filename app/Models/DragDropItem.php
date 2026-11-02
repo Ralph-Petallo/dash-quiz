@@ -4,29 +4,25 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class DragDropItem extends Model
 {
     use HasFactory;
 
-    protected $table = 'drag_drop_items';
-
     protected $fillable = [
         'question_id',
-
         'component_key',
         'display_name',
         'item_type',
         'quantity',
-
         'item_text',
         'instruction',
         'item_image_path',
-
         'phase',
         'action',
         'target_zone',
-
         'correct_position',
         'required',
         'active',
@@ -39,15 +35,12 @@ class DragDropItem extends Model
         'active' => 'boolean',
     ];
 
-    public function question()
+    public function question(): BelongsTo
     {
-        return $this->belongsTo(
-            Question::class,
-            'question_id'
-        );
+        return $this->belongsTo(Question::class);
     }
 
-    public function attemptSteps()
+    public function attemptSteps(): HasMany
     {
         return $this->hasMany(
             DragDropAttemptStep::class,

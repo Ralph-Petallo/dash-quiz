@@ -49,8 +49,6 @@
 
         <div v-else class="avatar-container settings-avatar">
           <img :src="userAvatar" class="avatar-img" alt="Administrator avatar" />
-
-          <span class="online-indicator"></span>
         </div>
 
       </div>
@@ -325,7 +323,7 @@ const showUserMeta = computed(
 
   flex-shrink: 0;
 
-  background: #222;
+  background: green;
 
   border-radius: 50%;
 }
@@ -390,27 +388,6 @@ const showUserMeta = computed(
   border-radius: 50%;
 
   background: #f2f2f2;
-}
-
-
-/* =====================================================
-   ONLINE INDICATOR
-===================================================== */
-
-.online-indicator {
-  position: absolute;
-
-  right: -1px;
-  bottom: 0;
-
-  width: 8px;
-  height: 8px;
-
-  background: #222;
-
-  border: 2px solid #fff;
-
-  border-radius: 50%;
 }
 
 

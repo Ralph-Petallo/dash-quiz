@@ -1,20 +1,21 @@
 import api from '../bootstrap'
 
 export const imageIdentificationRequest = {
-
-    fetch: (quizId) => {
-        return api.get(
-            `/api/assessments/image-identification/${quizId}`
-        )
+    fetch(quizId) {
+        return api.get(`/api/image-identification/${quizId}`)
     },
 
-    answer: (quizId, answers) => {
-        return api.post(
-            `/api/assessments/image-identification/answer`,
-            {
-                quiz_id: quizId,
-                answers: answers,
-            }
-        )
+    answer(quizId, attemptToken, answers, elapsedTime = 0) {
+        return api.post('/api/image-identification/answer', {
+            quiz_id: quizId,
+            attempt_token: attemptToken,
+            answers,
+            elapsed_time: elapsedTime,
+        })
     },
+
+
+    // admin side fetches
+
+
 }

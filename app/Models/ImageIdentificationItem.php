@@ -7,14 +7,19 @@ use Illuminate\Database\Eloquent\Model;
 
 class ImageIdentificationItem extends Model
 {
-    use HasFactory;
+use HasFactory;
     public $table = 'image_identification_items';
 
     protected $fillable = [
-        'quiz_id',
+        'assessment_id',
         'item_name',
         'image_path',
         'description',
         'sort_order',
     ];
+
+    public function assessment()
+    {
+        return $this->belongsTo(Assessment::class, 'assessment_id');
+    }
 }

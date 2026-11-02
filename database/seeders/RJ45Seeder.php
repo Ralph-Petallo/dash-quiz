@@ -14,7 +14,10 @@ class RJ45Seeder extends Seeder
     public function run(): void
     {
         DB::transaction(function () {
-            $quiz = Quiz::findOrFail(2);
+            $quiz = Quiz::query()
+                ->where('quiz_type', 'coc')
+                ->where('coc_number', 2)
+                ->firstOrFail();
 
             /*
              * AssessmentTypeController currently treats assessments.coc_id
@@ -23,7 +26,7 @@ class RJ45Seeder extends Seeder
             $assessment = Assessment::updateOrCreate(
                 [
                     'coc_id' => $quiz->coc_number,
-                    'type' => 'rj45_hands_on',
+                    'type' => 'RJ45 Hands On',
                     'title' => 'RJ-45 Cable Termination',
                 ],
                 [

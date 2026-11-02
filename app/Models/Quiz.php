@@ -39,9 +39,20 @@ class Quiz extends Model
     {
         return $this->hasOne(Rj45Assessment::class);
     }
+    
+    public function quizRecords()
+    {
+        return $this->hasMany(QuizRecord::class, 'dasher_id');
+    }
 
     public function hardwareProcedureAttempts()
     {
         return $this->hasMany(DragDropAttempt::class, 'quiz_id');
+    }
+
+    public function assessments()
+    {
+        return $this->hasMany(Assessment::class, 'coc_id')
+            ->orderBy('id');
     }
 }

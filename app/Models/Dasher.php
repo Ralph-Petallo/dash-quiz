@@ -2,16 +2,18 @@
 
 namespace App\Models;
 
-use Illuminate\Foundation\Auth\User as Authenticatable; // important
-use Illuminate\Notifications\Notifiable;
-use Illuminate\Database\Eloquent\Factories\HasFactory;
-use Laravel\Sanctum\HasApiTokens;
-use App\Models\QuizRecord;
-use Illuminate\Database\Eloquent\Casts\Attribute;
 
-class Dasher extends Authenticatable
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Contracts\Auth\MustVerifyEmail as MustVerifyEmailContract;
+use Illuminate\Auth\MustVerifyEmail as MustVerifyEmailTrait;
+use Illuminate\Notifications\Notifiable;
+use Laravel\Sanctum\HasApiTokens;
+use App\Notifications\VerifyDasherEmail;
+
+class Dasher extends Authenticatable implements MustVerifyEmailContract
 {
-    use HasApiTokens, Notifiable, HasFactory;
+    use HasApiTokens, Notifiable, HasFactory, MustVerifyEmailTrait;
 
     protected $table = 'dasher';
 
@@ -46,15 +48,8 @@ class Dasher extends Authenticatable
             : asset('images/profiles/default.jpg'); // fallback if no image
     }
 
-    public function quizRecords()
+    public function sendEmailVerificationNotification(): void
     {
-        return $this->hasMany(QuizRecord::class, 'user_id');
-    }
-
-    protected function firstName(): Attribute
-    {
-        return Attribute::make(
-            get: fn(string $value) => ucfirst($value),
-        );
+        $this->notify(new VerifyDasherEmail);
     }
 }

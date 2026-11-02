@@ -1,7 +1,13 @@
-import axios from 'axios'
+
+import api from '@/bootstrap'
 
 export const multipleChoiceRequest = {
-    fetch: (quizId) => axios.get(`/api/assessments/multiple-choice/${quizId}`),
-    submitAnswer: (payload) => axios.post('/api/assessments/multiple-choice/answer', payload),
-    submitResult: (payload) => axios.post('/api/assessments/multiple-choice/result', payload),
+    fetch: (quizId) =>
+        api.get(`/api/multiple-choice/${quizId}`),
+
+    submitAnswer: (payload) =>
+        api.post('/api/multiple-choice/answer', payload),
+
+    fetchResult: (recordId) =>
+        api.get(`/api/multiple-choice/result/${recordId}`),
 }

@@ -3,20 +3,18 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use Illuminate\Support\Str;
-use App\Models\Dasher;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
+use RuntimeException;
 
 class ProfileApiController extends Controller
 {
-
     // Update user profile information
     public function uploadPhoto(Request $request)
     {
-        // 🔍 DEBUG FIRST (only temporarily)
-        if (!$request->hasFile('photo')) {
+        if (! $request->hasFile('photo')) {
             return response()->json([
                 'debug' => 'NO FILE RECEIVED',
                 'all' => $request->all(),
@@ -30,37 +28,37 @@ class ProfileApiController extends Controller
 
         $user = $request->user();
 
-        if (!$user) {
+        if (! $user) {
             return response()->json([
                 'status' => 'error',
-                'message' => 'Unauthenticated.'
+                'message' => 'Unauthenticated.',
             ], 401);
         }
 
         $file = $request->file('photo');
 
-        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
+        $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
 
         // Store file properly
         $file->storeAs('public/images/profiles', $filename);
 
         // 🗑 Delete old photo if exists
         if ($user->profile_photo) {
-            Storage::delete('public/images/profiles/' . $user->profile_photo);
+            Storage::delete('public/images/profiles/'.$user->profile_photo);
         }
 
         //  Update user
         $user->update([
             'profile_photo' => $filename,
             'active_status' => 1,
-            'last_activity' => now()
+            'last_activity' => now(),
         ]);
 
         return response()->json([
             'status' => 'success',
             'message' => 'Profile photo updated successfully',
             'new_photo' => $filename,
-            'new_photo_url' => asset('storage/images/profiles/' . $filename)
+            'new_photo_url' => asset('storage/images/profiles/'.$filename),
         ]);
     }
 
@@ -71,14 +69,14 @@ class ProfileApiController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:dasher,email,' . $user->id,
+            'email' => 'required|email|unique:dasher,email,'.$user->id,
             'password' => 'nullable|min:6|confirmed',
         ], [
             'password.min' => 'Password must be at least 6 characters.',
         ]);
 
         // Only hash & update password if it was provided
-        if (!empty($validated['password'])) {
+        if (! empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
@@ -100,13 +98,27 @@ class ProfileApiController extends Controller
     // Allow users to delete their own account
     public function selfDeleteAccount(Request $request)
     {
-        // Get logged-in user's ID
-        $user_id = $request->user()->id;
+        $user = $request->user();
+        $profilePhoto = $user->profile_photo;
 
-        // Find the user record
-        $user = Dasher::findOrFail($user_id);
+        if (
+            $profilePhoto &&
+            basename($profilePhoto) === $profilePhoto &&
+            ! filter_var($profilePhoto, FILTER_VALIDATE_URL)
+        ) {
+            $photoPath = 'images/profiles/'.$profilePhoto;
+            $publicDisk = Storage::disk('public');
 
-        // Delete the user account permanently
+            if ($publicDisk->exists($photoPath) && ! $publicDisk->delete($photoPath)) {
+                throw new RuntimeException('Unable to delete the profile photo.');
+            }
+        }
+
         $user->delete();
+
+        return response()->json([
+            'status' => 'success',
+            'message' => 'Account deleted successfully.',
+        ]);
     }
 }

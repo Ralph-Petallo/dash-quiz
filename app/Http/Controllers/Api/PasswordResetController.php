@@ -11,16 +11,22 @@ class PasswordResetController
     public function sendResetLink(Request $request)
     {
         $request->validate([
-            'email' => 'required|email|exists:dasher,email'
+            'email' => 'required|email',
         ]);
 
         $status = Password::broker('dashers')->sendResetLink(
             $request->only('email')
         );
 
-        return $status === Password::RESET_LINK_SENT
-            ? response()->json(['message' => 'Reset link sent'])
-            : response()->json(['message' => 'Failed to send link'], 400);
+        if ($status !== Password::RESET_LINK_SENT) {
+            logger()->notice('Password reset link was not sent.', [
+                'status' => $status,
+            ]);
+        }
+
+        return response()->json([
+            'message' => 'If an account exists for this email, a reset link will be sent.',
+        ]);
     }
 
     public function resetPassword(Request $request)

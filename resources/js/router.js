@@ -17,40 +17,48 @@ import MultipleChoice from './views/AssessmentPages/MultipleChoice.vue'
 import ImageIdentification from './views/AssessmentPages/ImageIdentification.vue'
 import RJ45HandsOn from './views/AssessmentPages/Rj45Assessment.vue'
 import ChooseAssessmentPage from './views/AssessmentPages/ChooseAssessmentPage.vue'
-import ResultPage from './views/UserPages/ResultPage.vue'
 import UserLayout from './views/UserPages/UserLayout.vue'
 import CMD from './views/AssessmentPages/CMD.vue'
 import OrderingSequence from './views/AssessmentPages/DragDropOrderingSequence.vue'
 import AssessmentLayout from './views/AssessmentPages/AssessmentLayout.vue'
-
-
-
-//new
 import HardwareProcedure from './views/AssessmentPages/HardwareProcedure.vue'
+import InputOutputAssessment from './views/AssessmentPages/InputOutputAssessment.vue'
 
 // ==========================================================
 // PUBLIC
 // ==========================================================
-
 import LoginPage from './views/LoginPage.vue'
 import RegisterPage from './views/RegisterPage.vue'
 import ForgotPage from './views/ForgotPage.vue'
 import ResetPage from './views/ResetPage.vue'
+import FAQ from './views/FAQ.vue'
+import PrivacyPolicy from './views/PrivacyPolicy.vue'
+import TermsOfUse from './views/TermsOfUse.vue'
 
 // ==========================================================
 // ADMIN
 // ==========================================================
-
 import AdminDashboard from './views/AdminPages/AdminDashboard.vue'
 import UsersTable from './views/AdminPages/UsersTable.vue'
 import Settings from './views/AdminPages/Settings.vue'
 import StudentRecords from './views/AdminPages/StudentRecords.vue'
 import ManageQuestions from './views/AdminPages/ManageQuiz.vue'
 import AdminLayout from './views/AdminPages/AdminLayout.vue'
+import AdminAssessmentPage from './views/AdminPages/AdminAssessmentPages.vue'
 
-import MultipleAssessmentAdd from './views/AdminPages/MultipleAssessmentAdd.vue'
-import MultipleAssessmentEdit from './views/AdminPages/MultipleAssessmentEdit.vue'
+
 import RJ45AssessmentEdit from './views/AdminPages/RJ-45AssessmentEdit.vue'
+
+
+// ==========================================================
+// EDIT/ADD PAGES
+// ==========================================================
+import ImageIdentificationEdit from './views/AdminPages/EditAddPages/ImageIdentificationEdit.vue'
+import MultipleAssessmentAdd from './views/AdminPages/EditAddPages/MultipleAssessmentAdd.vue'
+import InputOutputEdit from './views/AdminPages/EditAddPages/InputOutputEdit.vue'
+import RJ45Edit from './views/AdminPages/EditAddPages/RJ45Edit.vue'
+import HardwareProcedureEdit from './views/AdminPages/EditAddPages/HardwareProcedureEdit.vue'
+import MultipleAssessmentEdit from './views/AdminPages/EditAddPages/MultipleAssessmentEdit.vue'
 
 // ==========================================================
 // ROUTES
@@ -73,18 +81,37 @@ const routes = [
         name: 'register',
         component: RegisterPage,
     },
-
     {
         path: '/forgot',
         name: 'forgot',
         component: ForgotPage,
     },
-
+    {
+        path: '/faq',
+        name: 'frequently-ask-question',
+        component: FAQ,
+    },
+    {
+        path: '/faq',
+        name: 'frequently-ask-question',
+        component: FAQ,
+    },
+    {
+        path: '/privacy',
+        name: 'privacy-policy',
+        component: PrivacyPolicy,
+    },
+    {
+        path: '/terms',
+        name: 'terms-of-use',
+        component: TermsOfUse,
+    },
     {
         path: '/reset/:token',
         name: 'reset',
         component: ResetPage,
     },
+    { path: '/email-verified', name: 'email-verified', component: RegisterPage },
 
 
     // ======================================================
@@ -101,51 +128,57 @@ const routes = [
         },
 
         children: [
-
             {
                 path: '',
                 name: 'user-home',
                 component: HomePage,
+                meta: {
+                    navSection: 'home',
+                },
             },
 
             {
                 path: 'records',
                 name: 'user-records',
                 component: Records,
+                meta: {
+                    navSection: 'records',
+                },
             },
 
             {
                 path: 'assessments',
                 name: 'user-assessments',
                 component: AssessmentPage,
+                meta: {
+                    navSection: 'assessments',
+                },
             },
 
             {
-                path: 'quizzes/assessment/:id',
+                path: 'assessments/assessment/:id',
                 name: 'choose-assessment',
                 component: ChooseAssessmentPage,
+                meta: {
+                    navSection: 'assessments',
+                },
             },
 
             {
                 path: 'profile',
                 name: 'user-profile',
                 component: Profile,
+                meta: {
+                    navSection: 'profile',
+                },
             },
 
-
-
-            // ==================================================
-            // RESULT
-            // ==================================================
-
-            {
-                path: 'quiz-result/:id',
-                name: 'quiz-result',
-                component: ResultPage,
-            },
 
         ],
     },
+
+
+
 
     {
         path: '/taking',
@@ -173,6 +206,8 @@ const routes = [
                     assessmentTitle: 'Multiple Choice',
                     assessmentType: 'Knowledge Assessment',
                 },
+
+
             },
 
             // ==================================================
@@ -189,6 +224,19 @@ const routes = [
                     assessmentType: 'Virtual Hands-On Practical',
                 },
             },
+
+            {
+                path: 'input-output/:id',
+                name: 'input-output',
+                component: InputOutputAssessment,
+
+                meta: {
+                    assessmentTitle: 'Input & Output Devices',
+                    assessmentType: 'Drag and Drop Input/Output Devices',
+                },
+            },
+
+
 
             // ==================================================
             // IMAGE IDENTIFICATION
@@ -236,7 +284,7 @@ const routes = [
             },
 
             {
-                path: 'ordering-sequence',
+                path: 'ordering-sequence/:id',
                 name: 'ordering-sequence',
                 component: OrderingSequence,
 
@@ -262,13 +310,16 @@ const routes = [
         },
 
         children: [
-
             {
                 path: '',
                 name: 'admin-dashboard',
                 component: AdminDashboard,
             },
-
+            {
+                path: 'assessments-list/:id',
+                name: 'admin-assessment-list',
+                component: AdminAssessmentPage,
+            },
             {
                 path: 'users',
                 name: 'admin-users',
@@ -282,46 +333,59 @@ const routes = [
             },
 
             {
-                path: 'quizzes/create',
+                path: 'assessment/create',
                 name: 'admin-quiz-create',
                 component: MultipleAssessmentAdd,
             },
-
-            {
-                path: 'quizzes/:id/edit',
-                name: 'admin-quiz-edit',
-                component: MultipleAssessmentEdit,
-            },
-
-            {
-                path: 'quizzes/:id/create',
-                name: 'admin-quiz-create-specific',
-                component: MultipleAssessmentAdd,
-            },
-
-            {
-                path: 'quizzes/:id/:type/multiple/edit',
-                name: 'admin-multiple-edit',
-                component: MultipleAssessmentEdit,
-            },
-
-            {
-                path: 'quizzes/:id/:type/rj-45/edit',
-                name: 'admin-rj45-edit',
-                component: RJ45AssessmentEdit,
-            },
-
             {
                 path: 'settings',
                 name: 'admin-settings',
                 component: Settings,
             },
-
             {
                 path: 'manage-quizzes',
                 name: 'admin-manage-quizzes',
                 component: ManageQuestions,
             },
+
+            /*
+            *
+            *
+            * BELOW ARE THE EDIT ASSESSMENTS PATHS
+            *
+            */
+            {
+                path: 'assessment/:id/create',
+                name: 'admin-quiz-create-specific',
+                component: MultipleAssessmentAdd,
+            },
+            {
+                path: 'assessment/:id/image_identification/edit',
+                name: 'admin-image-edit',
+                component: ImageIdentificationEdit,
+            },
+            {
+                path: 'assessment/:id/multiple_choice/edit',
+                name: 'admin-quiz-edit',
+                component: MultipleAssessmentEdit,
+            },
+            {
+                path: 'assessment/:id/input_output/edit',
+                name: 'admin-input-output-edit',
+                component: InputOutputEdit,
+            },
+
+            {
+                path: 'assessment/:id/rj45_hands_on/edit',
+                name: 'admin-rj45-edit',
+                component: RJ45Edit,
+            },
+            {
+                path: 'assessment/:id/hardware_procedure/edit',
+                name: 'admin-hardware-procedure-edit',
+                component: HardwareProcedureEdit,
+            },
+
         ],
     },
 

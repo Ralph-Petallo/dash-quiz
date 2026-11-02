@@ -1,194 +1,175 @@
 <template>
-  <div class="records-container">
-    <div class="header-flex">
-      <div class="title-wrap">
-        <div class="icon-box">
+  <section class="records-page">
+    <header class="page-header">
+      <div class="title-group">
+        <div class="title-icon" aria-hidden="true">
           <i class="fas fa-clipboard-list"></i>
         </div>
 
         <div>
-          <h3 class="records-title">Assessment Records</h3>
-          <p class="subtitle">View your completed assessment attempts</p>
+          <span class="eyebrow">CSS Prep · Performance History</span>
+          <h1>Assessment Records</h1>
+          <p>Review your saved assessment attempts and open any record for full details.</p>
         </div>
       </div>
 
-      <button
-        class="filter-toggle"
-        type="button"
-        @click="showFilters = !showFilters"
-        :aria-label="showFilters ? 'Hide filters' : 'Show filters'"
-      >
-        <i class="fas fa-filter"></i>
-      </button>
-    </div>
+      <div class="header-count" aria-label="Total assessment records">
+        <strong>{{ pagination.total }}</strong>
+        <span>{{ pagination.total === 1 ? 'record' : 'records' }}</span>
+      </div>
+    </header>
 
-    <div class="filter-bar" :class="{ 'filters-open': showFilters }">
-      <div class="input-group">
-        <svg class="input-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-          <circle cx="11" cy="11" r="8"></circle>
-          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-        </svg>
+    <div class="toolbar-card">
+      <div class="search-box">
+        <i class="fas fa-search" aria-hidden="true"></i>
+        <input v-model="searchQuery" type="search" placeholder="Search assessment records"
+          aria-label="Search assessment records" />
 
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search assessment..."
-          aria-label="Search assessment records"
-        />
-
-        <button
-          v-if="searchQuery"
-          class="clear-btn"
-          type="button"
-          @click="searchQuery = ''"
-          aria-label="Clear search"
-        >
+        <button v-if="searchQuery" type="button" class="search-clear" aria-label="Clear search"
+          @click="searchQuery = ''">
           <i class="fas fa-times"></i>
         </button>
       </div>
 
-      <select v-model="typeFilter" class="select-input" aria-label="Filter by assessment type">
-        <option value="">All Types</option>
-        <option v-for="type in filterOptions.types" :key="type" :value="type">
-          {{ formatLabel(type) }}
-        </option>
-      </select>
-
-      <select v-model="categoryFilter" class="select-input" aria-label="Filter by category">
-        <option value="">All Categories</option>
-        <option v-for="category in filterOptions.categories" :key="category" :value="category">
-          {{ formatLabel(category) }}
-        </option>
-      </select>
-
-      <input v-model="dateFilter" type="date" class="date-input" aria-label="Filter by date" />
-
-      <select v-model.number="perPage" class="select-input per-page-select" aria-label="Records per page">
-        <option :value="10">10 / page</option>
-        <option :value="15">15 / page</option>
-        <option :value="25">25 / page</option>
-        <option :value="50">50 / page</option>
-      </select>
-
-      <button
-        v-if="hasActiveFilters"
-        type="button"
-        class="reset-btn"
-        @click="clearFilters"
-      >
-        Clear
+      <button type="button" class="filter-btn" :class="{ active: showFilters || hasActiveFilters }"
+        @click="showFilters = !showFilters">
+        <i class="fas fa-sliders"></i>
+        Filters
+        <span v-if="activeFilterCount" class="filter-count">{{ activeFilterCount }}</span>
       </button>
     </div>
 
-    <div v-if="errorMessage" class="error-box">
-      <span>{{ errorMessage }}</span>
-      <button type="button" @click="loadRecords(pagination.current_page || 1, true)">Retry</button>
+    <Transition name="filter-panel">
+      <div v-if="showFilters" class="filter-panel">
+        <label class="filter-field">
+          <span>Assessment type</span>
+          <select v-model="typeFilter">
+            <option value="">All types</option>
+            <option v-for="type in filterOptions.types" :key="type" :value="type">
+              {{ formatLabel(type) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-field">
+          <span>Category</span>
+          <select v-model="categoryFilter">
+            <option value="">All categories</option>
+            <option v-for="category in filterOptions.categories" :key="category" :value="category">
+              {{ formatLabel(category) }}
+            </option>
+          </select>
+        </label>
+
+        <label class="filter-field">
+          <span>Completed date</span>
+          <input v-model="dateFilter" type="date" />
+        </label>
+
+        <label class="filter-field compact-field">
+          <span>Rows</span>
+          <select v-model.number="perPage">
+            <option :value="10">10</option>
+            <option :value="15">15</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
+        </label>
+
+        <button v-if="hasActiveFilters" type="button" class="clear-filters" @click="clearFilters">
+          Clear filters
+        </button>
+      </div>
+    </Transition>
+
+    <div v-if="errorMessage" class="notice error-notice">
+      <div>
+        <i class="fas fa-triangle-exclamation"></i>
+        <span>{{ errorMessage }}</span>
+      </div>
+
+      <button type="button" @click="loadRecords(pagination.current_page || 1, true)">
+        Retry
+      </button>
     </div>
 
-    <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-      <span>Loading records...</span>
+    <div v-if="loading" class="loading-state">
+      <span class="spinner"></span>
+      <strong>Loading assessment records</strong>
+      <small>Getting your latest saved attempts.</small>
     </div>
 
     <template v-else>
-      <div class="records-summary">
-        <div class="summary-item">
-          <span class="summary-label">Total Records</span>
-          <strong>{{ pagination.total }}</strong>
-        </div>
+      <div class="list-meta">
+        <span>
+          Showing
+          <strong>{{ pagination.from || 0 }}-{{ pagination.to || 0 }}</strong>
+          of <strong>{{ pagination.total }}</strong>
+        </span>
 
-        <div class="summary-item">
-          <span class="summary-label">Page</span>
-          <strong>{{ pagination.current_page }} / {{ pagination.total_pages }}</strong>
-        </div>
-
-        <div class="summary-item">
-          <span class="summary-label">Showing</span>
-          <strong>{{ records.length }}</strong>
-        </div>
+        <span v-if="hasActiveFilters" class="filtered-label">
+          <i class="fas fa-filter"></i>
+          Filtered results
+        </span>
       </div>
 
-      <div v-if="records.length" class="records-display">
-        <div class="table-wrapper">
+      <div v-if="records.length" class="records-content">
+        <div class="table-shell">
           <table class="records-table">
             <thead>
               <tr>
-                <th scope="col" class="col-date">Date</th>
-                <th scope="col" class="col-coc">COC</th>
-                <th scope="col" class="col-type">Type</th>
-                <th scope="col" class="col-assessment">Assessment</th>
-                <th scope="col" class="col-category">Category</th>
-                <th scope="col" class="col-score">Score</th>
-                <th scope="col" class="col-status">Status</th>
-                <th scope="col" class="col-action">View</th>
+                <th scope="col">Assessment</th>
+                <th scope="col" class="result-column">Performance Result</th>
+                <th scope="col" class="completed-column">Completed</th>
+                <th scope="col" class="action-column">Details</th>
               </tr>
             </thead>
 
             <tbody>
               <tr v-for="record in records" :key="record.id">
-                <td class="col-date">
-                  {{ formatDate(record.completed_at || record.created_at) }}
-                </td>
-
-                <td class="col-coc">
-                  <span class="data-tag">
-                    {{ formatCoc(record.coc_number) }}
-                  </span>
-                </td>
-
-                <td class="col-type">
-                  <span class="data-tag">
-                    {{ formatLabel(record.quiz_type) }}
-                  </span>
-                </td>
-
-                <td class="col-assessment">
-                  <div class="assessment-info">
-                    <div class="assessment-icon">
-                      <i class="fas fa-file-alt"></i>
+                <td>
+                  <div class="assessment-cell">
+                    <div class="assessment-icon" aria-hidden="true">
+                      <i :class="assessmentIcon(record)"></i>
                     </div>
 
-                    <div class="assessment-text">
-                      <span class="assessment-name" :title="record.quiz_title">
+                    <div class="assessment-copy">
+                      <strong :title="record.quiz_title">
                         {{ record.quiz_title || 'Untitled Assessment' }}
-                      </span>
-                      <span v-if="record.attempt_count" class="assessment-subtext">
-                        Attempt #{{ record.attempt_count }}
-                      </span>
+                      </strong>
+
+                      <div class="assessment-tags">
+                        <span>{{ formatCoc(record.coc_number) }}</span>
+                        <span v-if="record.quiz_type">{{ formatLabel(record.quiz_type) }}</span>
+                      </div>
                     </div>
                   </div>
                 </td>
 
-                <td class="col-category">
-                  <span class="category-text">
-                    {{ record.category || '—' }}
-                  </span>
+                <td class="result-column">
+                  <div class="result-cell">
+                    <strong>{{ formatPercentage(record.percentage) }}</strong>
+                    <span :class="['status-pill', statusClass(record)]">
+                      {{ getStatus(record) }}
+                    </span>
+                    <!-- <small v-if="displayScore(record) !== '—'">
+                      {{ displayScore(record) }}
+                    </small> -->
+                  </div>
                 </td>
 
-                <td class="col-score">
-                  <span class="score-display">
-                    {{ displayScore(record) }}
-                  </span>
-                  <span class="score-percent">
-                    {{ formatPercentage(record.percentage) }}
-                  </span>
+                <td class="completed-column">
+                  <div class="completed-cell">
+                    <strong>{{ formatDate(record.completed_at || record.created_at) }}</strong>
+                    <!-- <small>Attempt #{{ record.attempt_count || 1 }}</small> -->
+                  </div>
                 </td>
 
-                <td class="col-status">
-                  <span :class="['status-badge', statusClass(record)]">
-                    {{ getStatus(record) }}
-                  </span>
-                </td>
-
-                <td class="col-action">
-                  <button
-                    class="btn-icon"
-                    type="button"
-                    @click="openView(record)"
-                    title="View assessment record"
-                    aria-label="View assessment record"
-                  >
-                    <i class="fas fa-eye"></i>
+                <td class="action-column">
+                  <button type="button" class="view-btn"
+                    :aria-label="`View details for ${record.quiz_title || 'assessment'}`" @click="openView(record)">
+                    <i class="fas fa-arrow-up-right-from-square"></i>
+                    <span>View</span>
                   </button>
                 </td>
               </tr>
@@ -196,118 +177,94 @@
           </table>
         </div>
 
-        <div class="records-cards">
-          <article v-for="record in records" :key="record.id" class="record-card">
-            <div class="card-header">
-              <div class="card-title-wrap">
-                <div class="assessment-icon">
-                  <i class="fas fa-file-alt"></i>
+        <div class="mobile-records">
+          <article v-for="record in records" :key="`mobile-${record.id}`" class="record-card">
+            <div class="record-card-top">
+              <div class="assessment-cell">
+                <div class="assessment-icon" aria-hidden="true">
+                  <i :class="assessmentIcon(record)"></i>
                 </div>
 
-                <div class="card-title-copy">
-                  <h4>{{ record.quiz_title || 'Untitled Assessment' }}</h4>
-                  <p class="card-date">
-                    {{ formatDate(record.completed_at || record.created_at) }}
-                  </p>
+                <div class="assessment-copy">
+                  <strong>{{ record.quiz_title || 'Untitled Assessment' }}</strong>
+                  <div class="assessment-tags">
+                    <span>{{ formatCoc(record.coc_number) }}</span>
+                    <span v-if="record.quiz_type">{{ formatLabel(record.quiz_type) }}</span>
+                  </div>
                 </div>
               </div>
 
-              <span :class="['status-badge', statusClass(record)]">
+              <span :class="['status-pill', statusClass(record)]">
                 {{ getStatus(record) }}
               </span>
             </div>
 
-            <div class="card-meta-row">
-              <span class="data-tag">{{ formatCoc(record.coc_number) }}</span>
-              <span class="data-tag">{{ formatLabel(record.quiz_type) }}</span>
-            </div>
-
-            <div class="card-body">
-              <div class="card-row">
-                <span class="card-label">Category</span>
-                <span class="card-value">{{ record.category || '—' }}</span>
+            <div class="record-card-result">
+              <div>
+                <span>Result</span>
+                <strong>{{ formatPercentage(record.percentage) }}</strong>
               </div>
 
-              <div class="card-row">
-                <span class="card-label">Score</span>
-                <span class="card-value strong">{{ displayScore(record) }}</span>
+              <div>
+                <span>Completed</span>
+                <strong>{{ formatDate(record.completed_at || record.created_at) }}</strong>
               </div>
 
-              <div class="card-row">
-                <span class="card-label">Percentage</span>
-                <span class="card-value">{{ formatPercentage(record.percentage) }}</span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Attempt</span>
-                <span class="card-value">#{{ record.attempt_count || 1 }}</span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Time</span>
-                <span class="card-value">{{ formatTime(record.elapsed_time) }}</span>
+              <div>
+                <span>Attempt</span>
+                <strong>#{{ record.attempt_count || 1 }}</strong>
               </div>
             </div>
 
-            <button class="btn-view-card" type="button" @click="openView(record)">
-              <i class="fas fa-eye"></i>
-              View Record
+            <button type="button" class="mobile-view-btn" @click="openView(record)">
+              View record details
+              <i class="fas fa-arrow-right"></i>
             </button>
           </article>
         </div>
       </div>
 
-      <div v-else class="empty">
+      <div v-else class="empty-state">
         <div class="empty-icon">
-          <i class="fas fa-clipboard-list"></i>
+          <i class="fas fa-clipboard-check"></i>
         </div>
-        <p>No assessment records found.</p>
-        <small>
-          {{ hasActiveFilters ? 'Try adjusting your filters.' : 'Complete an assessment to see your records here.' }}
-        </small>
+        <h3>No assessment records found</h3>
+        <p>
+          {{
+            hasActiveFilters
+              ? 'Try clearing or adjusting your filters.'
+              : 'Complete an assessment and your saved result will appear here.'
+          }}
+        </p>
       </div>
 
-      <div v-if="pagination.total_pages > 1" class="pagination-wrap">
-        <div class="pagination-info">
-          Showing {{ pagination.from || 0 }}-{{ pagination.to || 0 }} of {{ pagination.total }}
-        </div>
+      <footer v-if="pagination.total_pages > 1" class="pagination-bar">
+        <span>
+          Page {{ pagination.current_page }} of {{ pagination.total_pages }}
+        </span>
 
         <div class="pagination-controls">
-          <button
-            type="button"
-            class="page-btn"
-            :disabled="pagination.current_page <= 1 || loading"
-            @click="goToPage(pagination.current_page - 1)"
-          >
+          <button type="button" class="page-btn" :disabled="pagination.current_page <= 1 || loading"
+            aria-label="Previous page" @click="goToPage(pagination.current_page - 1)">
             <i class="fas fa-chevron-left"></i>
           </button>
 
-          <button
-            v-for="page in visiblePages"
-            :key="page"
-            type="button"
-            class="page-btn number"
-            :class="{ active: page === pagination.current_page }"
-            :disabled="loading"
-            @click="goToPage(page)"
-          >
+          <button v-for="page in visiblePages" :key="page" type="button" class="page-btn number"
+            :class="{ active: page === pagination.current_page }" :disabled="loading" @click="goToPage(page)">
             {{ page }}
           </button>
 
-          <button
-            type="button"
-            class="page-btn"
-            :disabled="pagination.current_page >= pagination.total_pages || loading"
-            @click="goToPage(pagination.current_page + 1)"
-          >
+          <button type="button" class="page-btn"
+            :disabled="pagination.current_page >= pagination.total_pages || loading" aria-label="Next page"
+            @click="goToPage(pagination.current_page + 1)">
             <i class="fas fa-chevron-right"></i>
           </button>
         </div>
-      </div>
+      </footer>
     </template>
 
     <RecordModal v-model="showModal" :record="selectedRecord" />
-  </div>
+  </section>
 </template>
 
 <script setup>
@@ -358,6 +315,15 @@ const hasActiveFilters = computed(() => {
   )
 })
 
+const activeFilterCount = computed(() => {
+  return [
+    searchQuery.value.trim(),
+    dateFilter.value,
+    typeFilter.value,
+    categoryFilter.value,
+  ].filter(Boolean).length
+})
+
 const visiblePages = computed(() => {
   const total = Math.max(1, Number(pagination.total_pages || 1))
   const current = Math.max(1, Number(pagination.current_page || 1))
@@ -405,9 +371,10 @@ const loadRecords = async (page = 1, force = false) => {
       ? payload.filter_options.categories
       : []
   } catch (error) {
-    console.error('Failed to fetch records:', error.response?.data || error)
+    console.error('Failed to fetch records:', error?.response?.data || error)
     records.value = []
-    errorMessage.value = error.response?.data?.message || 'Unable to load assessment records.'
+    errorMessage.value =
+      error?.response?.data?.message || 'Unable to load assessment records.'
   } finally {
     loading.value = false
   }
@@ -436,6 +403,29 @@ const clearFilters = () => {
   categoryFilter.value = ''
 }
 
+const assessmentIcon = (record) => {
+  const value = String(record?.quiz_type ?? '').toLowerCase()
+
+  if (value.includes('rj45') || value.includes('network')) {
+    return 'fas fa-network-wired'
+  }
+
+  if (
+    value.includes('hardware') ||
+    value.includes('procedure') ||
+    value.includes('assembly') ||
+    value.includes('drag')
+  ) {
+    return 'fas fa-screwdriver-wrench'
+  }
+
+  if (value.includes('server')) {
+    return 'fas fa-server'
+  }
+
+  return 'fas fa-file-lines'
+}
+
 const formatDate = (date) => {
   if (!date) return '—'
 
@@ -447,20 +437,6 @@ const formatDate = (date) => {
     day: '2-digit',
     year: 'numeric',
   })
-}
-
-const formatTime = (seconds) => {
-  if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) {
-    return '—'
-  }
-
-  const totalSeconds = Math.max(0, Math.floor(Number(seconds)))
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const secs = totalSeconds % 60
-
-  if (hours > 0) return `${hours}h ${minutes}m ${secs}s`
-  return `${minutes}:${String(secs).padStart(2, '0')}`
 }
 
 const formatLabel = (value) => {
@@ -480,19 +456,20 @@ const formatCoc = (value) => {
 const formatPercentage = (value) => {
   const percentage = Number(value)
   if (!Number.isFinite(percentage)) return '0%'
+
   return `${Number.isInteger(percentage) ? percentage : percentage.toFixed(1)}%`
 }
 
-const displayScore = (record) => {
-  const score = record?.correct_answers ?? record?.score
-  const total = Number(record?.total_questions ?? 0)
+// const displayScore = (record) => {
+//   const score = record?.correct_answers ?? record?.score
+//   const total = Number(record?.total_questions ?? 0)
 
-  if (score !== null && score !== undefined && total > 0) {
-    return `${score} / ${total}`
-  }
+//   if (score !== null && score !== undefined && total > 0) {
+//     return `${score} / ${total}`
+//   }
 
-  return score !== null && score !== undefined ? String(score) : '—'
-}
+//   return score !== null && score !== undefined ? String(score) : '—'
+// }
 
 const getStatus = (record) => {
   if (record?.status) return formatLabel(record.status)
@@ -504,6 +481,7 @@ const getStatus = (record) => {
 
 const statusClass = (record) => {
   const status = String(getStatus(record)).toLowerCase()
+
   return status.includes('pass') || status.includes('complete')
     ? 'status-pass'
     : 'status-fail'
@@ -540,272 +518,461 @@ onMounted(async () => {
   box-sizing: border-box;
 }
 
-.records-container {
-  --black: #111111;
-  --white: #ffffff;
-  --text: #222222;
-  --muted: #737373;
-  --light: #a3a3a3;
-  --border: #e5e5e5;
-  --soft-border: #f0f0f0;
-  --surface: #fafafa;
+.records-page {
+  --ink: #111111;
+  --text: #2a2a2a;
+  --muted: #727272;
+  --soft: #f7f7f7;
+  --surface: #ffffff;
+  --border: #e7e7e7;
+  --border-strong: #d8d8d8;
 
   width: 100%;
+  max-width: 1200px;
   min-width: 0;
   min-height: 100%;
+  margin-inline: auto;
+  padding: clamp(12px, 2vw, 24px);
+
   display: flex;
   flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: var(--white);
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.05);
+  gap: 16px;
+
+  color: var(--text);
+  background: transparent;
+  overflow-wrap: anywhere;
 }
 
-.header-flex {
+.records-page button,
+.records-page input,
+.records-page select {
+  max-width: 100%;
+  font-family: inherit;
+}
+
+.records-page button {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.records-page input,
+.records-page select {
+  min-width: 0;
+}
+
+.records-page :focus-visible {
+  outline: 2px solid #555;
+  outline-offset: 3px;
+}
+
+/* Header */
+
+.page-header {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
+  gap: 24px;
+  min-width: 0;
+  padding: 22px 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.035);
 }
 
-.title-wrap {
+.title-group {
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.75rem;
+  gap: 14px;
+}
+
+.title-icon {
+  width: 46px;
+  height: 46px;
+  flex: 0 0 46px;
+  display: grid;
+  place-items: center;
+  border-radius: 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 15px;
+}
+
+.eyebrow {
+  display: block;
+  margin-bottom: 4px;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.page-header h1 {
+  margin: 0;
+  color: var(--ink);
+  font-size: clamp(20px, 2vw, 26px);
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.page-header p {
+  margin: 6px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.header-count {
+  min-width: 92px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  padding-left: 22px;
+  border-left: 1px solid var(--border);
+}
+
+.header-count strong {
+  color: var(--ink);
+  font-size: 28px;
+  line-height: 1;
+}
+
+.header-count span {
+  margin-top: 5px;
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+/* Toolbar and search */
+
+.toolbar-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.search-box {
+  position: relative;
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.icon-box {
-  width: 2.25rem;
-  height: 2.25rem;
-  flex-shrink: 0;
-  display: grid;
-  place-items: center;
-  background: var(--black);
-  color: var(--white);
-  border-radius: 0.55rem;
-  font-size: 0.85rem;
-}
-
-.records-title {
-  margin: 0;
-  color: var(--black);
-  font-size: 1rem;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.subtitle {
-  margin: 0.2rem 0 0;
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.filter-toggle {
-  display: none;
-  width: 2.25rem;
-  height: 2.25rem;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-  border-radius: 0.55rem;
-  background: var(--black);
-  color: var(--white);
-  cursor: pointer;
-}
-
-.filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  flex-wrap: wrap;
-  gap: 0.5rem;
-}
-
-.input-group {
-  position: relative;
-  width: min(260px, 100%);
-}
-
-.input-group input,
-.select-input,
-.date-input {
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 0.45rem;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.76rem;
-}
-
-.input-group input {
-  width: 100%;
-  padding: 0 2rem;
-}
-
-.select-input,
-.date-input {
-  padding: 0 0.65rem;
-}
-
-.input-group input:focus,
-.select-input:focus,
-.date-input:focus {
-  outline: none;
-  border-color: var(--black);
-  background: var(--white);
-}
-
-.input-icon {
+.search-box>i {
   position: absolute;
-  left: 0.65rem;
+  left: 13px;
   top: 50%;
-  width: 0.85rem;
-  height: 0.85rem;
   transform: translateY(-50%);
-  color: var(--light);
+  color: #999;
+  font-size: 12px;
   pointer-events: none;
 }
 
-.clear-btn {
+.search-box input {
+  width: 100%;
+  height: 42px;
+  padding: 0 38px;
+  border: 1px solid transparent;
+  border-radius: 10px;
+  outline: none;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 13px;
+  transition: border-color 0.18s ease, background 0.18s ease;
+}
+
+.search-box input:focus {
+  border-color: var(--border-strong);
+  background: #fff;
+}
+
+.search-box input::placeholder {
+  color: #999;
+}
+
+.search-clear {
   position: absolute;
-  right: 0.6rem;
+  right: 9px;
   top: 50%;
+  width: 28px;
+  height: 28px;
   transform: translateY(-50%);
+  display: grid;
+  place-items: center;
   border: 0;
-  background: none;
-  color: var(--light);
+  border-radius: 8px;
+  background: transparent;
+  color: #999;
   cursor: pointer;
 }
 
-.reset-btn {
-  height: 36px;
-  padding: 0 0.8rem;
+.search-clear:hover {
+  background: #ededed;
+  color: var(--ink);
+}
+
+.filter-btn {
+  min-height: 42px;
+  flex: 0 0 auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 14px;
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
-  background: var(--white);
+  border-radius: 10px;
+  background: #fff;
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.filter-btn:hover {
+  border-color: var(--ink);
+}
+
+.filter-btn.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
+}
+
+.filter-count {
+  min-width: 20px;
+  height: 20px;
+  display: inline-grid;
+  place-items: center;
+  padding: 0 5px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.16);
+  font-size: 10px;
+}
+
+/* Filter panel */
+
+.filter-panel {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr)) 100px auto;
+  gap: 10px;
+  align-items: end;
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.filter-field {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.filter-field>span {
   color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 10px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.filter-field select,
+.filter-field input {
+  width: 100%;
+  min-width: 0;
+  height: 38px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 9px;
+  outline: none;
+  background: var(--soft);
+  color: var(--text);
+  font-size: 12px;
+}
+
+.filter-field select:focus,
+.filter-field input:focus {
+  border-color: var(--border-strong);
+  background: #fff;
+}
+
+.clear-filters {
+  min-height: 38px;
+  padding: 0 13px;
+  border: 0;
+  border-radius: 9px;
+  background: var(--soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background 0.18s ease, color 0.18s ease;
+}
+
+.clear-filters:hover {
+  background: var(--ink);
+  color: #fff;
+}
+
+.filter-panel-enter-active,
+.filter-panel-leave-active {
+  transition: opacity 0.16s ease, transform 0.16s ease;
+}
+
+.filter-panel-enter-from,
+.filter-panel-leave-to {
+  opacity: 0;
+  transform: translateY(-5px);
+}
+
+/* Notices */
+
+.notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--surface);
+}
+
+.notice>div {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.notice>div i {
+  flex-shrink: 0;
+}
+
+.notice button {
+  flex-shrink: 0;
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 12px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
   font-weight: 700;
   cursor: pointer;
 }
 
-.reset-btn:hover {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
-}
+/* Loading state */
 
-.error-box {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 1rem;
-  padding: 0.75rem 0.9rem;
-  border: 1px solid var(--border);
-  border-radius: 0.55rem;
-  background: var(--surface);
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.error-box button {
-  border: 0;
-  border-radius: 0.4rem;
-  padding: 0.4rem 0.7rem;
-  background: var(--black);
-  color: var(--white);
-  font-size: 0.7rem;
-  cursor: pointer;
-}
-
-.loading {
-  min-height: 200px;
+.loading-state {
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 0.65rem;
-  color: var(--muted);
-  font-size: 0.72rem;
+  gap: 8px;
+  padding: 24px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--surface);
+  text-align: center;
 }
 
 .spinner {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
+  margin-bottom: 4px;
   border: 2px solid var(--border);
-  border-top-color: var(--black);
+  border-top-color: var(--ink);
   border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+  animation: spin 0.75s linear infinite;
 }
 
-.records-summary {
-  display: flex;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 0.5rem;
+.loading-state strong {
+  color: var(--ink);
+  font-size: 13px;
 }
 
-.summary-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.45rem;
-}
-
-.summary-label {
+.loading-state small {
   color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 600;
+  font-size: 11px;
 }
 
-.summary-item strong {
-  color: var(--black);
-  font-size: 0.78rem;
+/* Results metadata */
+
+.list-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 0 4px;
+  color: var(--muted);
+  font-size: 11px;
 }
 
-.records-display,
-.table-wrapper {
+.list-meta strong {
+  color: var(--ink);
+}
+
+.filtered-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Records layout */
+
+.records-content {
   width: 100%;
   min-width: 0;
+  container-type: inline-size;
 }
 
-.table-wrapper {
-  overflow-x: auto;
+.table-shell {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 0.65rem;
+  border-radius: 16px;
+  background: var(--surface);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.035);
 }
 
 .records-table {
   width: 100%;
-  min-width: 900px;
   border-collapse: collapse;
   table-layout: fixed;
 }
 
 .records-table th {
-  padding: 0.65rem 0.7rem;
-  background: var(--surface);
+  padding: 13px 16px;
   border-bottom: 1px solid var(--border);
+  background: #fafafa;
   color: var(--muted);
-  font-size: 0.62rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-align: center;
-  white-space: nowrap;
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
 }
 
 .records-table td {
-  padding: 0.7rem;
-  border-bottom: 1px solid var(--soft-border);
-  color: var(--text);
-  font-size: 0.75rem;
-  text-align: center;
+  padding: 15px 16px;
+  border-bottom: 1px solid #f1f1f1;
   vertical-align: middle;
 }
 
@@ -813,400 +980,683 @@ onMounted(async () => {
   border-bottom: 0;
 }
 
-.records-table tbody tr:hover {
-  background: var(--surface);
+.records-table tbody tr {
+  transition: background 0.15s ease;
 }
 
-.col-date { width: 110px; }
-.col-coc { width: 82px; }
-.col-type { width: 125px; }
-.col-assessment { width: 240px; }
-.col-category { width: 145px; }
-.col-score { width: 105px; }
-.col-status { width: 100px; }
-.col-action { width: 65px; }
+.records-table tbody tr:hover {
+  background: #fafafa;
+}
 
-.assessment-info {
+.result-column {
+  width: 150px;
+}
+
+.completed-column {
+  width: 155px;
+}
+
+.action-column {
+  width: 90px;
+  text-align: right !important;
+}
+
+/* Assessment details */
+
+.assessment-cell {
+  min-width: 0;
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  min-width: 0;
-  text-align: left;
+  gap: 12px;
 }
 
 .assessment-icon {
-  width: 30px;
-  height: 30px;
-  flex-shrink: 0;
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
   display: grid;
   place-items: center;
-  background: var(--surface);
   border: 1px solid var(--border);
-  border-radius: 0.45rem;
-  color: var(--black);
-  font-size: 0.7rem;
+  border-radius: 11px;
+  background: var(--soft);
+  color: var(--ink);
+  font-size: 13px;
 }
 
-.assessment-text,
-.card-title-copy {
+.assessment-copy {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
-.assessment-name {
+.assessment-copy>strong {
   display: block;
   overflow: hidden;
-  color: var(--black);
-  font-size: 0.75rem;
-  font-weight: 650;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 750;
+  line-height: 1.4;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.assessment-subtext {
-  display: block;
-  margin-top: 0.1rem;
-  color: var(--light);
-  font-size: 0.62rem;
+.assessment-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  margin-top: 6px;
 }
 
-.data-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.22rem 0.45rem;
-  background: var(--surface);
+.assessment-tags span {
+  max-width: 100%;
+  padding: 3px 7px;
   border: 1px solid var(--border);
-  border-radius: 0.3rem;
+  border-radius: 999px;
+  background: #fff;
   color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 600;
-}
-
-.category-text {
-  color: var(--muted);
-  font-size: 0.72rem;
+  font-size: 9px;
+  font-weight: 700;
   overflow-wrap: anywhere;
 }
 
-.score-display {
-  display: block;
-  color: var(--black);
-  font-weight: 750;
+/* Result and score */
+
+.result-cell,
+.completed-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  min-width: 0;
+  text-align: center;
 }
 
-.score-percent {
-  display: block;
-  margin-top: 0.1rem;
-  color: var(--light);
-  font-size: 0.62rem;
+.result-cell>strong {
+  color: var(--ink);
+  font-size: 17px;
+  line-height: 1;
 }
 
-.status-badge {
+.result-cell small,
+.completed-cell small {
+  color: #9a9a9a;
+  font-size: 10px;
+}
+
+.completed-cell>strong {
+  color: var(--text);
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1.4;
+}
+
+/* Status pills */
+
+.status-pill {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 0.24rem 0.52rem;
+  width: fit-content;
+  max-width: 100%;
+  padding: 4px 8px;
   border-radius: 999px;
-  font-size: 0.64rem;
-  font-weight: 700;
-  white-space: nowrap;
+  font-size: 9px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  overflow-wrap: anywhere;
 }
 
 .status-pass {
-  background: var(--black);
-  color: var(--white);
+  background: var(--ink);
+  color: #fff;
 }
 
 .status-fail {
-  background: var(--surface);
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-strong);
+  background: #fff;
   color: var(--muted);
 }
 
-.btn-icon {
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
+/* Desktop view button */
+
+.view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  min-height: 34px;
+  padding: 0 10px;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  background: var(--white);
-  color: var(--black);
+  border-radius: 9px;
+  background: #fff;
+  color: var(--ink);
+  font-size: 10px;
+  font-weight: 800;
+  white-space: nowrap;
   cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease,
+    color 0.16s ease;
 }
 
-.btn-icon:hover {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
+.view-btn:hover {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
 }
 
-.records-cards {
+/* Mobile records */
+
+.mobile-records {
   display: none;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 10px;
+  min-width: 0;
 }
 
 .record-card {
+  min-width: 0;
   overflow: hidden;
-  background: var(--white);
   border: 1px solid var(--border);
-  border-radius: 0.7rem;
+  border-radius: 14px;
+  background: var(--surface);
 }
 
-.card-header {
+.record-card-top {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.85rem;
-  border-bottom: 1px solid var(--soft-border);
+  gap: 12px;
+  min-width: 0;
+  padding: 14px;
 }
 
-.card-title-wrap {
+.record-card-top .assessment-cell {
+  flex: 1 1 auto;
+}
+
+.record-card-top .status-pill {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.record-card-result {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  border-top: 1px solid #f0f0f0;
+  border-bottom: 1px solid #f0f0f0;
+  background: #fafafa;
+}
+
+.record-card-result>div {
   min-width: 0;
   display: flex;
-  gap: 0.6rem;
-}
-
-.card-title-copy h4 {
-  margin: 0;
-  color: var(--black);
-  font-size: 0.84rem;
-  font-weight: 700;
-  line-height: 1.35;
-}
-
-.card-date {
-  margin: 0.18rem 0 0;
-  color: var(--light);
-  font-size: 0.67rem;
-}
-
-.card-meta-row {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 0.4rem;
-  padding: 0.7rem 0.85rem 0;
-}
-
-.card-body {
-  display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.8rem 0.85rem;
+  gap: 4px;
+  padding: 11px 12px;
+  border-right: 1px solid #ededed;
 }
 
-.card-row {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  gap: 1rem;
+.record-card-result>div:last-child {
+  border-right: 0;
 }
 
-.card-label {
+.record-card-result span {
   color: var(--muted);
-  font-size: 0.66rem;
-  font-weight: 650;
+  font-size: 9px;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
-.card-value {
-  color: var(--text);
-  font-size: 0.73rem;
-  text-align: right;
-  overflow-wrap: anywhere;
+.record-card-result strong {
+  overflow: hidden;
+  color: var(--ink);
+  font-size: 12px;
+  line-height: 1.4;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.card-value.strong {
-  color: var(--black);
-  font-weight: 750;
-}
-
-.btn-view-card {
-  width: calc(100% - 1rem);
-  margin: 0 0.5rem 0.5rem;
-  min-height: 34px;
+.mobile-view-btn {
+  width: calc(100% - 20px);
+  min-height: 38px;
+  margin: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 12px;
   border: 0;
-  border-radius: 0.45rem;
-  background: var(--black);
-  color: var(--white);
-  font-size: 0.7rem;
-  font-weight: 700;
+  border-radius: 10px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 800;
   cursor: pointer;
+  transition: background 0.16s ease;
 }
 
-.btn-view-card i {
-  margin-right: 0.35rem;
+.mobile-view-btn:hover {
+  background: #333;
 }
 
-.empty {
-  min-height: 220px;
+/* Empty state */
+
+.empty-state {
+  min-height: 280px;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  padding: 2rem 1rem;
+  padding: 30px;
+  border: 1px dashed var(--border-strong);
+  border-radius: 16px;
+  background: var(--surface);
   text-align: center;
 }
 
 .empty-icon {
-  width: 44px;
-  height: 44px;
+  width: 48px;
+  height: 48px;
   display: grid;
   place-items: center;
-  margin-bottom: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  background: var(--surface);
+  margin-bottom: 12px;
+  border-radius: 13px;
+  background: var(--soft);
   color: var(--muted);
 }
 
-.empty p {
-  margin: 0 0 0.25rem;
-  color: var(--black);
-  font-size: 0.84rem;
-  font-weight: 650;
+.empty-state h3 {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
 }
 
-.empty small {
-  color: var(--light);
-  font-size: 0.7rem;
+.empty-state p {
+  max-width: 420px;
+  margin: 7px 0 0;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
 }
 
-.pagination-wrap {
+/* Pagination */
+
+.pagination-bar {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 1rem;
-  flex-wrap: wrap;
-}
-
-.pagination-info {
+  gap: 14px;
+  min-width: 0;
+  padding: 4px 2px 0;
   color: var(--muted);
-  font-size: 0.7rem;
+  font-size: 11px;
 }
 
 .pagination-controls {
   display: flex;
   align-items: center;
-  gap: 0.3rem;
+  justify-content: flex-end;
+  flex-wrap: wrap;
+  gap: 5px;
 }
 
 .page-btn {
-  min-width: 32px;
-  height: 32px;
-  padding: 0 0.45rem;
+  min-width: 34px;
+  height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 9px;
   border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  background: var(--white);
+  border-radius: 9px;
+  background: #fff;
   color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 700;
+  font-size: 10px;
+  font-weight: 800;
   cursor: pointer;
+  transition: border-color 0.16s ease, background 0.16s ease,
+    color 0.16s ease;
 }
 
 .page-btn:hover:not(:disabled),
 .page-btn.active {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
+  border-color: var(--ink);
+  background: var(--ink);
+  color: #fff;
 }
 
 .page-btn:disabled {
-  opacity: 0.4;
+  opacity: 0.35;
   cursor: not-allowed;
 }
 
+/* Animations */
+
 @keyframes spin {
-  to { transform: rotate(360deg); }
-}
-
-@media (max-width: 900px) {
-  .filter-bar {
-    justify-content: flex-start;
+  to {
+    transform: rotate(360deg);
   }
 }
 
-@media (max-width: 768px) {
-  .records-container {
-    padding: 1rem;
-  }
+/* Container-based responsive table-to-card switch */
 
-  .filter-toggle {
-    display: flex;
-  }
-
-  .filter-bar {
-    max-height: 0;
-    overflow: hidden;
-    flex-direction: column;
-    align-items: stretch;
-    flex-wrap: nowrap;
-    transition: max-height 0.25s ease;
-  }
-
-  .filter-bar.filters-open {
-    max-height: 380px;
-  }
-
-  .input-group,
-  .select-input,
-  .date-input,
-  .per-page-select,
-  .reset-btn {
-    width: 100%;
-  }
-}
-
-@media (max-width: 640px) {
-  .records-container {
-    padding: 0.85rem;
-    gap: 0.75rem;
-  }
-
-  .records-summary {
-    width: 100%;
-  }
-
-  .summary-item {
-    flex: 1 1 calc(33.333% - 0.5rem);
-    justify-content: space-between;
-  }
-
-  .table-wrapper {
+@container (max-width: 760px) {
+  .table-shell {
     display: none;
   }
 
-  .records-cards {
+  .mobile-records {
     display: flex;
   }
+}
 
-  .pagination-wrap {
+@container (max-width: 420px) {
+  .record-card-top {
     flex-direction: column;
+    gap: 10px;
+  }
+
+  .record-card-top .status-pill {
+    align-self: flex-start;
+  }
+
+  .record-card-result {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .record-card-result>div:nth-child(2) {
+    border-right: 0;
+  }
+
+  .record-card-result>div:nth-child(3) {
+    grid-column: 1 / -1;
+    border-top: 1px solid #ededed;
+    border-right: 0;
+  }
+}
+
+/* Tablet and smaller desktop */
+
+@media (max-width: 980px) {
+  .filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .clear-filters {
+    width: 100%;
+  }
+
+  .result-column {
+    width: 125px;
+  }
+
+  .completed-column {
+    width: 140px;
+  }
+
+  .action-column {
+    width: 82px;
+  }
+
+  .records-table th {
+    padding: 12px 10px;
+  }
+
+  .records-table td {
+    padding: 13px 10px;
+  }
+}
+
+/* Tablet */
+
+@media (max-width: 760px) {
+  .records-page {
+    width: 100%;
+    padding: 12px;
+    gap: 12px;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    padding: 16px;
+    gap: 16px;
+  }
+
+  .header-count {
+    min-width: auto;
+    padding-left: 12px;
+  }
+
+  .header-count strong {
+    font-size: 24px;
+  }
+
+  .toolbar-card {
     align-items: stretch;
   }
 
-  .pagination-info {
-    text-align: center;
+  .filter-panel {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .records-table th,
+  .records-table td {
+    padding: 12px 10px;
+  }
+
+  .pagination-bar {
+    align-items: center;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 520px) {
+  .records-page {
+    padding: 8px;
+    gap: 10px;
+  }
+
+  .page-header {
+    flex-direction: column;
+    gap: 14px;
+    padding: 14px;
+    border-radius: 13px;
+  }
+
+  .title-group {
+    align-items: flex-start;
+    gap: 10px;
+    width: 100%;
+  }
+
+  .title-icon {
+    width: 38px;
+    height: 38px;
+    flex-basis: 38px;
+    border-radius: 10px;
+  }
+
+  .eyebrow {
+    font-size: 9px;
+  }
+
+  .page-header h1 {
+    font-size: 21px;
+  }
+
+  .page-header p {
+    font-size: 12px;
+  }
+
+  .header-count {
+    width: 100%;
+    flex-direction: row;
+    align-items: baseline;
+    gap: 6px;
+    padding: 12px 0 0;
+    border-left: 0;
+    border-top: 1px solid var(--border);
+  }
+
+  .header-count strong {
+    font-size: 20px;
+  }
+
+  .header-count span {
+    margin-top: 0;
+  }
+
+  .toolbar-card {
+    flex-direction: column;
+    padding: 8px;
+    border-radius: 12px;
+  }
+
+  .search-box,
+  .search-box input {
+    width: 100%;
+  }
+
+  .filter-btn {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .filter-panel {
+    grid-template-columns: minmax(0, 1fr);
+    padding: 12px;
+  }
+
+  .notice {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .notice button {
+    align-self: flex-end;
+  }
+
+  .list-meta {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 6px;
+    padding-inline: 2px;
+  }
+
+  .record-card-top {
+    padding: 12px;
+  }
+
+  .record-card-result>div {
+    padding: 10px 8px;
+  }
+
+  .record-card-result strong {
+    font-size: 11px;
+  }
+
+  .empty-state {
+    min-height: 230px;
+    padding: 22px 14px;
+  }
+
+  .pagination-bar {
+    align-items: center;
+    flex-direction: column;
+    gap: 10px;
+    padding-top: 8px;
   }
 
   .pagination-controls {
     justify-content: center;
-    flex-wrap: wrap;
+    max-width: 100%;
+  }
+
+  .page-btn {
+    min-width: 32px;
+    height: 32px;
+    padding-inline: 7px;
   }
 }
 
-@media (max-width: 480px) {
-  .records-container {
-    padding: 0.7rem;
+/* Very small phones */
+
+@media (max-width: 360px) {
+  .records-page {
+    padding: 5px;
+    gap: 8px;
   }
 
-  .summary-item {
-    flex: 1 1 100%;
+  .page-header {
+    padding: 12px;
   }
 
-  .card-header {
-    align-items: flex-start;
+  .title-group {
+    gap: 8px;
+  }
+
+  .title-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    font-size: 12px;
+  }
+
+  .page-header h1 {
+    font-size: 19px;
+  }
+
+  .page-header p {
+    font-size: 11px;
+  }
+
+  .assessment-cell {
+    gap: 8px;
+  }
+
+  .assessment-icon {
+    width: 34px;
+    height: 34px;
+    flex-basis: 34px;
+    border-radius: 9px;
+  }
+
+  .assessment-copy>strong {
+    font-size: 12px;
+  }
+
+  .record-card-result span {
+    font-size: 8px;
+  }
+
+  .record-card-result strong {
+    font-size: 10px;
+  }
+
+  .pagination-controls {
+    gap: 3px;
+  }
+
+  .page-btn {
+    min-width: 29px;
+    height: 30px;
+    padding-inline: 5px;
+  }
+}
+
+/* Reduced motion accessibility */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
   }
 }
 </style>
+

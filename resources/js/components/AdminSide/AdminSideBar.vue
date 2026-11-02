@@ -2,10 +2,10 @@
   <aside class="admin-sidebar" :class="{ open: isSidebarOpen }">
 
     <!-- BRAND -->
-    <div class="logo-section">
+    <div class="logo-section" @click="router.go(0)" role="button" tabindex="0">
 
       <div class="logo-mark">
-        <img src="/public/lightning.png" alt="CSS Prep" />
+        <img :src="logoUrl" alt="CSS Prep" />
       </div>
 
       <div class="logo-copy">
@@ -45,7 +45,7 @@
         </span>
 
         <span class="nav-text">
-          Assessments
+          Competency
         </span>
       </router-link>
 
@@ -127,6 +127,11 @@
 
 
 <script setup>
+
+import logoUrl from '@/assets/lightning.png'
+import { useRouter } from 'vue-router'
+
+const router = useRouter()
 
 defineProps({
   isSidebarOpen: {
@@ -261,13 +266,10 @@ defineEmits([
 .logo-section {
   display: flex;
   align-items: center;
-
   gap: 10px;
-
   padding: 2px 6px;
-
   margin-bottom: 30px;
-
+  cursor: pointer;
   flex-shrink: 0;
 }
 

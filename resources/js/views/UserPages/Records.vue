@@ -1,280 +1,381 @@
 <template>
-  <div class="records-container">
-    <div class="header-flex">
-      <div class="title-wrap">
-        <div class="icon-box">
-          <i class="fas fa-clipboard-list"></i>
-        </div>
-
-        <div>
-          <h3 class="records-title">Assessment Records</h3>
-          <p class="subtitle">View your completed assessment attempts</p>
-        </div>
+  <main class="records-page">
+    <!-- HEADER -->
+    <header class="page-header">
+      <div>
+        <span class="eyebrow">YOUR LEARNING JOURNEY</span>
+        <h1>My Records</h1>
+        <p>Track your assessment progress and results.</p>
       </div>
 
-      <button
-        class="filter-toggle"
-        type="button"
-        @click="showFilters = !showFilters"
-        :aria-label="showFilters ? 'Hide filters' : 'Show filters'"
-      >
-        <i class="fas fa-filter"></i>
+      <button class="refresh-button" type="button" :disabled="status === 'loading' || !isOnline"
+        aria-label="Refresh records" @click="fetchRecords">
+        <i class="fas fa-rotate-right" :class="{ spinning: status === 'loading' }" aria-hidden="true"></i>
+        <span>Refresh</span>
       </button>
+    </header>
+
+    <!-- OFFLINE NOTICE -->
+    <div v-if="!isOnline" class="notice notice-warn" role="status">
+      <i class="fas fa-wifi" aria-hidden="true"></i>
+      <span>You're offline. Your records will load again when the connection returns.</span>
     </div>
 
-    <div class="filter-bar" :class="{ 'filters-open': showFilters }">
-      <div class="input-group">
-        <i class="fas fa-search input-icon"></i>
-        <input
-          v-model="searchQuery"
-          type="text"
-          placeholder="Search assessment..."
-        />
-        <button
-          v-if="searchQuery"
-          type="button"
-          class="clear-btn"
-          @click="searchQuery = ''"
-          aria-label="Clear search"
-        >
-          <i class="fas fa-times"></i>
+    <!-- SLOW NETWORK HINT -->
+    <p v-if="status === 'loading' && slowNetwork" class="slow-note" role="status">
+      <i class="fas fa-hourglass-half" aria-hidden="true"></i>
+      Still loading. Your connection may be slow.
+    </p>
+
+    <!-- PAGE ERROR (session, permission, offline, network, server) -->
+    <section v-if="status === 'error'" class="state-panel" role="alert">
+      <span class="state-icon" :class="`tone-${currentError.tone}`" aria-hidden="true">
+        <i :class="currentError.icon"></i>
+      </span>
+
+      <h3>{{ currentError.title }}</h3>
+      <p>{{ currentError.text }}</p>
+
+      <div class="state-actions">
+        <button v-if="currentError.retry" class="primary-button" type="button" :disabled="!isOnline"
+          @click="fetchRecords">
+          <i class="fas fa-rotate-right" aria-hidden="true"></i>
+          Try again
+        </button>
+
+        <button v-if="currentError.signIn" class="primary-button" type="button" @click="goToLogin">
+          <i class="fas fa-right-to-bracket" aria-hidden="true"></i>
+          Sign in again
         </button>
       </div>
-
-      <select v-model="typeFilter" class="select-input">
-        <option value="">All Types</option>
-        <option
-          v-for="type in availableTypes"
-          :key="type"
-          :value="type"
-        >
-          {{ formatLabel(type) }}
-        </option>
-      </select>
-
-      <select v-model="categoryFilter" class="select-input">
-        <option value="">All Categories</option>
-        <option
-          v-for="category in availableCategories"
-          :key="category"
-          :value="category"
-        >
-          {{ category }}
-        </option>
-      </select>
-
-      <input v-model="dateFilter" type="date" class="date-input" />
-    </div>
-
-    <div v-if="loading" class="loading">
-      <div class="spinner"></div>
-    </div>
+    </section>
 
     <template v-else>
-      <div class="records-summary">
-        <div class="summary-item">
-          <span class="summary-label">Records</span>
-          <strong>{{ filteredRecords.length }}</strong>
+      <!-- OVERVIEW -->
+      <section v-if="status === 'loading'" class="overview" role="status" aria-live="polite">
+        <span class="sr-only">Loading your records</span>
+
+        <div v-for="n in 3" :key="n" class="stat-card skeleton-stat" aria-hidden="true">
+          <span class="sk sk-icon"></span>
+          <div class="skeleton-stat-copy">
+            <span class="sk sk-line sk-w-50"></span>
+            <span class="sk sk-value"></span>
+          </div>
+        </div>
+      </section>
+
+      <section v-else class="overview" aria-label="Assessment overview">
+        <article class="stat-card">
+          <span class="stat-icon"><i class="fas fa-book-open" aria-hidden="true"></i></span>
+          <div>
+            <span class="stat-label">Assessments</span>
+            <strong>{{ latestRecords.length }}</strong>
+            <small>Unique assessments</small>
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-icon"><i class="fas fa-check" aria-hidden="true"></i></span>
+          <div>
+            <span class="stat-label">Passed</span>
+            <strong>{{ passedCount }}</strong>
+            <small>Latest results</small>
+          </div>
+        </article>
+
+        <article class="stat-card">
+          <span class="stat-icon"><i class="fas fa-chart-simple" aria-hidden="true"></i></span>
+          <div>
+            <span class="stat-label">Average score</span>
+            <strong>{{ averageScore }}%</strong>
+            <small>Across your latest results</small>
+          </div>
+        </article>
+      </section>
+
+      <!-- ASSESSMENT LIST -->
+      <section class="records-section">
+        <div class="section-heading">
+          <div>
+            <h2>Your assessments</h2>
+            <p>One latest result per assessment.</p>
+          </div>
+
+          <span v-if="status === 'ready'" class="result-count">
+            {{ filteredRecords.length }}
+            {{ filteredRecords.length === 1 ? 'assessment' : 'assessments' }}
+          </span>
         </div>
 
-        <div class="summary-item">
-          <span class="summary-label">Assessments</span>
-          <strong>{{ uniqueAssessments }}</strong>
+        <div class="toolbar">
+          <label class="search-box">
+            <i class="fas fa-search" aria-hidden="true"></i>
+            <input v-model="searchQuery" type="search" placeholder="Search assessments..."
+              aria-label="Search assessments" :disabled="status !== 'ready'" />
+            <button v-if="searchQuery" type="button" class="clear-search" aria-label="Clear search"
+              @click="searchQuery = ''">
+              <i class="fas fa-times" aria-hidden="true"></i>
+            </button>
+          </label>
+
+          <select v-model="statusFilter" class="status-filter" aria-label="Filter by result"
+            :disabled="status !== 'ready'">
+            <option value="all">All results</option>
+            <option value="passed">Passed</option>
+            <option value="failed">Failed</option>
+          </select>
         </div>
-      </div>
 
-      <div v-if="filteredRecords.length" class="records-display">
-        <div class="table-wrapper">
-          <table class="records-table">
-            <thead>
-              <tr>
-                <th scope="col" class="col-date">Date</th>
-                <th scope="col" class="col-coc">COC</th>
-                <th scope="col" class="col-type">Type</th>
-                <th scope="col" class="col-assessment">Assessment</th>
-                <th scope="col" class="col-category">Category</th>
-                <th scope="col" class="col-score">Score</th>
-                <th scope="col" class="col-status">Status</th>
-                <th scope="col" class="col-action">View</th>
-              </tr>
-            </thead>
+        <!-- LOADING: skeleton cards -->
+        <div v-if="status === 'loading'" class="assessment-list" aria-hidden="true">
+          <div v-for="n in 3" :key="n" class="assessment-card skeleton-card">
+            <div class="card-main">
+              <span class="sk sk-symbol"></span>
+              <div class="skeleton-card-copy">
+                <span class="sk sk-line sk-w-60"></span>
+                <span class="sk sk-line sk-w-40"></span>
+                <span class="sk sk-line sk-w-80"></span>
+              </div>
+            </div>
+            <div class="skeleton-card-result">
+              <span class="sk sk-line sk-w-40"></span>
+              <span class="sk sk-value"></span>
+              <span class="sk sk-bar"></span>
+            </div>
+          </div>
+        </div>
 
-            <tbody>
-              <tr v-for="record in filteredRecords" :key="record.id">
-                <td class="col-date">
-                  {{ formatDate(record.completed_at || record.created_at) }}
-                </td>
+        <!-- LIST -->
+        <div v-else-if="filteredRecords.length" class="assessment-list">
+          <article v-for="record in filteredRecords" :key="record._groupKey" class="assessment-card">
+            <div class="card-main">
+              <div class="assessment-symbol" aria-hidden="true">
+                <i :class="assessmentIcon(record.quiz_type)"></i>
+              </div>
 
-                <td class="col-coc">
-                  <span class="data-tag">
-                    {{ formatCoc(record.coc_number) }}
-                  </span>
-                </td>
+              <div class="assessment-info">
+                <div class="assessment-heading">
+                  <h3>{{ record.quiz_title || 'Assessment' }}</h3>
 
-                <td class="col-type">
-                  <span class="data-tag">
-                    {{ formatLabel(record.quiz_type) }}
-                  </span>
-                </td>
-
-                <td class="col-assessment">
-                  <div class="assessment-info">
-                    <div class="assessment-icon">
-                      <i :class="assessmentIcon(record.quiz_type)"></i>
-                    </div>
-
-                    <div class="assessment-text">
-                      <span class="assessment-name">
-                        {{ record.quiz_title || 'Assessment' }}
-                      </span>
-                    </div>
-                  </div>
-                </td>
-
-                <td class="col-category">
-                  <span class="category-text">
-                    {{ record.category || '—' }}
-                  </span>
-                </td>
-
-                <td class="col-score">
-                  <div class="score-wrap">
-                    <strong class="score-display">
-                      {{ displayScore(record) }}
-                    </strong>
-                    <small>{{ formatPercentage(record.percentage) }}</small>
-                  </div>
-                </td>
-
-                <td class="col-status">
-                  <span :class="['status-badge', statusClass(record)]">
+                  <span class="status" :class="statusClass(record)">
+                    <i :class="isPassed(record) ? 'fas fa-check-circle' : 'fas fa-circle-xmark'"
+                      aria-hidden="true"></i>
                     {{ getStatus(record) }}
                   </span>
-                </td>
-
-                <td class="col-action">
-                  <button
-                    type="button"
-                    class="btn-icon"
-                    @click="openView(record)"
-                    title="View assessment record"
-                    aria-label="View assessment record"
-                  >
-                    <i class="fas fa-eye"></i>
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div class="records-cards">
-          <article
-            v-for="record in filteredRecords"
-            :key="`card-${record.id}`"
-            class="record-card"
-          >
-            <div class="card-header">
-              <div class="card-title-wrap">
-                <div class="assessment-icon">
-                  <i :class="assessmentIcon(record.quiz_type)"></i>
                 </div>
 
-                <div class="card-title-text">
-                  <h4>{{ record.quiz_title || 'Assessment' }}</h4>
-                  <p class="card-date">
-                    {{ formatDate(record.completed_at || record.created_at) }}
-                  </p>
+                <div class="assessment-meta">
+                  <span v-if="record.coc_number">{{ formatCoc(record.coc_number) }}</span>
+                  <span v-if="record.quiz_type">{{ formatLabel(record.quiz_type) }}</span>
+                  <span v-if="record.category">{{ record.category }}</span>
                 </div>
-              </div>
 
-              <span :class="['status-badge', statusClass(record)]">
-                {{ getStatus(record) }}
-              </span>
-            </div>
-
-            <div class="card-body">
-              <div class="card-row">
-                <span class="card-label">COC</span>
-                <span class="card-value">{{ formatCoc(record.coc_number) }}</span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Type</span>
-                <span class="card-tag">{{ formatLabel(record.quiz_type) }}</span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Category</span>
-                <span class="card-value">{{ record.category || '—' }}</span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Score</span>
-                <span class="card-value">
-                  {{ displayScore(record) }} · {{ formatPercentage(record.percentage) }}
-                </span>
-              </div>
-
-              <div class="card-row">
-                <span class="card-label">Time</span>
-                <span class="card-value">{{ formatTime(record.elapsed_time) }}</span>
+                <p class="activity-date">
+                  <i class="far fa-clock" aria-hidden="true"></i>
+                  Last activity · {{ formatDate(record.completed_at || record.created_at) }}
+                </p>
               </div>
             </div>
 
-            <button
-              type="button"
-              class="btn-view-card"
-              @click="openView(record)"
-            >
-              <i class="fas fa-eye"></i>
-              View Record
-            </button>
+            <div class="card-result">
+              <div class="score-info">
+                <span>Latest score</span>
+                <strong>{{ formatPercentage(record.percentage) }}</strong>
+                <small>{{ displayScore(record) }}</small>
+              </div>
+
+              <div class="score-track" role="progressbar" :aria-valuenow="clampPercentage(record.percentage)"
+                aria-valuemin="0" aria-valuemax="100" :aria-label="`Score: ${formatPercentage(record.percentage)}`">
+                <span class="score-fill" :class="statusClass(record)"
+                  :style="{ width: `${clampPercentage(record.percentage)}%` }"></span>
+              </div>
+
+              <button class="details-button" type="button" @click="openView(record)">
+                View details
+                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+              </button>
+            </div>
           </article>
         </div>
-      </div>
 
-      <div v-else class="empty">
-        <div class="empty-icon">
-          <i class="fas fa-clipboard-list"></i>
+        <!-- NO RECORDS YET -->
+        <div v-else-if="!latestRecords.length" class="state-panel">
+          <span class="state-icon" aria-hidden="true"><i class="fas fa-folder-open"></i></span>
+          <h3>Your journey starts here</h3>
+          <p>Complete an assessment and your latest result will appear here.</p>
         </div>
-        <p>No assessment records found.</p>
-        <small>
-          {{ records.length
-            ? 'Try adjusting your filters.'
-            : 'Complete an assessment to see your records here.' }}
-        </small>
-      </div>
 
-      <RecordModal v-model="showModal" :record="selectedRecord" />
+        <!-- NO SEARCH RESULT -->
+        <div v-else class="state-panel">
+          <span class="state-icon" aria-hidden="true"><i class="fas fa-magnifying-glass"></i></span>
+          <h3>No matching assessments</h3>
+          <p>Try another search or change your result filter.</p>
+          <button class="secondary-button" type="button" @click="clearFilters">
+            Clear filters
+          </button>
+        </div>
+      </section>
     </template>
-  </div>
+
+    <RecordModal v-model="showModal" :record="selectedRecord" />
+  </main>
 </template>
 
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 import api from '@/bootstrap'
 import { useUser } from '@/composables/useUser'
 import RecordModal from '@/components/UserSide/RecordModal.vue'
 
+const router = useRouter()
 const { user, fetchUser } = useUser()
 
-const records = ref([])
-const loading = ref(true)
-const searchQuery = ref('')
-const dateFilter = ref('')
-const typeFilter = ref('')
-const categoryFilter = ref('')
-const selectedRecord = ref(null)
-const showModal = ref(false)
-const showFilters = ref(false)
+const DEFAULT_PASSING_SCORE = 75
+const SLOW_AFTER_MS = 4000
 
-const openView = (record) => {
-  selectedRecord.value = { ...record }
-  showModal.value = true
+/* =========================================================
+   ERROR STATES
+========================================================= */
+
+const ERROR_STATES = {
+  offline: {
+    icon: 'fas fa-wifi',
+    title: "You're offline",
+    text: 'Check your internet connection. Your records will load automatically once you are back online.',
+    tone: 'danger',
+    retry: true,
+  },
+  network: {
+    icon: 'fas fa-plug-circle-xmark',
+    title: "Can't reach the server",
+    text: 'The connection failed. Check your network and try again.',
+    tone: 'danger',
+    retry: true,
+  },
+  timeout: {
+    icon: 'fas fa-hourglass-half',
+    title: 'The request took too long',
+    text: 'Your network may be slow right now. Try again in a moment.',
+    tone: 'danger',
+    retry: true,
+  },
+  server: {
+    icon: 'fas fa-triangle-exclamation',
+    title: "Couldn't load your records",
+    text: 'The server could not load your results. Please try again shortly.',
+    tone: 'danger',
+    retry: true,
+  },
+  permission: {
+    icon: 'fas fa-lock',
+    title: 'Access denied',
+    text: 'Your account does not have permission to view these records. Contact your instructor if this is a mistake.',
+    tone: 'neutral',
+    retry: false,
+  },
+  session: {
+    icon: 'fas fa-user-clock',
+    title: 'Your session has expired',
+    text: 'For your security, please sign in again to see your records.',
+    tone: 'neutral',
+    retry: false,
+    signIn: true,
+  },
 }
 
-const formatDate = (date) => {
+/* =========================================================
+   STATE
+========================================================= */
+
+// status: loading | ready | error
+const status = ref('loading')
+const errorType = ref('server')
+const slowNetwork = ref(false)
+const isOnline = ref(navigator.onLine)
+
+const records = ref([])
+const searchQuery = ref('')
+const statusFilter = ref('all')
+const selectedRecord = ref(null)
+const showModal = ref(false)
+
+let requestId = 0
+let slowTimer = null
+
+const currentError = computed(() => ERROR_STATES[errorType.value] ?? ERROR_STATES.server)
+
+/* =========================================================
+   ERROR CLASSIFICATION
+========================================================= */
+
+function classifyError(error) {
+  const code = error?.response?.status
+
+  if (error?.isInvalidResponse) return 'server'
+  if (code === 401 || code === 419) return 'session'
+  if (code === 403) return 'permission'
+  if (code >= 500) return 'server'
+  if (error?.response) return 'server'
+  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') return 'timeout'
+  if (!navigator.onLine) return 'offline'
+
+  return 'network'
+}
+
+function showFailure(type) {
+  records.value = []
+  errorType.value = type
+  status.value = 'error'
+}
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function getTimestamp(record) {
+  const date = record.completed_at || record.created_at
+  if (!date) return 0
+
+  const timestamp = new Date(date).getTime()
+  return Number.isFinite(timestamp) ? timestamp : 0
+}
+
+function toNumberOrNull(value) {
+  if (value === null || value === undefined || value === '') return null
+
+  const number = Number(value)
+  return Number.isFinite(number) ? number : null
+}
+
+function normalizeRecord(record) {
+  return {
+    ...record,
+    score: toNumberOrNull(record.score),
+    correct_answers: toNumberOrNull(record.correct_answers),
+    total_questions: toNumberOrNull(record.total_questions),
+    percentage: toNumberOrNull(record.percentage),
+    passing_score: toNumberOrNull(record.passing_score) ?? DEFAULT_PASSING_SCORE,
+    elapsed_time: toNumberOrNull(record.elapsed_time),
+    questions: Array.isArray(record.questions) ? record.questions : [],
+  }
+}
+
+function clampPercentage(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return 0
+
+  return Math.min(100, Math.max(0, number))
+}
+
+function formatPercentage(value) {
+  const number = Number(value)
+  if (!Number.isFinite(number)) return '0%'
+
+  return `${Number.isInteger(number) ? number : number.toFixed(1)}%`
+}
+
+function formatDate(date) {
   if (!date) return '—'
 
   const parsed = new Date(date)
@@ -287,37 +388,7 @@ const formatDate = (date) => {
   })
 }
 
-const toDateKey = (date) => {
-  if (!date) return ''
-
-  const parsed = new Date(date)
-  if (Number.isNaN(parsed.getTime())) return ''
-
-  return [
-    parsed.getFullYear(),
-    String(parsed.getMonth() + 1).padStart(2, '0'),
-    String(parsed.getDate()).padStart(2, '0'),
-  ].join('-')
-}
-
-const formatTime = (seconds) => {
-  if (seconds === null || seconds === undefined || Number.isNaN(Number(seconds))) {
-    return '—'
-  }
-
-  const totalSeconds = Math.max(0, Math.floor(Number(seconds)))
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const secs = totalSeconds % 60
-
-  if (hours > 0) {
-    return `${hours}h ${minutes}m ${secs}s`
-  }
-
-  return `${minutes}:${String(secs).padStart(2, '0')}`
-}
-
-const formatLabel = (value) => {
+function formatLabel(value) {
   if (!value) return '—'
 
   return String(value)
@@ -325,56 +396,100 @@ const formatLabel = (value) => {
     .replace(/\b\w/g, (char) => char.toUpperCase())
 }
 
-const formatCoc = (value) => {
-  if (value === null || value === undefined || value === '') {
-    return '—'
-  }
-
+function formatCoc(value) {
+  if (value === null || value === undefined || value === '') return ''
   return `COC ${value}`
 }
 
-const formatPercentage = (value) => {
-  const percentage = Number(value)
-  if (!Number.isFinite(percentage)) return '0%'
-
-  return `${Number.isInteger(percentage) ? percentage : percentage.toFixed(1)}%`
-}
-
-const displayScore = (record) => {
+function displayScore(record) {
   const score = record.correct_answers ?? record.score
   const total = record.total_questions
 
-  if (score !== null && score !== undefined && Number(total) > 0) {
+  if (score !== null && total !== null && total > 0) {
     return `${score} / ${total}`
   }
 
-  if (score !== null && score !== undefined) {
-    return String(score)
+  if (score !== null) return `Score: ${score}`
+
+  return 'Score unavailable'
+}
+
+/* =========================================================
+   RESULTS
+========================================================= */
+
+// Show only the newest record for each quiz. Older attempts stay saved.
+const latestRecords = computed(() => {
+  const grouped = new Map()
+
+  for (const record of records.value) {
+    const key = record.quiz_id !== null && record.quiz_id !== undefined
+      ? `quiz-${record.quiz_id}`
+      : `record-${record.id}`
+
+    const current = grouped.get(key)
+
+    if (!current || getTimestamp(record) >= getTimestamp(current)) {
+      grouped.set(key, { ...record, _groupKey: key })
+    }
   }
 
-  return '—'
+  return [...grouped.values()].sort((a, b) => getTimestamp(b) - getTimestamp(a))
+})
+
+function isPassed(record) {
+  const status = String(record.status || '').toLowerCase()
+
+  if (status.includes('fail')) return false
+  if (status.includes('pass')) return true
+
+  return Number(record.percentage ?? 0) >= Number(record.passing_score ?? DEFAULT_PASSING_SCORE)
 }
 
-const getStatus = (record) => {
-  if (record.status) {
-    return formatLabel(record.status)
-  }
+const passedCount = computed(() => latestRecords.value.filter(isPassed).length)
 
-  const percentage = Number(record.percentage ?? 0)
-  const passingScore = Number(record.passing_score ?? 70)
+const averageScore = computed(() => {
+  const scored = latestRecords.value.filter((record) => record.percentage !== null)
 
-  return percentage >= passingScore ? 'Passed' : 'Failed'
+  if (!scored.length) return 0
+
+  const total = scored.reduce((sum, record) => sum + clampPercentage(record.percentage), 0)
+
+  return Math.round(total / scored.length)
+})
+
+const filteredRecords = computed(() => {
+  const query = searchQuery.value.trim().toLowerCase()
+
+  return latestRecords.value.filter((record) => {
+    const searchable = [
+      record.quiz_title,
+      record.quiz_description,
+      record.quiz_type,
+      record.category,
+      record.coc_number,
+    ].filter(Boolean).join(' ').toLowerCase()
+
+    const matchesSearch = !query || searchable.includes(query)
+
+    const matchesStatus =
+      statusFilter.value === 'all' ||
+      (statusFilter.value === 'passed' && isPassed(record)) ||
+      (statusFilter.value === 'failed' && !isPassed(record))
+
+    return matchesSearch && matchesStatus
+  })
+})
+
+function getStatus(record) {
+  return isPassed(record) ? 'Passed' : 'Needs improvement'
 }
 
-const statusClass = (record) => {
-  const status = getStatus(record).toLowerCase()
-
-  return status.includes('pass') || status.includes('complete')
-    ? 'status-pass'
-    : 'status-fail'
+function statusClass(record) {
+  return isPassed(record) ? 'is-passed' : 'is-failed'
 }
 
-const assessmentIcon = (type) => {
+function assessmentIcon(type) {
   const value = String(type || '').toLowerCase()
 
   if (value.includes('rj45')) return 'fas fa-network-wired'
@@ -382,617 +497,1119 @@ const assessmentIcon = (type) => {
   if (value.includes('image')) return 'fas fa-image'
   if (value.includes('multiple')) return 'fas fa-list-check'
 
-  return 'fas fa-file-alt'
+  return 'fas fa-file-lines'
 }
 
-const availableTypes = computed(() => [
-  ...new Set(records.value.map((record) => record.quiz_type).filter(Boolean)),
-])
+function clearFilters() {
+  searchQuery.value = ''
+  statusFilter.value = 'all'
+}
 
-const availableCategories = computed(() => [
-  ...new Set(records.value.map((record) => record.category).filter(Boolean)),
-])
+function openView(record) {
+  selectedRecord.value = { ...record }
+  showModal.value = true
+}
 
-const filteredRecords = computed(() => {
-  const search = searchQuery.value.toLowerCase().trim()
+/* =========================================================
+   LOADING
+========================================================= */
 
-  return records.value.filter((record) => {
-    const title = String(record.quiz_title || '').toLowerCase()
-    const description = String(record.quiz_description || '').toLowerCase()
-    const type = String(record.quiz_type || '').toLowerCase()
-    const category = String(record.category || '').toLowerCase()
-    const date = record.completed_at || record.created_at
+function startSlowTimer() {
+  slowNetwork.value = false
+  clearTimeout(slowTimer)
 
-    const matchesSearch =
-      !search ||
-      title.includes(search) ||
-      description.includes(search) ||
-      type.includes(search) ||
-      category.includes(search)
+  slowTimer = setTimeout(() => {
+    slowNetwork.value = true
+  }, SLOW_AFTER_MS)
+}
 
-    const matchesDate = !dateFilter.value || toDateKey(date) === dateFilter.value
-    const matchesType = !typeFilter.value || record.quiz_type === typeFilter.value
-    const matchesCategory = !categoryFilter.value || record.category === categoryFilter.value
+function stopSlowTimer() {
+  clearTimeout(slowTimer)
+  slowNetwork.value = false
+}
 
-    return matchesSearch && matchesDate && matchesType && matchesCategory
-  })
-})
+async function fetchRecords() {
+  const id = ++requestId
 
-const uniqueAssessments = computed(() => {
-  return new Set(
-    filteredRecords.value
-      .map((record) => record.quiz_id)
-      .filter((id) => id !== null && id !== undefined)
-  ).size
-})
+  if (!navigator.onLine) {
+    isOnline.value = false
+    showFailure('offline')
+    return
+  }
 
-const fetchRecords = async () => {
-  loading.value = true
+  isOnline.value = true
+  status.value = 'loading'
+  startSlowTimer()
 
   try {
     const { data } = await api.get('/api/records')
 
-    records.value = Array.isArray(data?.results)
-      ? data.results.map((record) => ({
-          ...record,
-          score: record.score !== null && record.score !== undefined
-            ? Number(record.score)
-            : null,
-          correct_answers: record.correct_answers !== null && record.correct_answers !== undefined
-            ? Number(record.correct_answers)
-            : null,
-          total_questions: record.total_questions !== null && record.total_questions !== undefined
-            ? Number(record.total_questions)
-            : 0,
-          percentage: record.percentage !== null && record.percentage !== undefined
-            ? Number(record.percentage)
-            : 0,
-          passing_score: record.passing_score !== null && record.passing_score !== undefined
-            ? Number(record.passing_score)
-            : 70,
-          elapsed_time: record.elapsed_time !== null && record.elapsed_time !== undefined
-            ? Number(record.elapsed_time)
-            : null,
-          questions: Array.isArray(record.questions) ? record.questions : [],
-        }))
-      : []
+    if (id !== requestId) return
+
+    if (!Array.isArray(data?.results)) {
+      const invalid = new Error('Invalid records response.')
+      invalid.isInvalidResponse = true
+      throw invalid
+    }
+
+    records.value = data.results.map(normalizeRecord)
+    status.value = 'ready'
   } catch (error) {
+    if (id !== requestId) return
+
     console.error('Failed to fetch records:', error.response?.data || error)
-    records.value = []
+    showFailure(classifyError(error))
   } finally {
-    loading.value = false
+    if (id === requestId) stopSlowTimer()
   }
 }
 
+function goToLogin() {
+  router.push('/login')
+}
+
+/* =========================================================
+   CONNECTION EVENTS
+========================================================= */
+
+function handleOnline() {
+  isOnline.value = true
+
+  if (status.value === 'error' && ['offline', 'network', 'timeout'].includes(errorType.value)) {
+    fetchRecords()
+  }
+}
+
+function handleOffline() {
+  isOnline.value = false
+}
+
+/* =========================================================
+   LIFECYCLE
+========================================================= */
+
 onMounted(async () => {
-  if (!user.value) {
-    await fetchUser()
+  window.addEventListener('online', handleOnline)
+  window.addEventListener('offline', handleOffline)
+
+  try {
+    if (!user.value) await fetchUser()
+  } catch (error) {
+    showFailure(classifyError(error))
+    return
   }
 
   if (!user.value) {
-    loading.value = false
+    showFailure('session')
     return
   }
 
   await fetchRecords()
 })
+
+onBeforeUnmount(() => {
+  window.removeEventListener('online', handleOnline)
+  window.removeEventListener('offline', handleOffline)
+  clearTimeout(slowTimer)
+})
 </script>
 
 <style scoped>
-*,
-*::before,
-*::after {
+.records-page {
+  --ink: #171717;
+  --muted: #777;
+  --soft-muted: #999;
+  --line: #eaeaea;
+  --surface: #fafafa;
+  --white: #fff;
+
+  /* Centered layout with a maximum width */
+  width: 100%;
+  max-width: 68rem;
+  min-width: 0;
+  margin-inline: auto;
+  padding: clamp(1rem, 2.5vw, 1.75rem) clamp(0.75rem, 2vw, 1.5rem) 3rem;
+
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+
+  color: var(--ink);
+  background: transparent;
+  font-family: inherit;
   box-sizing: border-box;
 }
 
-.records-container {
-  --black: #111111;
-  --white: #ffffff;
-  --text: #222222;
-  --muted: #737373;
-  --light: #a3a3a3;
-  --border: #e5e5e5;
-  --soft-border: #f0f0f0;
-  --surface: #fafafa;
-
-  width: 100%;
-  min-height: 100%;
-  display: flex;
-  flex-direction: column;
-  gap: 1rem;
-  padding: 1.5rem;
-  background: var(--white);
-  border-radius: 4px;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03), 0 12px 32px rgba(0, 0, 0, 0.05);
+.records-page *,
+.records-page *::before,
+.records-page *::after {
+  box-sizing: border-box;
 }
 
-.header-flex,
-.title-wrap,
-.records-summary,
-.assessment-info,
-.card-title-wrap,
-.card-row {
+.records-page button,
+.records-page input,
+.records-page select {
+  font: inherit;
+}
+
+.records-page button {
+  -webkit-tap-highlight-color: transparent;
+  cursor: pointer;
+}
+
+.records-page button:disabled {
+  cursor: not-allowed;
+  opacity: 0.65;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* ================= HEADER ================= */
+
+.page-header {
   display: flex;
   align-items: center;
-}
-
-.header-flex {
   justify-content: space-between;
   gap: 1rem;
-}
-
-.title-wrap {
-  gap: 0.75rem;
   min-width: 0;
 }
 
-.icon-box {
-  width: 2.25rem;
-  height: 2.25rem;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  background: var(--black);
-  color: var(--white);
-  border-radius: 0.55rem;
-  font-size: 0.85rem;
+.page-header>div {
+  min-width: 0;
 }
 
-.records-title {
-  margin: 0;
-  color: var(--black);
-  font-size: 1rem;
-  font-weight: 700;
-}
-
-.subtitle {
-  margin: 0.2rem 0 0;
+.eyebrow {
   color: var(--muted);
-  font-size: 0.75rem;
+  font-size: 0.67rem;
+  font-weight: 700;
+  letter-spacing: 0.13em;
 }
 
-.filter-toggle {
-  display: none;
-  width: 2.25rem;
-  height: 2.25rem;
+.page-header h1 {
+  margin: 0.35rem 0 0;
+  font-size: clamp(1.45rem, 1.2rem + 0.8vw, 1.9rem);
+  line-height: 1.2;
+  letter-spacing: -0.045em;
+  font-weight: 750;
+  overflow-wrap: anywhere;
+}
+
+.page-header p,
+.section-heading p {
+  margin: 0.4rem 0 0;
+  color: var(--muted);
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.refresh-button,
+.primary-button,
+.secondary-button {
+  min-height: 40px;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  border: 0;
-  border-radius: 0.55rem;
-  background: var(--black);
-  color: var(--white);
-  cursor: pointer;
+  gap: 0.55rem;
+  padding: 0.65rem 0.9rem;
+  border-radius: 0.6rem;
+  transition: background 0.18s ease, border-color 0.18s ease;
 }
 
-.filter-bar {
-  display: flex;
-  align-items: center;
-  justify-content: flex-end;
-  gap: 0.5rem;
-}
-
-.input-group {
-  position: relative;
-  width: 240px;
-}
-
-.input-group input,
-.select-input,
-.date-input {
-  height: 36px;
-  border: 1px solid var(--border);
-  border-radius: 0.45rem;
-  background: var(--surface);
-  color: var(--text);
-  font-size: 0.78rem;
-}
-
-.input-group input {
-  width: 100%;
-  padding: 0 2rem;
-}
-
-.select-input,
-.date-input {
-  padding: 0 0.7rem;
-}
-
-.input-group input:focus,
-.select-input:focus,
-.date-input:focus {
-  outline: none;
-  border-color: var(--black);
+.refresh-button {
+  flex-shrink: 0;
+  border: 1px solid var(--line);
   background: var(--white);
-}
-
-.input-icon,
-.clear-btn {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-}
-
-.input-icon {
-  left: 0.7rem;
-  color: var(--light);
-  font-size: 0.75rem;
-}
-
-.clear-btn {
-  right: 0.6rem;
-  border: 0;
-  background: transparent;
-  color: var(--light);
-  cursor: pointer;
-}
-
-.records-summary {
-  gap: 0.5rem;
-}
-
-.summary-item {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.7rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.45rem;
-}
-
-.summary-label {
-  color: var(--muted);
-  font-size: 0.68rem;
+  color: var(--ink);
+  font-size: 0.8rem;
   font-weight: 600;
 }
 
-.summary-item strong {
-  color: var(--black);
+.refresh-button:hover,
+.secondary-button:hover {
+  background: #f3f3f3;
+}
+
+.spinning {
+  animation: spin 0.8s linear infinite;
+}
+
+/* ================= NOTICES AND SLOW NETWORK ================= */
+
+.notice {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.6rem;
+  padding: 0.7rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: 0.8rem;
+  background: var(--white);
+  font-size: 0.8rem;
+}
+
+.notice i {
+  color: var(--muted);
+}
+
+.notice span {
+  flex: 1 1 200px;
+  min-width: 0;
+}
+
+.notice-warn {
+  border-color: #e7c76a;
+  background: #fffaf0;
+}
+
+.slow-note {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--muted);
+  font-size: 0.8rem;
+}
+
+/* ================= OVERVIEW ================= */
+
+.overview {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.85rem;
+  min-width: 0;
+}
+
+.stat-card {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: transparent;
+}
+
+.stat-icon,
+.assessment-symbol,
+.state-icon {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--surface);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+}
+
+.stat-icon {
+  width: 42px;
+  height: 42px;
+  font-size: 0.95rem;
+}
+
+.stat-card>div {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.12rem;
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 0.76rem;
+  font-weight: 500;
+}
+
+.stat-card strong {
+  font-size: 1.55rem;
+  line-height: 1.25;
+  letter-spacing: -0.04em;
+  font-weight: 750;
+}
+
+.stat-card small {
+  color: var(--soft-muted);
+  font-size: 0.68rem;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.skeleton-stat {
+  align-items: center;
+}
+
+.skeleton-stat-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+/* ================= ASSESSMENT SECTION ================= */
+
+.records-section {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.section-heading {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  min-width: 0;
+}
+
+.section-heading>div {
+  min-width: 0;
+}
+
+.section-heading h2 {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 750;
+  letter-spacing: -0.025em;
+}
+
+.section-heading p {
   font-size: 0.78rem;
 }
 
-.table-wrapper {
-  width: 100%;
-  overflow-x: auto;
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-}
-
-.records-table {
-  width: 100%;
-  min-width: 920px;
-  border-collapse: collapse;
-  table-layout: fixed;
-}
-
-.records-table th {
-  padding: 0.7rem 0.75rem;
-  background: var(--surface);
-  border-bottom: 1px solid var(--border);
+.result-count {
+  flex-shrink: 0;
+  padding: 0.35rem 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   color: var(--muted);
-  font-size: 0.64rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.05em;
-  text-align: center;
+  font-size: 0.7rem;
+  font-weight: 600;
   white-space: nowrap;
 }
 
-.records-table td {
-  padding: 0.75rem;
-  border-bottom: 1px solid var(--soft-border);
-  color: var(--text);
-  font-size: 0.78rem;
-  text-align: center;
-  vertical-align: middle;
+/* ================= SEARCH AND FILTER ================= */
+
+.toolbar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 0.65rem;
+  width: 100%;
+  min-width: 0;
 }
 
-.records-table tbody tr:last-child td {
-  border-bottom: 0;
+.search-box {
+  min-width: 0;
+  height: 43px;
+  display: flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  background: transparent;
+  color: var(--soft-muted);
+  transition: border-color 0.18s ease;
 }
 
-.records-table tbody tr:hover {
+.search-box:focus-within {
+  border-color: #777;
+}
+
+.search-box input {
+  width: 100%;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.82rem;
+}
+
+.search-box input:disabled {
+  cursor: not-allowed;
+}
+
+.search-box input::placeholder {
+  color: #a0a0a0;
+}
+
+.clear-search {
+  display: grid;
+  place-items: center;
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  border: 0;
+  border-radius: 0.4rem;
+  background: transparent;
+  color: var(--muted);
+}
+
+.clear-search:hover {
   background: var(--surface);
 }
 
-.col-date { width: 105px; }
-.col-coc { width: 85px; }
-.col-type { width: 135px; }
-.col-assessment { width: 230px; }
-.col-category { width: 150px; }
-.col-score { width: 105px; }
-.col-status { width: 100px; }
-.col-action { width: 65px; }
+.status-filter {
+  width: auto;
+  min-width: 135px;
+  max-width: 100%;
+  height: 43px;
+  padding: 0 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 0.7rem;
+  outline: none;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.8rem;
+}
+
+.status-filter:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* ================= ASSESSMENT CARDS ================= */
+
+.assessment-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  min-width: 0;
+  width: 100%;
+}
+
+.assessment-card {
+  min-width: 0;
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(130px, 170px);
+  align-items: center;
+  gap: 1.25rem;
+  padding: 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: 0.9rem;
+  background: transparent;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease;
+}
+
+.assessment-card:hover {
+  border-color: #d4d4d4;
+  box-shadow: 0 5px 20px rgb(0 0 0 / 3%);
+}
+
+.skeleton-card:hover {
+  border-color: var(--line);
+  box-shadow: none;
+}
+
+.card-main {
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 0.9rem;
+}
+
+.assessment-symbol {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+}
 
 .assessment-info {
-  gap: 0.6rem;
-  text-align: left;
-}
-
-.assessment-icon {
-  width: 30px;
-  height: 30px;
-  display: grid;
-  place-items: center;
-  flex-shrink: 0;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  color: var(--black);
-  font-size: 0.72rem;
-}
-
-.assessment-text,
-.card-title-text {
   min-width: 0;
+  flex: 1;
 }
 
-.assessment-name {
-  display: block;
-  overflow: hidden;
-  color: var(--black);
-  font-size: 0.78rem;
-  font-weight: 650;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.data-tag,
-.card-tag {
-  display: inline-flex;
-  align-items: center;
-  padding: 0.22rem 0.45rem;
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: 0.3rem;
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 600;
-}
-
-.category-text {
-  color: var(--muted);
-  font-size: 0.75rem;
-}
-
-.score-wrap {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  align-items: center;
-}
-
-.score-display {
-  color: var(--black);
-  font-weight: 700;
-}
-
-.score-wrap small {
-  color: var(--light);
-  font-size: 0.64rem;
-}
-
-.status-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 58px;
-  padding: 0.25rem 0.55rem;
-  border-radius: 999px;
-  font-size: 0.65rem;
-  font-weight: 700;
-  white-space: nowrap;
-}
-
-.status-pass {
-  background: var(--black);
-  color: var(--white);
-}
-
-.status-fail {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--muted);
-}
-
-.btn-icon {
-  width: 30px;
-  height: 30px;
-  display: inline-grid;
-  place-items: center;
-  border: 1px solid var(--border);
-  border-radius: 0.4rem;
-  background: var(--white);
-  color: var(--black);
-  cursor: pointer;
-}
-
-.btn-icon:hover {
-  background: var(--black);
-  border-color: var(--black);
-  color: var(--white);
-}
-
-.records-cards {
-  display: none;
-  flex-direction: column;
-  gap: 0.75rem;
-}
-
-.record-card {
-  overflow: hidden;
-  background: var(--white);
-  border: 1px solid var(--border);
-  border-radius: 0.65rem;
-}
-
-.card-header {
+.assessment-heading {
   display: flex;
   align-items: flex-start;
   justify-content: space-between;
-  gap: 0.75rem;
-  padding: 0.85rem;
-  border-bottom: 1px solid var(--soft-border);
-}
-
-.card-title-wrap {
-  gap: 0.6rem;
+  gap: 0.7rem;
   min-width: 0;
 }
 
-.card-header h4 {
+.assessment-heading h3 {
+  min-width: 0;
   margin: 0;
-  color: var(--black);
-  font-size: 0.85rem;
-  font-weight: 650;
+  overflow-wrap: anywhere;
+  font-size: 0.9rem;
+  line-height: 1.5;
+  font-weight: 700;
 }
 
-.card-date {
-  margin: 0.2rem 0 0;
-  color: var(--light);
+.status {
+  flex-shrink: 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.32rem 0.55rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
   font-size: 0.68rem;
+  font-weight: 650;
+  white-space: nowrap;
 }
 
-.card-body {
+.is-passed {
+  color: #222;
+}
+
+.status.is-passed {
+  border-color: #dedede;
+  background: #f5f5f5;
+}
+
+.is-failed {
+  color: #666;
+}
+
+.status.is-failed {
+  background: transparent;
+}
+
+.assessment-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin-top: 0.45rem;
+}
+
+.assessment-meta span {
+  color: var(--muted);
+  font-size: 0.69rem;
+  overflow-wrap: anywhere;
+}
+
+.assessment-meta span+span::before {
+  content: "·";
+  margin-right: 0.4rem;
+  color: #b5b5b5;
+}
+
+.activity-date {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+  margin: 0.7rem 0 0;
+  color: var(--soft-muted);
+  font-size: 0.72rem;
+  overflow-wrap: anywhere;
+}
+
+/* ================= SCORE ================= */
+
+.card-result {
+  min-width: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.55rem;
-  padding: 0.85rem;
+  align-items: stretch;
+  gap: 0.65rem;
 }
 
-.card-row {
-  justify-content: space-between;
-  gap: 1rem;
+.score-info {
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 0.4rem;
 }
 
-.card-label {
+.score-info>span {
+  width: 100%;
   color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 600;
-  text-transform: uppercase;
+  font-size: 0.69rem;
 }
 
-.card-value {
-  color: var(--black);
-  font-size: 0.76rem;
-  font-weight: 600;
-  text-align: right;
+.score-info strong {
+  font-size: 1.4rem;
+  line-height: 1.25;
+  letter-spacing: -0.04em;
 }
 
-.btn-view-card {
-  width: calc(100% - 1rem);
-  margin: 0 0.5rem 0.5rem;
-  height: 34px;
-  border: 0;
-  border-radius: 0.4rem;
-  background: var(--black);
-  color: var(--white);
-  font-size: 0.72rem;
-  font-weight: 600;
-  cursor: pointer;
+.score-info small {
+  color: var(--muted);
+  font-size: 0.7rem;
+  overflow-wrap: anywhere;
 }
 
-.btn-view-card i {
-  margin-right: 0.35rem;
+.score-track {
+  width: 100%;
+  height: 5px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: #eee;
 }
 
-.loading,
-.empty {
+.score-fill {
+  display: block;
+  height: 100%;
+  border-radius: inherit;
+  background: #262626;
+  transition: width 0.3s ease;
+}
+
+.score-fill.is-failed {
+  background: #a3a3a3;
+}
+
+.details-button {
   display: flex;
   align-items: center;
-  justify-content: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  width: 100%;
+  min-height: 35px;
+  padding: 0.45rem 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.76rem;
+  font-weight: 650;
+  text-align: left;
 }
 
-.loading {
-  min-height: 180px;
+.details-button i {
+  flex-shrink: 0;
+  font-size: 0.7rem;
+  transition: transform 0.18s ease;
 }
 
-.spinner {
-  width: 26px;
-  height: 26px;
-  border: 2px solid var(--border);
-  border-top-color: var(--black);
-  border-radius: 50%;
-  animation: spin 0.7s linear infinite;
+.details-button:hover i {
+  transform: translateX(3px);
 }
 
-.empty {
+/* ================= STATE PANELS (loading, empty, error) ================= */
+
+.state-panel {
+  min-width: 0;
+  min-height: 230px;
+  display: flex;
   flex-direction: column;
-  padding: 3rem 1rem;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
   text-align: center;
+  border: 1px dashed #dedede;
+  border-radius: 0.9rem;
+  background: transparent;
 }
 
-.empty-icon {
-  width: 42px;
-  height: 42px;
-  display: grid;
-  place-items: center;
-  margin-bottom: 0.75rem;
-  border: 1px solid var(--border);
-  border-radius: 0.6rem;
-  background: var(--surface);
+.state-panel h3 {
+  margin: 0.8rem 0 0;
+  font-size: 0.95rem;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.state-panel p {
+  max-width: 360px;
+  margin: 0.45rem 0 0;
   color: var(--muted);
+  font-size: 0.8rem;
+  line-height: 1.6;
+  overflow-wrap: anywhere;
 }
 
-.empty p {
-  margin: 0 0 0.25rem;
-  color: var(--black);
-  font-size: 0.85rem;
+.state-icon {
+  width: 44px;
+  height: 44px;
+  font-size: 1rem;
+}
+
+.state-icon.tone-danger {
+  border-color: #f3c4c0;
+  background: #fff1f0;
+  color: #b42318;
+}
+
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.primary-button {
+  margin-top: 0.75rem;
+  border: 1px solid var(--ink);
+  background: var(--ink);
+  color: var(--white);
+  font-size: 0.78rem;
   font-weight: 600;
 }
 
-.empty small {
-  color: var(--light);
-  font-size: 0.72rem;
+.primary-button:hover:not(:disabled) {
+  background: #333;
+}
+
+.primary-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.secondary-button {
+  margin-top: 1rem;
+  border: 1px solid var(--line);
+  background: transparent;
+  color: var(--ink);
+  font-size: 0.78rem;
+  font-weight: 600;
+}
+
+/* ================= SKELETON (shimmering placeholders) ================= */
+
+.sk {
+  display: block;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #efefef 25%, #f8f8f8 37%, #efefef 63%);
+  background-size: 400% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+
+.sk-line {
+  height: 0.7rem;
+}
+
+.sk-w-40 {
+  width: 40%;
+}
+
+.sk-w-50 {
+  width: 50%;
+}
+
+.sk-w-60 {
+  width: 60%;
+}
+
+.sk-w-80 {
+  width: 80%;
+}
+
+.sk-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 0.7rem;
+}
+
+.sk-value {
+  width: 45%;
+  height: 1.4rem;
+}
+
+.sk-bar {
+  height: 0.3rem;
+  border-radius: 999px;
+}
+
+.sk-symbol {
+  width: 44px;
+  height: 44px;
+  flex-shrink: 0;
+  border-radius: 0.7rem;
+}
+
+.skeleton-card-copy {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.skeleton-card-result {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 100% 0;
+  }
+
+  100% {
+    background-position: -100% 0;
+  }
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-@media (max-width: 768px) {
-  .records-container {
-    padding: 1rem;
+/* ================= TABLET ================= */
+
+@media (max-width: 760px) {
+  .records-page {
+    gap: 1.35rem;
+    padding: 1.25rem 1rem 2.5rem;
   }
 
-  .filter-toggle {
-    display: flex;
+  .overview {
+    gap: 0.6rem;
   }
 
-  .filter-bar {
+  .stat-card {
+    align-items: flex-start;
     flex-direction: column;
-    align-items: stretch;
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.25s ease;
+    gap: 0.65rem;
+    padding: 0.85rem;
   }
 
-  .filter-bar.filters-open {
-    max-height: 300px;
+  .skeleton-stat {
+    align-items: flex-start;
   }
 
-  .input-group,
-  .select-input,
-  .date-input {
-    width: 100%;
+  .stat-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 0.6rem;
+  }
+
+  .stat-card strong {
+    font-size: 1.35rem;
+  }
+
+  .assessment-card {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.95rem;
+  }
+
+  .skeleton-card {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .card-result {
+    padding-top: 0.85rem;
+    border-top: 1px solid var(--line);
+  }
+
+  .score-info>span {
+    width: auto;
+    margin-right: auto;
+  }
+
+  .score-track {
+    height: 4px;
+  }
+
+  .details-button {
+    padding: 0.4rem 0 0;
   }
 }
 
-@media (max-width: 640px) {
-  .table-wrapper {
+/* ================= MOBILE ================= */
+
+@media (max-width: 480px) {
+  .records-page {
+    padding: 1rem 0.75rem 2rem;
+    gap: 1.2rem;
+  }
+
+  .page-header {
+    align-items: flex-start;
+    gap: 0.65rem;
+  }
+
+  .page-header h1 {
+    font-size: 1.5rem;
+  }
+
+  .page-header p {
+    max-width: 230px;
+    font-size: 0.77rem;
+  }
+
+  .refresh-button {
+    width: 39px;
+    height: 39px;
+    min-height: 39px;
+    padding: 0;
+  }
+
+  .refresh-button span {
     display: none;
   }
 
-  .records-cards {
-    display: flex;
+  .overview {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.4rem;
   }
 
-  .records-summary {
+  .stat-card {
+    padding: 0.65rem 0.45rem;
+    gap: 0.5rem;
+    border-radius: 0.7rem;
+  }
+
+  .stat-icon {
+    width: 30px;
+    height: 30px;
+    font-size: 0.78rem;
+  }
+
+  .stat-label {
+    font-size: 0.63rem;
+  }
+
+  .stat-card strong {
+    font-size: 1.1rem;
+  }
+
+  .stat-card small {
+    font-size: 0.58rem;
+    line-height: 1.35;
+  }
+
+  .skeleton-stat {
+    padding: 0.65rem 0.45rem;
+  }
+
+  .sk-icon {
+    width: 30px;
+    height: 30px;
+  }
+
+  .sk-value {
+    height: 1.1rem;
+  }
+
+  .section-heading {
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+
+  .section-heading h2 {
+    font-size: 0.98rem;
+  }
+
+  .section-heading p {
+    font-size: 0.72rem;
+  }
+
+  .result-count {
+    font-size: 0.63rem;
+    padding: 0.3rem 0.45rem;
+  }
+
+  .toolbar {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 0.55rem;
+  }
+
+  .search-box,
+  .status-filter {
+    width: 100%;
+    min-width: 0;
+    height: 42px;
+  }
+
+  .assessment-card {
+    padding: 0.85rem;
+    border-radius: 0.75rem;
+  }
+
+  .card-main {
+    gap: 0.7rem;
+  }
+
+  .assessment-symbol,
+  .sk-symbol {
+    width: 38px;
+    height: 38px;
+    font-size: 0.85rem;
+  }
+
+  .assessment-heading {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.45rem;
+  }
+
+  .assessment-heading h3 {
+    font-size: 0.85rem;
+  }
+
+  .activity-date {
+    font-size: 0.68rem;
+  }
+
+  .score-info strong {
+    font-size: 1.3rem;
+  }
+
+  .state-panel {
+    min-height: 200px;
+    padding: 1.5rem 1rem;
+  }
+
+  .state-actions {
     width: 100%;
   }
 
-  .summary-item {
-    flex: 1;
+  .state-actions .primary-button {
+    flex: 1 1 140px;
+  }
+}
+
+/* ================= EXTRA SMALL SCREENS ================= */
+
+@media (max-width: 340px) {
+  .records-page {
+    padding-inline: 0.5rem;
+  }
+
+  .overview {
+    grid-template-columns: 1fr;
+  }
+
+  .stat-card {
+    flex-direction: row;
+    align-items: center;
+    padding: 0.75rem;
+  }
+
+  .section-heading {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .card-main {
+    gap: 0.55rem;
+  }
+}
+
+/* ================= ACCESSIBILITY ================= */
+
+@media (prefers-reduced-motion: reduce) {
+
+  .records-page *,
+  .records-page *::before,
+  .records-page *::after {
+    animation: none !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
   }
 }
 </style>

@@ -29,9 +29,8 @@ class ImageIdentificationQuestion extends Model
     /**
      * The image identification items in this question.
      */
-    public function items(): HasMany
+    public function items()
     {
-        return $this->hasMany(ImageIdentificationItem::class, 'question_id')
-            ->orderBy('sort_order');
+        return $this->hasMany(ImageIdentificationItem::class, 'question_id', 'id');
     }
 }

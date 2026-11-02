@@ -57,7 +57,7 @@ onUnmounted(() => {
 const pageTitles = {
     '/admin': 'Dashboard',
     '/admin/dashboard': 'Dashboard',
-    '/admin/manage-quizzes': 'Assessments',
+    '/admin/manage-quizzes': 'Competences',
     '/admin/users': 'Users',
     '/admin/records': 'Records',
     '/admin/settings': 'Admin Settings',

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Builder;
 
 class QuizRecord extends Model
 {
@@ -36,6 +37,17 @@ class QuizRecord extends Model
         'attempt_count' => 'integer',
         'completed_at' => 'datetime',
     ];
+
+    /*
+     * get the attempt of specific assessment
+     */
+    public function scopeAttemptsFor(Builder $query, int $userId, int $quizId, string $quizType): Builder
+    {
+        return $query
+            ->where('user_id', $userId)
+            ->where('quiz_id', $quizId)
+            ->where('quiz_type', $quizType);
+    }
 
     public function quiz()
     {

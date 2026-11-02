@@ -35,7 +35,7 @@ class Rj45Assessment extends Model
         'test_pin_delay_ms' => 'integer',
     ];
 
-    public function quiz()
+    public function coc()
     {
         return $this->belongsTo(Quiz::class);
     }
@@ -48,5 +48,10 @@ class Rj45Assessment extends Model
     public function attempts()
     {
         return $this->hasMany(Rj45Attempt::class);
+    }
+
+    public function assessment()
+    {
+        return $this->belongsTo(Assessment::class, 'assessment_id', 'id');
     }
 }

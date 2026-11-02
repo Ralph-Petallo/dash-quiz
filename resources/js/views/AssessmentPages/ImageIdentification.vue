@@ -2,1306 +2,868 @@
     <div class="quiz-page">
         <!-- HEADER -->
         <header class="quiz-header">
-            <button class="back-btn" type="button" title="Go back" @click="router.back()">
-                <i class="fas fa-arrow-left"></i>
+            <button class="back-btn" type="button" aria-label="Go back" @click="router.back()">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
             </button>
+
             <div class="header-title">
-                <span class="eyebrow">IMAGE IDENTIFICATION</span>
-                <h1>Component Identification</h1>
+                <span class="eyebrow">Image identification</span>
+                <h1>Component identification</h1>
             </div>
-            <div class="progress-info">
-                <span>{{ collectedAnswers.length }} / {{ items.length }}</span>
-                <div class="progress-bar">
-                    <div class="progress-fill" :style="{ width: `${progress}%` }"></div>
+
+            <div class="progress-info" :aria-label="`${answeredCount} of ${items.length} answered`">
+                <span class="progress-count">{{ answeredCount }}/{{ items.length }}</span>
+                <div class="progress-bar" aria-hidden="true">
+                    <div class="progress-fill" :style="{ width: progress + '%' }"></div>
                 </div>
             </div>
         </header>
 
-
         <main class="quiz-container">
-            <!-- QUESTION -->
-            <section class="question">
-                <div class="question-meta">
-                    <span>
-                        ITEM {{ selectedItemIndex + 1 }}
-                    </span>
-                    <span v-if="selectedItem">
-                        {{ hasAnsweredQuestion(selectedItem.id) ? 'ANSWERED' : 'ANSWER' }}
-                    </span>
-                </div>
-                <h2>
-                    {{ selectedItem?.question_text ||
-                        'Identify the component and choose the description that best explains its function.' }}
-                </h2>
-                <p>
-                    Examine the component shown below and select the description
-                    that best matches its function.
-                </p>
-            </section>
-            <!-- QUIZ -->
-            <section v-if="items.length" class="quiz-layout">
-                <!-- DETAIL -->
-                <section class="detail">
-                    <!-- IMAGE -->
-                    <div class="image-frame">
-                        <div class="image-label">
-                            <i class="fas fa-image"></i>
-                            Component
-                        </div>
-                        <img v-if="selectedItem?.image_path" :src="imageUrl(selectedItem.image_path)"
-                            :alt="selectedItem.question_text || 'Component image'" class="component-image" />
-                        <div v-else class="image-fallback">
-                            <i class="fas fa-microchip"></i>
-                            <span>No image available</span>
-                        </div>
-                    </div>
-                    <!-- OPTIONS -->
-                    <div class="answer-header">
-                        <div>
-                            <span class="answer-label">
-                                SELECT ONE ANSWER
-                            </span>
-                            <p>
-                                Choose the description that matches the component.
-                            </p>
-                        </div>
-                        <span class="option-count">
-                            {{ selectedItem?.options?.length || 0 }} options
-                        </span>
-                    </div>
-                    <div class="options">
-                        <button v-for="(option, idx) in selectedItem?.options || []" :key="option.id" type="button"
-                            class="option" :class="{
-                                chosen: currentSelectedAnswer === option.id
-                            }" :disabled="submitting" @click="selectAnswer(option)">
-                            <span class="option-letter">
-                                {{ String.fromCharCode(65 + idx) }}
-                            </span>
-                            <span class="option-text">
-                                {{ option.description }}
-                            </span>
-                        </button>
-                    </div>
-                    <!-- CONFIRM FOR CURRENT QUESTION -->
-                    <button v-if="!hasAnsweredQuestion(selectedItem?.id)" class="confirm-btn" type="button"
-                        :disabled="!currentSelectedAnswer || submitting" @click="confirmCurrentAnswer">
-                        <span v-if="!submitting">
-                            Save Answer
-                        </span>
-                        <span v-else>
-                            Saving...
-                        </span>
-                        <i v-if="!submitting" class="fas fa-arrow-right"></i>
-                    </button>
-                    <!-- NEXT -->
-                    <button v-else-if="nextItem" class="confirm-btn" type="button" @click="selectItem(nextItem)">
-                        Next Item
-                        <i class="fas fa-arrow-right"></i>
-                    </button>
-                </section>
+            <!-- LOADING -->
+            <section v-if="loading" class="state-card" role="status" aria-live="polite">
+                <span class="spinner" aria-hidden="true"></span>
+                <p>Loading component identification…</p>
             </section>
 
+            <!-- ERROR -->
+            <section v-else-if="errorMessage" class="state-card state-error" role="alert">
+                <span class="state-icon" aria-hidden="true">
+                    <i class="fas fa-triangle-exclamation"></i>
+                </span>
+                <p>{{ errorMessage }}</p>
+                <button type="button" class="btn btn-outline" @click="getQuizData(quizId)">
+                    <i class="fas fa-rotate-right" aria-hidden="true"></i>
+                    Try again
+                </button>
+            </section>
+
+            <template v-else-if="items.length">
+                <div class="layout">
+                    <!-- IMAGE -->
+                    <section class="card media-card" aria-label="Image to identify">
+                        <div class="card-head">
+                            <span class="label">Image {{ selectedItemIndex + 1 }}</span>
+                            <span class="chip" :class="{ 'chip-done': answered }">
+                                {{ answered ? "Answered" : "Unanswered" }}
+                            </span>
+                        </div>
+
+                        <div class="image-frame">
+                            <img v-if="selectedItem?.image_url" :src="selectedItem.image_url"
+                                alt="Image to identify" class="component-image" />
+
+                            <div v-else class="image-fallback">
+                                <i class="fas fa-image" aria-hidden="true"></i>
+                                <span>No image available</span>
+                            </div>
+                        </div>
+                    </section>
+
+                    <!-- ANSWER -->
+                    <section class="card answer-card">
+                        <div class="card-head">
+                            <span class="label">Question {{ selectedItemIndex + 1 }} of {{ items.length }}</span>
+                        </div>
+
+                        <h2 class="question-title">Identify the purpose of the image shown.</h2>
+                        <p class="question-help">Select the description that best matches the image.</p>
+
+                        <div class="options" role="radiogroup" aria-label="Answer options">
+                            <button v-for="(option, idx) in selectedItem?.options || []" :key="option.id" type="button"
+                                class="option" role="radio"
+                                :aria-checked="currentSelectedAnswer === option.id ? 'true' : 'false'"
+                                :class="{ chosen: currentSelectedAnswer === option.id }"
+                                :disabled="submitting || answered" @click="selectAnswer(option)">
+                                <span class="option-letter" aria-hidden="true">
+                                    {{ String.fromCharCode(65 + idx) }}
+                                </span>
+                                <span class="option-text">{{ option.description }}</span>
+                            </button>
+                        </div>
+
+                        <div class="answer-footer">
+                            <p class="answer-note">
+                                <template v-if="!answered">Choose one answer to continue.</template>
+                                <template v-else-if="nextItem">Answer saved.</template>
+                                <template v-else>Answer saved. All items are answered.</template>
+                            </p>
+
+                            <button v-if="!answered" type="button" class="btn btn-primary"
+                                :disabled="!currentSelectedAnswer || submitting" @click="confirmCurrentAnswer">
+                                <span>{{ submitting ? "Saving…" : "Next question" }}</span>
+                                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </button>
+
+                            <button v-else-if="nextItem" type="button" class="btn btn-primary"
+                                @click="selectItem(nextItem)">
+                                <span>Next question</span>
+                                <i class="fas fa-arrow-right" aria-hidden="true"></i>
+                            </button>
+                        </div>
+                    </section>
+                </div>
+
+                <!-- FINISH BAR -->
+                <footer class="finish-bar">
+                    <p class="finish-status">
+                        <span class="status-dot" :class="{ 'status-dot-done': allAnswered }" aria-hidden="true"></span>
+                        {{ allAnswered ? "All items answered" : `${remaining} remaining` }}
+                    </p>
+
+                    <button type="button" class="btn btn-primary" :disabled="!allAnswered || submitting"
+                        @click="finishLab">
+                        {{ submitting ? "Submitting…" : "Finish assessment" }}
+                    </button>
+                </footer>
+            </template>
 
             <!-- EMPTY -->
-            <section v-else class="empty-state">
-                <i class="fas fa-image"></i>
+            <section v-else class="state-card">
+                <span class="state-icon" aria-hidden="true">
+                    <i class="fas fa-image"></i>
+                </span>
                 <h2>No items to identify</h2>
-                <p>
-                    This assessment doesn't have any reference images yet.
-                </p>
-            </section>
-            <!-- FOOTER -->
-            <section v-if="items.length" class="quiz-actions">
-                <div class="action-status">
-                    <span class="status-dot"></span>
-                    <span>
-                        {{
-                            collectedAnswers.length === items.length
-                                ? 'All items answered'
-                                : `${items.length - collectedAnswers.length} remaining`
-                        }}
-                    </span>
-                </div>
-                <div class="action-buttons">
-                    <button class="reset-btn" type="button" @click="resetLab" :disabled="submitting">
-                        Reset
-                    </button>
-                    <button class="submit-btn" type="button"
-                        :disabled="collectedAnswers.length !== items.length || submitting" @click="finishLab">
-                        {{ submitting ? 'Submitting...' : 'Finish Assessment' }}
-                    </button>
-                </div>
+                <p>This assessment doesn't have any reference images yet.</p>
             </section>
         </main>
+
         <!-- RESULT -->
-        <div v-if="finished" class="result-overlay" role="dialog" aria-modal="true">
-            <div class="result-notice">
-                <div class="result-icon">
+        <div v-if="finished" class="result-overlay" role="dialog" aria-modal="true" aria-labelledby="result-title">
+            <section class="result-dialog">
+                <span class="result-icon" aria-hidden="true">
                     <i class="fas fa-check"></i>
-                </div>
-                <span class="result-label">
-                    ASSESSMENT COMPLETE
                 </span>
-                <h2>Image Identification</h2>
-                <p>
-                    You completed all {{ items.length }} items.
-                </p>
+
+                <span class="eyebrow">Assessment complete</span>
+                <h2 id="result-title">Image identification</h2>
+                <p class="result-lede">You answered all {{ items.length }} items.</p>
+
                 <div class="result-score">
                     <strong>{{ score }}</strong>
-                    <span>
-                        / {{ items.length }}
-                    </span>
+                    <span>/ {{ items.length }}</span>
                 </div>
-                <div class="result-summary">
+
+                <dl class="result-stats">
                     <div>
-                        <strong>{{ score }}</strong>
-                        <span>Correct</span>
+                        <dt>Correct</dt>
+                        <dd>{{ score }}</dd>
                     </div>
                     <div>
-                        <strong>{{ items.length - score }}</strong>
-                        <span>Incorrect</span>
+                        <dt>Incorrect</dt>
+                        <dd>{{ items.length - score }}</dd>
                     </div>
-                </div>
-                <button type="button" @click="router.push(`/user/quizzes/assessment/${quizId}`)">
-                    Return to Assessment
-                    <i class="fas fa-arrow-right"></i>
+                </dl>
+
+                <button type="button" class="btn btn-primary btn-block"
+                    @click="router.push(`/user/assessments/assessment/${quizId}`)">
+                    Return to assessment
+                    <i class="fas fa-arrow-right" aria-hidden="true"></i>
                 </button>
-
-            </div>
-
+            </section>
         </div>
-
     </div>
 </template>
 
-
 <script setup>
-import { computed, onMounted, ref } from 'vue'
+import { computed, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { imageIdentificationRequest } from '@/assessmentrequests/imageIdentification'
 
 const route = useRoute()
 const router = useRouter()
 
-const quizId = route.params.id
-
-
-// =========================================================
-// DATA
-// =========================================================
-
 const items = ref([])
-
 const selectedItem = ref(null)
-
 const currentSelectedAnswer = ref(null)
+const collectedAnswers = ref([])
+const attemptToken = ref(null)
+const score = ref(0)
+const submitting = ref(false)
+const finished = ref(false)
+const loading = ref(true)
+const errorMessage = ref('')
+const startedAt = ref(null)
+
+const quizId = computed(() => Number(route.params.id))
 
 const selectedItemIndex = computed(() => {
-    if (!selectedItem.value) {
-        return 0
-    }
-
-    const index = items.value.findIndex(
-        item => item.id === selectedItem.value.id
-    )
-
+    if (!selectedItem.value) return 0
+    const index = items.value.findIndex(item => item.id === selectedItem.value.id)
     return index >= 0 ? index : 0
 })
 
+const answeredCount = computed(() => collectedAnswers.value.length)
 
-// =========================================================
-// ANSWERS - BATCH COLLECTION
-// =========================================================
+const remaining = computed(() => items.value.length - answeredCount.value)
 
-const collectedAnswers = ref([])
-
-const hasAnsweredQuestion = (questionId) => {
-    return collectedAnswers.value.some(answer => answer.question_id === questionId)
-}
-
-const getAnswerForQuestion = (questionId) => {
-    return collectedAnswers.value.find(answer => answer.question_id === questionId)
-}
-
-
-// =========================================================
-// PROGRESS
-// =========================================================
+const allAnswered = computed(() => items.value.length > 0 && remaining.value === 0)
 
 const progress = computed(() => {
-    if (!items.value.length) {
-        return 0
-    }
-
-    return (
-        (collectedAnswers.value.length / items.value.length) * 100
-    )
+    if (!items.value.length) return 0
+    return (answeredCount.value / items.value.length) * 100
 })
 
-const score = ref(0)
+const hasAnsweredQuestion = (itemId) =>
+    collectedAnswers.value.some(answer => answer.question_id === itemId)
 
+const answered = computed(() =>
+    selectedItem.value ? hasAnsweredQuestion(selectedItem.value.id) : false
+)
 
-// =========================================================
-// SUBMISSION STATE
-// =========================================================
+const getAnswerForQuestion = (itemId) =>
+    collectedAnswers.value.find(answer => answer.question_id === itemId)
 
-const submitting = ref(false)
-
-const finished = ref(false)
-
-
-// =========================================================
-// NEXT ITEM
-// =========================================================
-
-const nextItem = computed(() => {
-    return items.value.find(
-        item => !hasAnsweredQuestion(item.id)
-    )
-})
-
-
-// =========================================================
-// IMAGE
-// =========================================================
-
-const imageUrl = (path) => {
-    if (!path) {
-        return ''
-    }
-
-    return path.startsWith('http') || path.startsWith('/')
-        ? path
-        : `/storage/${path}`
-}
-
-
-// =========================================================
-// SELECT ITEM
-// =========================================================
+const nextItem = computed(() =>
+    items.value.find(item => !hasAnsweredQuestion(item.id))
+)
 
 const selectItem = (item) => {
-
     selectedItem.value = item
-
-    // Load answer if already answered
     const existingAnswer = getAnswerForQuestion(item.id)
-    if (existingAnswer) {
-        currentSelectedAnswer.value = existingAnswer.answer_id
-    } else {
-        currentSelectedAnswer.value = null
-    }
+    currentSelectedAnswer.value = existingAnswer?.answer_id ?? null
 }
 
-
-// =========================================================
-// SELECT ANSWER
-// =========================================================
-
 const selectAnswer = (option) => {
-
-    if (!selectedItem.value) {
-        return
-    }
-
-    if (submitting.value) {
-        return
-    }
+    if (!selectedItem.value || submitting.value || finished.value) return
+    if (hasAnsweredQuestion(selectedItem.value.id)) return
 
     currentSelectedAnswer.value = option.id
 }
 
-
-// =========================================================
-// CONFIRM CURRENT ANSWER
-// =========================================================
-
 const confirmCurrentAnswer = () => {
+    if (!selectedItem.value || currentSelectedAnswer.value == null) return
+    if (hasAnsweredQuestion(selectedItem.value.id)) return
 
-    if (!selectedItem.value) {
-        return
-    }
+    collectedAnswers.value = [
+        ...collectedAnswers.value,
+        {
+            question_id: selectedItem.value.id,
+            answer_id: currentSelectedAnswer.value,
+        },
+    ]
 
-    if (!currentSelectedAnswer.value) {
-        return
-    }
-
-    if (hasAnsweredQuestion(selectedItem.value.id)) {
-        return
-    }
-
-    // Add to collected answers
-    collectedAnswers.value.push({
-        question_id: selectedItem.value.id,
-        answer_id: currentSelectedAnswer.value
-    })
-
-    // Move to next item
     if (nextItem.value) {
         selectItem(nextItem.value)
     }
 }
 
-
-// =========================================================
-// RESET
-// =========================================================
-
-const resetLab = () => {
-    collectedAnswers.value = []
-    currentSelectedAnswer.value = null
-    finished.value = false
-    score.value = 0
-
-    if (items.value[0]) {
-        selectItem(items.value[0])
-    }
-}
-// =========================================================
-// FINISH - SUBMIT ALL ANSWERS
-// =========================================================
-
 const finishLab = async () => {
-    if (collectedAnswers.value.length !== items.value.length) return
+    if (submitting.value || !allAnswered.value) return
 
     submitting.value = true
-    try {
-        const response = await imageIdentificationRequest.answer(quizId, collectedAnswers.value)
-        const result = response.data
-        // Server-calculated score  
-        score.value = result.correct
-        // Mark assessment as completed
-        finished.value = true
-        console.log('Assessment submitted:', result)
-    } catch (error) {
-        console.error('Error submitting assessment:', error)
-        alert('Error submitting assessment. Please try again.')
-    } finally {
-        submitting.value = false
+    errorMessage.value = ''
 
-    }
-}
-
-
-// =========================================================
-// FETCH QUIZ
-// =========================================================
-
-const getQuizData = async () => {
+    const elapsedTime = startedAt.value
+        ? Math.round((Date.now() - startedAt.value) / 1000)
+        : 0
 
     try {
-
-        const { data } =
-            await imageIdentificationRequest.fetch(
-                quizId
-            )
-
-
-        items.value = (data.questions || []).map(item => ({
-
-            id: item.id,
-
-            question_text:
-                item.question_text ||
-                'Identify this component.',
-
-            image_path: item.image_path,
-            item_name: item.item_name,
-            options: (item.options || []).map(option => ({
-                id: option.id,
-                description: option.description
-            }))
-
-        }))
-
-
-        if (items.value.length) {
-            selectItem(items.value[0])
-        }
-
-    } catch (error) {
-
-        console.error(
-            'Error fetching image identification quiz:',
-            error
+        const response = await imageIdentificationRequest.answer(
+            quizId.value,
+            attemptToken.value,
+            collectedAnswers.value,
+            elapsedTime
         )
 
+        score.value = response.data.correct
+        finished.value = true
+    } catch (error) {
+        console.error('Error submitting assessment:', error)
+        errorMessage.value = 'Error submitting assessment. Please try again.'
+    } finally {
+        submitting.value = false
     }
 }
 
+const getQuizData = async (id) => {
+    if (!Number.isFinite(id) || id <= 0) {
+        items.value = []
+        selectedItem.value = null
+        loading.value = false
+        errorMessage.value = 'Invalid quiz ID.'
+        return
+    }
 
-// =========================================================
-// INITIALIZE
-// =========================================================
+    loading.value = true
+    errorMessage.value = ''
+    items.value = []
+    selectedItem.value = null
+    currentSelectedAnswer.value = null
+    collectedAnswers.value = []
+    attemptToken.value = null
+    score.value = 0
+    finished.value = false
 
-onMounted(() => {
-    getQuizData()
-})
+    try {
+        const { data } = await imageIdentificationRequest.fetch(id)
+        attemptToken.value = data.attempt_token
+
+        items.value = (data.questions || []).map(item => ({
+            id: item.id,
+            question_text: 'Identify the use of the image shown.',
+            image_url: item.image?.image_url ?? item.image_url ?? '',
+            options: (item.options || []).map(option => ({
+                id: option.id,
+                description: option.description,
+            })),
+        }))
+
+        if (items.value.length) {
+            startedAt.value = Date.now()
+            selectItem(items.value[0])
+        }
+    } catch (error) {
+        console.error('Error fetching image identification quiz:', error)
+        errorMessage.value = 'Error fetching the quiz. Please try again.'
+    } finally {
+        loading.value = false
+    }
+}
+
+watch(
+    () => route.params.id,
+    id => getQuizData(Number(id)),
+    { immediate: true }
+)
 </script>
 
 <style scoped>
-/* =========================================================
-   NOIR ASSESSMENT
-   ========================================================= */
-
 .quiz-page {
-    --black: #111111;
-    --black-soft: #222222;
-    --text: #181818;
-    --muted: #737373;
-    --light-muted: #a3a3a3;
-    --border: #e5e5e5;
-    --soft-border: #f0f0f0;
+    --ink: #111111;
+    --muted: #6b6f76;
+    --line: #e3e5e8;
     --surface: #ffffff;
-    --background: #fafafa;
-    --success: #111111;
+    --canvas: #f5f6f8;
+    --soft: #fafbfc;
+    --success: #1f7a4d;
 
     min-height: 100vh;
-    padding-bottom: 48px;
-    background: var(--background);
-    color: var(--text);
-
-    font-family:
-        Inter,
-        ui-sans-serif,
-        system-ui,
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    padding-bottom: 96px;
+    background: var(--canvas);
+    color: var(--ink);
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    font-size: 14px;
+    line-height: 1.5;
 }
 
+.quiz-page *,
+.quiz-page *::before,
+.quiz-page *::after {
+    box-sizing: border-box;
+}
 
-/* =========================================================
-   HEADER
-   ========================================================= */
+.quiz-page h1,
+.quiz-page h2,
+.quiz-page p,
+.quiz-page dl,
+.quiz-page dd {
+    margin: 0;
+}
+
+.quiz-page button {
+    font-family: inherit;
+}
+
+/* HEADER */
 
 .quiz-header {
     position: sticky;
     top: 0;
     z-index: 30;
-
     display: flex;
     align-items: center;
     gap: 14px;
-
     min-height: 64px;
-    padding: 12px 28px;
-
-    background: rgba(250, 250, 250, 0.88);
-    border-bottom: 1px solid var(--border);
-
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
+    padding: 10px 24px;
+    border-bottom: 1px solid var(--line);
+    background: rgb(255 255 255 / 92%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
 }
 
 .back-btn {
-    width: 38px;
-    height: 38px;
-
+    width: 36px;
+    height: 36px;
+    flex: 0 0 36px;
     display: grid;
     place-items: center;
-    flex: 0 0 auto;
-
-    border: 1px solid var(--border);
-    border-radius: 10px;
-
+    border: 1px solid var(--line);
+    border-radius: 9px;
     background: var(--surface);
     color: var(--muted);
-
     cursor: pointer;
-
-    transition:
-        color 0.18s ease,
-        border-color 0.18s ease,
-        background 0.18s ease;
+    transition: border-color 0.15s ease, color 0.15s ease;
 }
 
-.back-btn:hover:not(:disabled) {
-    color: var(--black);
-    border-color: var(--black);
-    background: var(--surface);
-}
-
-.back-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+.back-btn:hover {
+    border-color: var(--ink);
+    color: var(--ink);
 }
 
 .header-title {
-    flex: 1;
     min-width: 0;
+    flex: 1;
 }
 
-.header-title .eyebrow {
+.eyebrow {
     display: block;
+    color: var(--muted);
     font-size: 10px;
     font-weight: 700;
     letter-spacing: 0.08em;
-    color: var(--muted);
     text-transform: uppercase;
-    margin-bottom: 2px;
 }
 
 .quiz-header h1 {
-    min-width: 0;
-    margin: 0;
-
+    overflow: hidden;
     font-size: 15px;
     font-weight: 650;
     letter-spacing: -0.01em;
-
-    white-space: nowrap;
-    overflow: hidden;
     text-overflow: ellipsis;
+    white-space: nowrap;
 }
 
 .progress-info {
-    width: 190px;
-
+    width: 170px;
+    flex: 0 0 auto;
     display: flex;
     align-items: center;
     gap: 10px;
+}
 
-    flex: 0 0 auto;
-
+.progress-count {
+    min-width: 36px;
     color: var(--muted);
     font-size: 12px;
-    font-weight: 600;
+    font-weight: 650;
+    font-variant-numeric: tabular-nums;
+    text-align: right;
+    white-space: nowrap;
 }
 
 .progress-bar {
+    height: 4px;
     flex: 1;
-    height: 5px;
-
     overflow: hidden;
-
     border-radius: 999px;
-    background: var(--border);
+    background: var(--line);
 }
 
 .progress-fill {
     height: 100%;
-
     border-radius: inherit;
-    background: var(--black);
-
+    background: var(--ink);
     transition: width 0.3s ease;
 }
 
-
-/* =========================================================
-   MAIN CONTAINER
-   ========================================================= */
+/* LAYOUT */
 
 .quiz-container {
-    width: min(1180px, calc(100% - 48px));
+    width: min(1040px, calc(100% - 40px));
     margin: 0 auto;
-    padding: 42px 0 0;
+    padding-top: 28px;
 }
 
-
-/* =========================================================
-   QUESTION HEADER
-   ========================================================= */
-
-.question {
-    max-width: 760px;
+.layout {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    align-items: stretch;
+    gap: 18px;
 }
 
-.question-meta {
+.card {
+    min-width: 0;
     display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    margin-bottom: 8px;
+    flex-direction: column;
+    padding: 18px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    background: var(--surface);
+    box-shadow: 0 1px 2px rgb(0 0 0 / 3%);
+}
 
+.card-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 10px;
+    margin-bottom: 14px;
+}
+
+.label {
+    color: var(--muted);
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--muted);
+    letter-spacing: 0.06em;
     text-transform: uppercase;
 }
 
-.question h2 {
-    margin: 0;
-
-    font-size: clamp(20px, 2.2vw, 28px);
-    line-height: 1.3;
-    font-weight: 700;
-    letter-spacing: -0.025em;
-}
-
-.question p {
-    margin: 10px 0 0;
-
+.chip {
+    padding: 3px 9px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
     color: var(--muted);
-
-    font-size: 14px;
-    line-height: 1.6;
-}
-
-
-/* =========================================================
-   MAIN WORKSPACE
-   ========================================================= */
-
-.quiz-layout {
-    display: flex;
-    gap: 20px;
-
-    margin-top: 30px;
-}
-
-
-/* =========================================================
-   ITEM NAVIGATOR
-   ========================================================= */
-
-.item-list {
-    align-self: start;
-    position: sticky;
-    top: 80px;
-
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-
-    padding: 8px;
-
-    border: 1px solid var(--border);
-    border-radius: 14px;
-
-    background: var(--surface);
-}
-
-.item-list-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-
-    padding: 10px;
-
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--muted);
-}
-
-.item-row {
-    position: relative;
-
-    width: 100%;
-    min-height: 58px;
-
-    display: flex;
-    align-items: center;
-    gap: 11px;
-
-    padding: 9px 10px;
-
-    border: 1px solid transparent;
-    border-radius: 9px;
-
-    background: transparent;
-    color: var(--muted);
-
-    text-align: left;
-    font: inherit;
-
-    cursor: pointer;
-
-    transition:
-        background 0.18s ease,
-        color 0.18s ease,
-        border-color 0.18s ease;
-}
-
-.item-row:hover:not(:disabled) {
-    background: #f7f7f7;
-    color: var(--text);
-}
-
-.item-row.selected {
-    border-color: var(--black);
-    background: var(--black);
-    color: var(--surface);
-}
-
-.item-row.complete:not(.selected) {
-    background: #f7f7f7;
-    color: var(--text);
-}
-
-.item-row:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.item-number {
-    width: 30px;
-    height: 30px;
-
-    display: grid;
-    place-items: center;
-    flex: 0 0 30px;
-
-    border: 1px solid var(--border);
-    border-radius: 8px;
-
-    background: var(--surface);
-
-    color: var(--muted);
-
     font-size: 11px;
-    font-weight: 700;
-}
-
-.item-row.selected .item-number {
-    border-color: rgba(255, 255, 255, 0.25);
-    background: rgba(255, 255, 255, 0.12);
-    color: var(--surface);
-}
-
-.item-text {
-    min-width: 0;
-
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-}
-
-.item-text strong {
-    font-size: 12px;
     font-weight: 650;
-}
-
-.item-text small {
-    min-width: 0;
-
-    overflow: hidden;
-    text-overflow: ellipsis;
     white-space: nowrap;
-
-    color: var(--light-muted);
-
-    font-size: 11px;
 }
 
-.item-row.selected .item-text small {
-    color: rgba(255, 255, 255, 0.65);
+.chip-done {
+    border-color: #bfe3cf;
+    background: #f0faf4;
+    color: var(--success);
 }
 
-.item-row i {
-    margin-left: auto;
-    flex: 0 0 auto;
+/* MEDIA */
 
-    font-size: 11px;
+.media-card {
+    padding-bottom: 14px;
 }
-
-
-/* =========================================================
-   DETAIL WORKSPACE
-   ========================================================= */
-
-.detail {
-    min-width: 0;
-
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-}
-
-
-/* =========================================================
-   IMAGE
-   ========================================================= */
 
 .image-frame {
     position: relative;
-
-    min-height: 390px;
-
+    flex: 1;
+    min-height: 300px;
     display: grid;
     place-items: center;
-
     overflow: hidden;
-
-    border: 1px solid var(--border);
-    border-radius: 16px;
-
-    background:
-        linear-gradient(135deg,
-            #ffffff 0%,
-            #fafafa 50%,
-            #f5f5f5 100%);
-}
-
-.image-frame::before {
-    content: "";
-
-    position: absolute;
-    inset: 18px;
-
-    border: 1px dashed var(--soft-border);
-    border-radius: 11px;
-
-    pointer-events: none;
-}
-
-.image-label {
-    position: absolute;
-    top: 14px;
-    left: 14px;
-
-    display: flex;
-    align-items: center;
-    gap: 6px;
-
-    padding: 6px 10px;
-
-    border-radius: 6px;
-
-    background: rgba(255, 255, 255, 0.9);
-    color: var(--muted);
-
-    font-size: 11px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-
-    z-index: 2;
-}
-
-.image-label i {
-    font-size: 13px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--soft);
 }
 
 .component-image {
-    position: relative;
-    z-index: 1;
-
     width: 100%;
-    height: 390px;
-
+    height: 100%;
+    max-height: 380px;
+    padding: 24px;
     object-fit: contain;
-
-    padding: 38px;
-
-    box-sizing: border-box;
-
-    transition: transform 0.25s ease;
-}
-
-.image-frame:hover .component-image {
-    transform: scale(1.015);
 }
 
 .image-fallback {
-    position: relative;
-    z-index: 1;
-
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 10px;
-
+    gap: 8px;
     color: var(--muted);
-
-    font-size: 13px;
+    font-size: 12px;
 }
 
 .image-fallback i {
-    font-size: 36px;
-    color: var(--light-muted);
+    color: #b3b7bd;
+    font-size: 28px;
 }
 
+/* ANSWER */
 
-/* =========================================================
-   ANSWER SECTION
-   ========================================================= */
-
-.answer-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 16px;
+.answer-card {
+    padding: 22px;
 }
 
-.answer-label {
-    display: block;
-
-    font-size: 11px;
+.question-title {
+    font-size: clamp(18px, 2vw, 22px);
     font-weight: 700;
-    letter-spacing: 0.05em;
-    color: var(--muted);
-    text-transform: uppercase;
-
-    margin-bottom: 4px;
+    line-height: 1.3;
+    letter-spacing: -0.01em;
 }
 
-.answer-header p {
-    margin: 0;
-
+.question-help {
+    margin-top: 6px;
     color: var(--muted);
     font-size: 13px;
-    line-height: 1.5;
 }
-
-.option-count {
-    flex: 0 0 auto;
-
-    font-size: 12px;
-    font-weight: 600;
-    color: var(--light-muted);
-}
-
-
-/* =========================================================
-   OPTIONS
-   ========================================================= */
 
 .options {
     display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 10px;
+    gap: 8px;
+    margin-top: 18px;
 }
 
 .option {
-    min-width: 0;
-    min-height: 70px;
-
+    position: relative;
+    width: 100%;
+    min-height: 54px;
     display: flex;
-    align-items: flex-start;
+    align-items: center;
     gap: 12px;
-
-    padding: 14px;
-
-    border: 1px solid var(--border);
-    border-radius: 11px;
-
+    padding: 10px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
     background: var(--surface);
-    color: var(--text);
-
+    color: var(--ink);
+    font-size: 13px;
     text-align: left;
-    font: inherit;
-
     cursor: pointer;
-
-    transition:
-        border-color 0.18s ease,
-        background 0.18s ease,
-        color 0.18s ease,
-        transform 0.18s ease;
+    transition: border-color 0.15s ease, background 0.15s ease, box-shadow 0.15s ease;
 }
 
 .option:hover:not(:disabled) {
-    border-color: var(--black);
-    transform: translateY(-1px);
+    border-color: #9da2a9;
+    background: var(--soft);
 }
 
 .option.chosen {
-    border-color: var(--black);
-    background: var(--black);
-    color: var(--surface);
+    border-color: var(--ink);
+    background: var(--soft);
+    box-shadow: inset 0 0 0 1px var(--ink);
 }
 
 .option:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
+    cursor: default;
+}
+
+.option:disabled:not(.chosen) {
+    opacity: 0.55;
 }
 
 .option-letter {
     width: 26px;
     height: 26px;
-
+    flex: 0 0 26px;
     display: grid;
     place-items: center;
-    flex: 0 0 26px;
-
-    border: 1px solid currentColor;
+    border: 1px solid var(--line);
     border-radius: 7px;
-
+    background: var(--surface);
+    color: var(--muted);
     font-size: 11px;
     font-weight: 700;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
 }
 
 .option.chosen .option-letter {
-    background: var(--surface);
-    color: var(--black);
+    border-color: var(--ink);
+    background: var(--ink);
+    color: #ffffff;
 }
 
 .option-text {
     min-width: 0;
-
-    padding-top: 2px;
-
-    font-size: 13px;
-    line-height: 1.5;
+    flex: 1;
+    line-height: 1.45;
+    overflow-wrap: anywhere;
 }
 
-
-/* =========================================================
-   CONFIRM
-   ========================================================= */
-
-.confirm-btn {
-    align-self: flex-end;
-
-    min-width: 145px;
-    min-height: 44px;
-
-    padding: 0 22px;
-
-    border: 1px solid var(--black);
-    border-radius: 9px;
-
-    background: var(--black);
-    color: var(--surface);
-
-    font: inherit;
-    font-size: 13px;
-    font-weight: 650;
-
-    cursor: pointer;
-
-    transition:
-        background 0.18s ease,
-        color 0.18s ease,
-        transform 0.18s ease;
+.option-check {
+    flex: 0 0 auto;
+    color: var(--ink);
+    font-size: 12px;
 }
 
-.confirm-btn:hover:not(:disabled) {
-    background: var(--surface);
-    color: var(--black);
-    transform: translateY(-1px);
-}
-
-.confirm-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-
-/* =========================================================
-   FOOTER ACTIONS
-   ========================================================= */
-
-.quiz-actions {
+.answer-footer {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 20px;
-
-    margin-top: 22px;
-    padding-top: 18px;
-
-    border-top: 1px solid var(--border);
+    gap: 12px;
+    margin-top: 20px;
+    padding-top: 16px;
+    border-top: 1px solid var(--line);
 }
 
-.action-status {
+.answer-note {
+    min-width: 0;
+    color: var(--muted);
+    font-size: 12px;
+}
+
+/* BUTTONS */
+
+.btn {
+    min-height: 40px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    padding: 0 16px;
+    border: 1px solid var(--ink);
+    border-radius: 9px;
+    font-size: 13px;
+    font-weight: 650;
+    white-space: nowrap;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.12s ease;
+}
+
+.btn:active:not(:disabled) {
+    transform: scale(0.98);
+}
+
+.btn:disabled {
+    cursor: not-allowed;
+    opacity: 0.4;
+}
+
+.btn-primary {
+    background: var(--ink);
+    color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+    background: #333639;
+    border-color: #333639;
+}
+
+.btn-outline {
+    background: var(--surface);
+    color: var(--ink);
+}
+
+.btn-outline:hover:not(:disabled) {
+    background: var(--soft);
+}
+
+.btn-block {
+    width: 100%;
+}
+
+/* FINISH BAR */
+
+.finish-bar {
+    position: fixed;
+    right: 0;
+    bottom: 0;
+    left: 0;
+    z-index: 40;
     display: flex;
     align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    border-top: 1px solid var(--line);
+    background: rgb(255 255 255 / 94%);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.finish-status {
+    display: inline-flex;
+    align-items: center;
     gap: 8px;
-
     color: var(--muted);
-
     font-size: 12px;
-    font-weight: 550;
+    font-weight: 600;
 }
 
 .status-dot {
-    width: 8px;
-    height: 8px;
-
+    width: 7px;
+    height: 7px;
     border-radius: 50%;
-    background: var(--black);
+    background: #b3b7bd;
 }
 
-.action-buttons {
+.status-dot-done {
+    background: var(--success);
+}
+
+/* STATES */
+
+.state-card {
+    margin-top: 24px;
+    min-height: 240px;
+    padding: 28px 24px;
     display: flex;
-    gap: 8px;
-}
-
-.reset-btn,
-.submit-btn {
-    min-height: 40px;
-
-    padding: 0 17px;
-
-    border-radius: 8px;
-
-    font: inherit;
-    font-size: 12px;
-    font-weight: 650;
-
-    cursor: pointer;
-
-    transition:
-        border-color 0.18s ease,
-        background 0.18s ease,
-        color 0.18s ease;
-}
-
-.reset-btn {
-    border: 1px solid var(--border);
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    border: 1px solid var(--line);
+    border-radius: 14px;
     background: var(--surface);
     color: var(--muted);
-}
-
-.reset-btn:hover:not(:disabled) {
-    border-color: var(--black);
-    color: var(--black);
-}
-
-.reset-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.submit-btn {
-    border: 1px solid var(--black);
-    background: var(--black);
-    color: var(--surface);
-}
-
-.submit-btn:hover:not(:disabled) {
-    background: var(--surface);
-    color: var(--black);
-}
-
-.submit-btn:disabled {
-    opacity: 0.3;
-    cursor: not-allowed;
-}
-
-
-/* =========================================================
-   EMPTY STATE
-   ========================================================= */
-
-.empty-state {
-    margin-top: 30px;
-    padding: 90px 24px;
-
     text-align: center;
-
-    border: 1px solid var(--border);
-    border-radius: 16px;
-
-    background: var(--surface);
 }
 
-.empty-state i {
-    font-size: 30px;
-    color: var(--light-muted);
+.state-card h2 {
+    color: var(--ink);
+    font-size: 16px;
+    font-weight: 700;
 }
 
-.empty-state h2 {
-    margin: 16px 0 5px;
-
-    font-size: 17px;
-    font-weight: 650;
-}
-
-.empty-state p {
-    margin: 0;
-
-    color: var(--muted);
-
+.state-card p {
+    max-width: 360px;
     font-size: 13px;
 }
 
+.state-icon {
+    width: 42px;
+    height: 42px;
+    display: grid;
+    place-items: center;
+    border-radius: 50%;
+    background: var(--soft);
+    color: var(--muted);
+    font-size: 16px;
+}
 
-/* =========================================================
-   RESULT
-   ========================================================= */
+.state-error .state-icon {
+    background: #fdf1f2;
+    color: #b42318;
+}
+
+.spinner {
+    width: 26px;
+    height: 26px;
+    border: 3px solid var(--line);
+    border-top-color: var(--ink);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* RESULT */
 
 .result-overlay {
     position: fixed;
     inset: 0;
     z-index: 100;
-
     display: grid;
     place-items: center;
-
-    padding: 20px;
-
-    background: rgba(0, 0, 0, 0.55);
-
-    backdrop-filter: blur(5px);
-    -webkit-backdrop-filter: blur(5px);
+    padding: 18px;
+    background: rgb(0 0 0 / 45%);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
 }
 
-.result-notice {
-    width: min(390px, 100%);
-
-    padding: 34px;
-
-    border: 1px solid var(--border);
-    border-radius: 18px;
-
+.result-dialog {
+    width: min(380px, 100%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    padding: 28px 24px 24px;
+    border: 1px solid var(--line);
+    border-radius: 16px;
     background: var(--surface);
-
+    box-shadow: 0 20px 60px rgb(0 0 0 / 18%);
     text-align: center;
-
-    box-shadow: 0 24px 70px rgba(0, 0, 0, 0.18);
-
-    animation: slideIn 0.3s ease;
-}
-
-@keyframes slideIn {
-    from {
-        opacity: 0;
-        transform: scale(0.95);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
 }
 
 .result-icon {
-    width: 60px;
-    height: 60px;
-
-    margin: 0 auto 16px;
-
+    width: 48px;
+    height: 48px;
     display: grid;
     place-items: center;
-
-    border-radius: 50%;
-    background: var(--black);
-    color: var(--surface);
-
-    font-size: 28px;
-}
-
-.result-label {
-    display: block;
-
-    font-size: 11px;
-    font-weight: 700;
-    letter-spacing: 0.08em;
-    color: var(--muted);
-    text-transform: uppercase;
-
     margin-bottom: 8px;
+    border-radius: 50%;
+    background: var(--ink);
+    color: #ffffff;
+    font-size: 18px;
 }
 
-.result-notice h2 {
-    margin: 0 0 5px;
-
-    font-size: 20px;
+.result-dialog h2 {
+    font-size: 19px;
     font-weight: 700;
     letter-spacing: -0.02em;
 }
 
-.result-notice p {
-    margin: 0;
-
+.result-lede {
     color: var(--muted);
-
     font-size: 13px;
 }
 
@@ -1309,16 +871,15 @@ onMounted(() => {
     display: flex;
     align-items: baseline;
     justify-content: center;
-    gap: 5px;
-
-    margin: 22px 0;
+    gap: 6px;
+    margin: 14px 0 6px;
 }
 
 .result-score strong {
-    font-size: 48px;
-    line-height: 1;
+    font-size: 44px;
     font-weight: 750;
-    letter-spacing: -0.05em;
+    letter-spacing: -0.04em;
+    line-height: 1;
 }
 
 .result-score span {
@@ -1326,670 +887,139 @@ onMounted(() => {
     font-size: 14px;
 }
 
-.result-summary {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
-    gap: 12px;
-
-    margin: 24px 0;
-}
-
-.result-summary>div {
-    padding: 12px;
-
-    border-radius: 10px;
-    background: var(--background);
-}
-
-.result-summary strong {
-    display: block;
-
-    font-size: 18px;
-    margin-bottom: 4px;
-}
-
-.result-summary span {
-    display: block;
-
-    font-size: 11px;
-    font-weight: 600;
-    color: var(--muted);
-    text-transform: uppercase;
-    letter-spacing: 0.03em;
-}
-
-.result-notice button {
+.result-stats {
     width: 100%;
-    min-height: 44px;
-
-    border: 1px solid var(--black);
-    border-radius: 9px;
-
-    background: var(--black);
-    color: var(--surface);
-
-    font: inherit;
-    font-size: 13px;
-    font-weight: 650;
-
-    cursor: pointer;
-
-    transition:
-        background 0.18s ease,
-        color 0.18s ease;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin: 12px 0 16px;
 }
 
-.result-notice button:hover {
-    background: var(--surface);
-    color: var(--black);
+.result-stats > div {
+    padding: 10px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--soft);
 }
 
-
-/* =========================================================
-   TABLET (900px)
-   ========================================================= */
-
-@media (max-width: 900px) {
-
-    .quiz-container {
-        width: min(100% - 32px, 760px);
-    }
-
-    .quiz-layout {
-        grid-template-columns: 200px minmax(0, 1fr);
-        gap: 16px;
-    }
-
-    .image-frame,
-    .component-image {
-        min-height: 330px;
-        height: 330px;
-    }
-
-    .options {
-        grid-template-columns: 1fr;
-    }
-
-    .item-list {
-        top: 76px;
-    }
+.result-stats dt {
+    color: var(--muted);
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
 }
 
-
-/* =========================================================
-   TABLET SMALL (768px)
-   ========================================================= */
-
-@media (max-width: 768px) {
-
-    .quiz-header {
-        min-height: 60px;
-        padding: 10px 16px;
-    }
-
-    .progress-info {
-        width: 170px;
-    }
-
-    .quiz-container {
-        width: calc(100% - 24px);
-        padding-top: 32px;
-    }
-
-    .quiz-layout {
-        grid-template-columns: 160px minmax(0, 1fr);
-        gap: 14px;
-    }
-
-    .image-frame,
-    .component-image {
-        min-height: 300px;
-        height: 300px;
-    }
-
-    .confirm-btn {
-        min-width: 120px;
-    }
+.result-stats dd {
+    margin-top: 2px;
+    font-size: 16px;
+    font-weight: 700;
 }
 
+/* RESPONSIVE */
 
-/* =========================================================
-   MOBILE (700px)
-   ========================================================= */
-
-@media (max-width: 700px) {
-
-    /* =====================================================
-       MOBILE PAGE
-    ===================================================== */
-
-    .quiz-page {
-        width: 100%;
-        min-height: 100vh;
-        height: auto;
-
-        padding-bottom: 90px;
-
-        overflow-x: hidden;
-        overflow-y: auto;
-
-        -webkit-overflow-scrolling: touch;
+@media (max-width: 860px) {
+    .layout {
+        grid-template-columns: minmax(0, 1fr);
     }
-
-    /* =====================================================
-       HEADER
-    ===================================================== */
-
-    .quiz-header {
-        min-height: 58px;
-
-        flex-wrap: wrap;
-        gap: 10px;
-
-        padding: 10px 14px;
-
-        position: sticky;
-        top: 0;
-
-        z-index: 30;
-    }
-
-    .back-btn {
-        width: 34px;
-        height: 34px;
-
-        flex-shrink: 0;
-
-        font-size: 14px;
-    }
-
-    .header-title {
-        flex: 1;
-        min-width: 0;
-    }
-
-    .header-title .eyebrow {
-        font-size: 9px;
-        margin-bottom: 1px;
-    }
-
-    .quiz-header h1 {
-        font-size: 14px;
-
-        white-space: nowrap;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-
-    .progress-info {
-        width: 100%;
-
-        order: 3;
-
-        gap: 8px;
-        padding-left: 0;
-    }
-
-
-    /* =====================================================
-       MAIN CONTAINER
-    ===================================================== */
-
-    .quiz-container {
-        width: calc(100% - 24px);
-
-        max-width: none;
-
-        padding-top: 24px;
-        padding-bottom: 20px;
-
-        margin: 0 auto;
-    }
-
-
-    /* =====================================================
-       QUESTION
-    ===================================================== */
-
-    .question {
-        width: 100%;
-    }
-
-    .question h2 {
-        font-size: 20px;
-        line-height: 1.35;
-
-        overflow-wrap: anywhere;
-    }
-
-    .question p {
-        margin-top: 8px;
-
-        font-size: 13px;
-        line-height: 1.5;
-
-        overflow-wrap: anywhere;
-    }
-
-
-    /* =====================================================
-       MAIN LAYOUT
-    ===================================================== */
-
-    .quiz-layout {
-        display: flex;
-
-        flex-direction: column;
-
-        gap: 16px;
-
-        width: 100%;
-
-        margin-top: 22px;
-    }
-
-
-    /* =====================================================
-       DETAIL
-    ===================================================== */
-
-    .detail {
-        order: 1;
-
-        width: 100%;
-        min-width: 0;
-
-        overflow: visible;
-    }
-
-
-    /* =====================================================
-       ITEM NAVIGATOR
-    ===================================================== */
-
-    .item-list {
-        order: 2;
-
-        display: flex;
-        flex-direction: row;
-
-        width: 100%;
-        min-width: 0;
-
-        overflow-x: auto;
-        overflow-y: hidden;
-
-        padding: 6px;
-
-        border-radius: 12px;
-
-        scrollbar-width: thin;
-
-        position: static;
-
-        -webkit-overflow-scrolling: touch;
-
-        overscroll-behavior-x: contain;
-    }
-
-    .item-list::-webkit-scrollbar {
-        height: 4px;
-    }
-
-    .item-list::-webkit-scrollbar-thumb {
-        border-radius: 10px;
-        background: var(--muted);
-    }
-
-    .item-list-header {
-        display: none;
-    }
-
-    .item-row {
-        position: relative;
-
-        width: 48px;
-        min-width: 48px;
-
-        height: 48px;
-        min-height: 48px;
-
-        flex-shrink: 0;
-
-        justify-content: center;
-
-        padding: 5px;
-
-        border-radius: 9px;
-    }
-
-    .item-row .item-number {
-        width: 30px;
-        height: 30px;
-
-        flex-shrink: 0;
-    }
-
-    .item-text {
-        display: none;
-    }
-
-    .item-row i {
-        display: none;
-    }
-
-    .item-row.complete:not(.selected)::after {
-        content: "";
-
-        position: absolute;
-
-        right: 5px;
-        top: 5px;
-
-        width: 6px;
-        height: 6px;
-
-        border-radius: 50%;
-
-        background: var(--black);
-    }
-
-
-    /* =====================================================
-       IMAGE
-    ===================================================== */
 
     .image-frame {
-        width: 100%;
-
-        min-height: 260px;
-        height: auto;
-
-        border-radius: 13px;
-
-        overflow: hidden;
-    }
-
-    .image-frame::before {
-        inset: 12px;
-    }
-
-    .image-label {
-        font-size: 10px;
-
-        padding: 5px 8px;
+        min-height: 240px;
     }
 
     .component-image {
-        display: block;
-
-        width: 100%;
-        height: 260px;
-
-        max-width: 100%;
-
-        object-fit: contain;
-
-        padding: 28px;
-    }
-
-
-    /* =====================================================
-       ANSWER SECTION
-    ===================================================== */
-
-    .answer-header {
-        flex-direction: column;
-
-        gap: 8px;
-
-        align-items: flex-start;
-    }
-
-    .answer-section {
-        width: 100%;
-        min-width: 0;
-    }
-
-
-    /* =====================================================
-       OPTIONS
-    ===================================================== */
-
-    .options {
-        display: grid;
-
-        grid-template-columns: 1fr;
-
-        width: 100%;
-
-        gap: 8px;
-    }
-
-    .option {
-        width: 100%;
-        min-width: 0;
-
-        min-height: 62px;
-
-        padding: 12px;
-
-        border-radius: 10px;
-
-        text-align: left;
-    }
-
-    .option-text {
-        min-width: 0;
-
-        font-size: 13px;
-        line-height: 1.45;
-
-        overflow-wrap: anywhere;
-        word-break: break-word;
-    }
-
-
-    /* =====================================================
-       CONFIRM
-    ===================================================== */
-
-    .confirm-btn {
-        width: 100%;
-
-        min-height: 44px;
-
-        align-self: stretch;
-
-        margin-top: 10px;
-    }
-
-
-    /* =====================================================
-       FOOTER ACTIONS
-    ===================================================== */
-
-    .quiz-actions {
-        position: fixed;
-
-        left: 0;
-        right: 0;
-        bottom: 0;
-
-        z-index: 50;
-
-        width: 100%;
-
-        margin: 0;
-
-        padding: 10px 12px;
-
-        border-top: 1px solid var(--border);
-
-        background: rgba(250, 250, 250, 0.96);
-
-        backdrop-filter: blur(14px);
-        -webkit-backdrop-filter: blur(14px);
-
-        box-sizing: border-box;
-    }
-
-    .action-status {
-        min-width: 0;
-
-        flex: 1;
-
-        font-size: 11px;
-
-        overflow: hidden;
-        text-overflow: ellipsis;
-        white-space: nowrap;
-    }
-
-    .action-buttons {
-        flex-shrink: 0;
-
-        display: flex;
-
-        gap: 6px;
-    }
-
-    .reset-btn,
-    .submit-btn {
-        min-height: 38px;
-
-        padding: 0 14px;
-
-        font-size: 11px;
-
-        white-space: nowrap;
-    }
-
-
-    /* =====================================================
-       RESULT
-    ===================================================== */
-
-    .result-overlay {
-        position: fixed;
-
-        inset: 0;
-
-        z-index: 100;
-
-        overflow-y: auto;
-
-        padding: 20px;
-
-        box-sizing: border-box;
-
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .result-notice {
-        width: min(100%, 420px);
-
-        max-height: calc(100vh - 40px);
-
-        overflow-y: auto;
-
-        padding: 28px 22px;
-
-        border-radius: 15px;
-
-        box-sizing: border-box;
-    }
-
-    .result-score strong {
-        font-size: 42px;
+        max-height: 260px;
     }
 }
 
+@media (max-width: 600px) {
+    .quiz-header {
+        min-height: 58px;
+        flex-wrap: wrap;
+        gap: 10px;
+        padding: 10px 14px;
+    }
 
-/* =========================================================
-   SMALL PHONES (380px)
-   ========================================================= */
+    .progress-info {
+        width: 100%;
+        order: 3;
+    }
+
+    .quiz-container {
+        width: calc(100% - 24px);
+        padding-top: 18px;
+    }
+
+    .card {
+        padding: 14px;
+    }
+
+    .answer-card {
+        padding: 16px;
+    }
+
+    .answer-footer {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .answer-footer .btn {
+        width: 100%;
+    }
+
+    .answer-note {
+        text-align: center;
+    }
+
+    .finish-bar {
+        padding: 10px 14px;
+    }
+
+    .finish-status {
+        font-size: 11px;
+    }
+
+    .finish-bar .btn {
+        min-height: 38px;
+        padding: 0 12px;
+    }
+}
 
 @media (max-width: 380px) {
-
     .quiz-container {
         width: calc(100% - 18px);
     }
 
-    .question-meta {
-        flex-direction: column;
-        align-items: flex-start;
-        gap: 4px;
+    .question-title {
+        font-size: 17px;
     }
 
-    .question h2 {
-        font-size: 18px;
+    .option {
+        padding: 9px 11px;
     }
 
-    .image-frame,
-    .component-image {
-        min-height: 225px;
-        height: 225px;
-    }
-
-    .component-image {
-        padding: 20px;
-    }
-
-    .action-status {
+    .finish-status {
         display: none;
     }
 
-    .quiz-actions {
+    .finish-bar {
         justify-content: flex-end;
-    }
-
-    .reset-btn,
-    .submit-btn {
-        flex: 1;
-    }
-
-    .answer-label {
-        font-size: 10px;
-    }
-
-    .result-score strong {
-        font-size: 36px;
-    }
-
-    .result-summary {
-        grid-template-columns: 1fr;
-        gap: 10px;
     }
 }
 
-
-/* =========================================================
-   ACCESSIBILITY
-   ========================================================= */
-
 button:focus-visible {
-    outline: 2px solid var(--black);
+    outline: 2px solid var(--ink);
     outline-offset: 2px;
 }
 
 @media (prefers-reduced-motion: reduce) {
 
-    .progress-fill,
-    .item-row,
-    .option,
-    .confirm-btn,
-    .component-image,
-    .back-btn,
-    .reset-btn,
-    .submit-btn,
-    .result-notice,
-    .result-notice button {
-        transition: none;
-    }
-
-    .result-notice {
-        animation: none;
+    .quiz-page *,
+    .quiz-page *::before,
+    .quiz-page *::after {
+        animation: none !important;
+        transition: none !important;
+        scroll-behavior: auto !important;
     }
 }
 </style>

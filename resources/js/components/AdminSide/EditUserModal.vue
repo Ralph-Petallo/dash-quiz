@@ -1,42 +1,56 @@
 <template>
-    <div v-if="show" class="modal">
-        <div class="modal-content">
-            <h3>Edit Profile {{ form.first_name }}</h3>
+    <div v-if="show" class="modal" @click.self="$emit('close')">
+        <div class="modal-content" role="dialog" aria-modal="true" aria-labelledby="edit-user-title">
+            <h3 id="edit-user-title">Edit Profile</h3>
+
+            <p v-if="error" class="form-error" role="alert">{{ error }}</p>
 
             <div class="edit-fields">
                 <label for="first_name">First Name</label>
-                <input id="first_name" v-model="form.first_name" type="text" autocomplete="off" />
+                <input id="first_name" v-model.trim="form.first_name" type="text" autocomplete="off" :disabled="saving"
+                    :class="{ invalid: errors.first_name }" />
+                <small v-if="errors.first_name">{{ errors.first_name[0] }}</small>
             </div>
 
             <div class="edit-fields">
                 <label for="last_name">Last Name</label>
-                <input id="last_name" v-model="form.last_name" type="text" autocomplete="off" />
+                <input id="last_name" v-model.trim="form.last_name" type="text" autocomplete="off" :disabled="saving"
+                    :class="{ invalid: errors.last_name }" />
+                <small v-if="errors.last_name">{{ errors.last_name[0] }}</small>
             </div>
 
             <div class="edit-fields">
                 <label for="email">Email</label>
-                <input id="email" v-model="form.email" type="email" autocomplete="off" />
+                <input id="email" v-model.trim="form.email" type="email" autocomplete="off" :disabled="saving"
+                    :class="{ invalid: errors.email }" />
+                <small v-if="errors.email">{{ errors.email[0] }}</small>
             </div>
 
             <div class="edit-fields">
-                <label for="password">Password</label>
-                <input id="password" v-model="form.password" type="password" autocomplete="off" />
+                <label for="password">Current Password</label>
+                <input id="password" v-model="form.password" type="password" autocomplete="new-password"
+                    :disabled="saving" :class="{ invalid: errors.password }" />
+                <small v-if="errors.password">{{ errors.password[0] }}</small>
             </div>
 
             <div class="edit-fields">
-                <label for="password">New Password</label>
-                <input id="password" v-model="form.new_password" type="password" autocomplete="off" />
+                <label for="new_password">New Password</label>
+                <input id="new_password" v-model="form.new_password" type="password" autocomplete="new-password"
+                    :disabled="saving" :class="{ invalid: errors.new_password }" />
+                <small v-if="errors.new_password">{{ errors.new_password[0] }}</small>
             </div>
 
             <div class="edit-fields">
-                <label for="password_confirmation">Confirm Password</label>
+                <label for="password_confirmation">Confirm New Password</label>
                 <input id="password_confirmation" v-model="form.password_confirmation" type="password"
-                    autocomplete="off" />
+                    autocomplete="new-password" :disabled="saving" />
             </div>
 
             <div class="modal-buttons">
-                <button class="cancel-btn" @click="$emit('close')">Cancel</button>
-                <button class="save-btn" @click="handleSave">Save Changes</button>
+                <button type="button" class="cancel-btn" :disabled="saving" @click="$emit('close')">Cancel</button>
+                <button type="button" class="save-btn" :disabled="saving" @click="handleSave">
+                    {{ saving ? 'Saving...' : 'Save Changes' }}
+                </button>
             </div>
         </div>
     </div>
@@ -47,142 +61,163 @@ import { ref, watch } from 'vue'
 
 const props = defineProps({
     show: Boolean,
-    user: {
-        type: Object,
-        default: () => ({})
-    }
+    user: { type: Object, default: () => ({}) },
+    saving: Boolean,
+    error: { type: String, default: '' },
+    errors: { type: Object, default: () => ({}) },
 })
 
-// Local form state
-const form = ref({
+const emit = defineEmits(['save', 'close'])
+
+const blankForm = () => ({
     first_name: '',
     last_name: '',
     email: '',
     password: '',
     new_password: '',
-    password_confirmation: ''
+    password_confirmation: '',
 })
 
-const emit = defineEmits(['save', 'close'])
+const form = ref(blankForm())
 
-// Watch for when the modal opens to sync data
+// Reset the form each time the modal opens, using the selected student.
 watch(
-    () => props.user,
-    (user) => {
-        if (user) {
-            form.value = {
-                first_name: user.first_name || '',
-                last_name: user.last_name || '',
-                email: user.email || '',
-                password: '',
-                new_password: '',
-                password_confirmation: ''
-            }
-        }
-    },
-    { immediate: true }
-)
+    () => props.show,
+    (open) => {
+        if (!open) return
 
-
-// ✅ Save handler
-const handleSave = () => {
-    // 1. Password Match Validation
-    if (form.value.password || form.value.password_confirmation) {
-        if (form.value.password !== form.value.password_confirmation) {
-            emit('notify', { message: "Passwords do not match!", type: "error" })
-            return
+        form.value = {
+            ...blankForm(),
+            first_name: props.user?.first_name || '',
+            last_name: props.user?.last_name || '',
+            email: props.user?.email || '',
         }
     }
+)
 
-    // 2. Prepare Clean Payload
-    const payload = { ...form.value }
+const handleSave = () => {
+    if (props.saving) return
 
-    // 3. Remove password fields if they are empty (so we don't update them)
-    if (!payload.password) {
-        delete payload.password
-        delete payload.new_password
-        delete payload.password_confirmation
+    const payload = {
+        first_name: form.value.first_name,
+        last_name: form.value.last_name,
+        email: form.value.email,
+    }
+
+    if (form.value.new_password) {
+        payload.password = form.value.password
+        payload.new_password = form.value.new_password
+        payload.new_password_confirmation = form.value.password_confirmation
     }
 
     emit('save', payload)
-    emit('close')
 }
 </script>
 
 <style scoped>
-/* Reusing the core alignment logic */
 .modal {
     position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
+    inset: 0;
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 3;
+    padding: 20px;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 1000;
 }
 
 .modal-content {
-    background: white;
-    padding: 2rem;
-    border-radius: 12px;
     width: 400px;
-    max-width: 90%;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
-    z-index:5;
+    max-width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 2rem;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    border-radius: 12px;
+    background: rgba(25, 28, 36, 0.94);
+    color: #eceef3;
+    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.45);
 }
 
-/* New Input Styles */
+h3 {
+    margin: 0 0 20px;
+    color: #f2f3f7;
+}
+
 .edit-fields {
     display: flex;
     flex-direction: column;
-    text-align: left;
-    margin: 10px 0;
+    margin: 12px 0;
 }
 
 .edit-fields label {
-    font-size: 0.9rem;
-    font-weight: bold;
     margin-bottom: 6px;
-    color: #555;
+    color: #b8bfce;
+    font-size: 0.9rem;
+    font-weight: 600;
 }
 
 .edit-fields input {
     padding: 10px;
-    border: 1px solid #ddd;
+    border: 1px solid rgba(255, 255, 255, 0.14);
     border-radius: 6px;
+    outline: none;
+    background: rgba(8, 10, 15, 0.55);
+    color: #eceef3;
     font-size: 1rem;
 }
 
-/* Button Alignment */
+.form-error {
+    margin: 0 0 8px;
+    padding: 8px 10px;
+    border: 1px solid rgba(255, 120, 120, 0.4);
+    border-radius: 6px;
+    background: rgba(255, 80, 80, 0.12);
+    color: #ffb4b4;
+    font-size: 0.85rem;
+}
+
+.edit-fields input.invalid {
+    border-color: #ff8a8a;
+}
+
+.edit-fields small {
+    margin-top: 4px;
+    color: #ffb4b4;
+    font-size: 0.8rem;
+}
+
+.edit-fields input:focus {
+    border-color: #929fbd;
+}
+
 .modal-buttons {
     display: flex;
     justify-content: flex-end;
     gap: 10px;
+    margin-top: 22px;
 }
 
 button {
     padding: 10px 18px;
-    cursor: pointer;
+    border: 1px solid transparent;
     border-radius: 6px;
-    border: none;
+    cursor: pointer;
     font-weight: 600;
 }
 
 .cancel-btn {
-    background-color: #f3f4f6;
-    color: #4b5563;
+    border-color: rgba(255, 255, 255, 0.14);
+    background: rgba(255, 255, 255, 0.06);
+    color: #c6cbd5;
 }
 
 .save-btn {
-    background-color: #3b82f6;
-    /* Blue for "Save" */
-    color: white;
+    background: #d8deeb;
+    color: #171a22;
 }
 
 .save-btn:hover {
-    background-color: #2563eb;
+    background: #eef1f7;
 }
 </style>

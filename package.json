@@ -13,9 +13,12 @@
     },
     "dependencies": {
         "@fortawesome/fontawesome-free": "^7.2.0",
+        "@solar-icons/vue": "^2.3.2",
         "axios": "^1.13.6",
         "chart.js": "^4.5.1",
         "crypto-js": "^4.2.0",
+        "jspdf": "^4.2.1",
+        "jspdf-autotable": "^5.0.9",
         "laravel-echo": "^2.3.1",
         "pusher-js": "^8.4.3",
         "vue": "^3.5.18",

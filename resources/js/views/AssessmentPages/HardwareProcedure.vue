@@ -1,1614 +1,2486 @@
 <template>
-  <div class="hardware-page">
-    <div class="page-shell">
-      <header class="page-header">
-        <button type="button" class="back-button" aria-label="Back" @click="goBack">←</button>
+    <div class="lab">
+        <!-- TOP BAR -->
+        <header class="topbar">
+            <button class="icon-btn" type="button" aria-label="Go back" :disabled="showResult" @click="goBack">
+                <i class="fas fa-arrow-left" aria-hidden="true"></i>
+            </button>
 
-        <div class="heading-copy">
-          <p class="project-line"><strong>CSS PREP</strong><span>/</span><span>Virtual Hands-On</span></p>
-          <h1>{{ assessment.title || quiz.title || 'Computer Assembly and Disassembly' }}</h1>
-          <p>{{ assessment.category || 'Computer Maintenance and Troubleshooting' }}</p>
-        </div>
-
-        <div class="performance-strip" aria-label="Attempt status">
-          <div><small>PHASE</small><strong>{{ phaseLabel }}</strong></div>
-          <div><small>TIME</small><strong>{{ elapsedLabel }}</strong></div>
-          <div><small>MISTAKES</small><strong>{{ mistakeCount }}</strong></div>
-          <div><small>ACTIONS</small><strong>{{ completedActions }}/{{ totalActions }}</strong></div>
-        </div>
-      </header>
-
-      <main v-if="!loading" class="lab-layout">
-        <section class="chassis-card frost-panel">
-          <div class="lab-topline">
-            <div>
-              <span class="eyebrow">SYSTEM UNIT PRACTICAL</span>
-              <h2>Open-side chassis</h2>
-              <p>Your actions are recorded. Work as you would on the actual unit.</p>
+            <div class="title">
+                <span class="kicker">CSS Prep · COC {{ quiz.coc_number ?? "—" }} · Practical</span>
+                <h1>{{ assessment.title || "Assembly and Disassembly" }}</h1>
             </div>
 
-            <button type="button" class="submit-button" :disabled="!canSubmit" @click="submitAttempt">
-              {{ saving ? 'Submitting…' : submitted ? 'Submitted' : 'Submit Attempt' }}
-            </button>
-          </div>
+            <dl class="stats" aria-label="Practical progress">
+                <div :class="{ warn: timeWarning }">
+                    <dt>Time</dt>
+                    <dd>{{ formattedTime }}</dd>
+                </div>
+                <div>
+                    <dt>Steps</dt>
+                    <dd>{{ completedActions }}/{{ totalActions }}</dd>
+                </div>
+                <div :class="{ bad: mistakeCount > 0 }">
+                    <dt>Mistakes</dt>
+                    <dd>{{ mistakeCount }}</dd>
+                </div>
+            </dl>
+        </header>
 
-          <div v-if="warning.visible" class="warning-card" role="alert" aria-live="assertive">
-            <strong>{{ warning.title }}</strong>
-            <span>{{ warning.message }}</span>
-          </div>
+        <!-- STAGE RAIL -->
+        <nav class="rail" aria-label="Practical stages">
+            <ol>
+                <li v-for="step in railSteps" :key="step.key" :class="step.state"
+                    :aria-current="step.state === 'current' ? 'step' : undefined">
+                    <span class="rail-dot">
+                        <i v-if="step.state === 'done'" class="fas fa-check" aria-hidden="true"></i>
+                        <template v-else>{{ step.number }}</template>
+                    </span>
+                    <span>{{ step.label }}</span>
+                </li>
+            </ol>
+        </nav>
 
-          <div class="svg-wrap">
-            <svg ref="chassisSvg" class="chassis-svg" viewBox="0 0 1000 650" xmlns="http://www.w3.org/2000/svg"
-              role="group" aria-label="Interactive computer system unit chassis" @click="handleChassisClick">
-              <defs>
-                <linearGradient id="caseMetal" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0" stop-color="#F7F7F7" />
-                  <stop offset=".2" stop-color="#C7C9CB" />
-                  <stop offset=".48" stop-color="#F1F1F1" />
-                  <stop offset=".75" stop-color="#9EA1A3" />
-                  <stop offset="1" stop-color="#E3E4E5" />
-                </linearGradient>
-                <linearGradient id="darkMetal" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0" stop-color="#343638" />
-                  <stop offset="1" stop-color="#151617" />
-                </linearGradient>
-                <linearGradient id="boardGreen" x1="0" x2="1" y1="0" y2="1">
-                  <stop offset="0" stop-color="#397354" />
-                  <stop offset=".5" stop-color="#235E43" />
-                  <stop offset="1" stop-color="#173F2F" />
-                </linearGradient>
-                <linearGradient id="goldEdge" x1="0" x2="1">
-                  <stop offset="0" stop-color="#986B25" />
-                  <stop offset=".5" stop-color="#E2BE67" />
-                  <stop offset="1" stop-color="#8B5B1C" />
-                </linearGradient>
-                <linearGradient id="driveMetal" x1="0" x2="1">
-                  <stop offset="0" stop-color="#44484B" />
-                  <stop offset=".45" stop-color="#8B9093" />
-                  <stop offset="1" stop-color="#303335" />
-                </linearGradient>
-                <radialGradient id="fanHub">
-                  <stop offset="0" stop-color="#C6C8C9" />
-                  <stop offset=".42" stop-color="#5A5E61" />
-                  <stop offset="1" stop-color="#181A1B" />
-                </radialGradient>
-                <pattern id="vent" width="14" height="14" patternUnits="userSpaceOnUse">
-                  <circle cx="7" cy="7" r="2.2" fill="#666B6E" opacity=".55" />
-                </pattern>
-                <filter id="partShadow" x="-30%" y="-30%" width="170%" height="180%">
-                  <feDropShadow dx="0" dy="7" stdDeviation="7" flood-color="#000" flood-opacity=".24" />
-                </filter>
-              </defs>
+        <!-- SAFETY WARNING -->
+        <div class="warning" role="note">
+            <i class="fas fa-triangle-exclamation" aria-hidden="true"></i>
+            <p>
+                <strong>Safety first.</strong>
+                Power off, unplug the cord, and wear an anti-static wrist strap before you touch any part.
+            </p>
+        </div>
 
-              <!-- Chassis shell -->
-              <rect x="50" y="35" width="900" height="565" rx="27" fill="#000" opacity=".08" />
-              <rect x="38" y="23" width="900" height="565" rx="27" fill="url(#darkMetal)" stroke="#111"
-                stroke-width="4" />
-              <rect x="62" y="49" width="852" height="515" rx="18" fill="url(#caseMetal)" stroke="#777C7F"
-                stroke-width="2" />
-              <rect x="85" y="73" width="800" height="467" rx="12" fill="#D6D8D9" stroke="#969A9D" stroke-width="1.5" />
-              <rect x="95" y="84" width="35" height="438" rx="7" fill="url(#vent)" />
-              <rect x="849" y="94" width="22" height="405" rx="7" fill="url(#vent)" />
+        <!-- Screen reader announcements -->
+        <p class="sr-only" aria-live="polite" aria-atomic="true">{{ announcement }}</p>
 
-              <!-- Bare standoffs remain when motherboard is removed -->
-              <g fill="#8A8E91" stroke="#565A5D">
-                <circle cx="260" cy="150" r="7" />
-                <circle cx="600" cy="150" r="7" />
-                <circle cx="260" cy="440" r="7" />
-                <circle cx="600" cy="440" r="7" />
-                <circle cx="430" cy="150" r="7" />
-                <circle cx="430" cy="440" r="7" />
-                <circle cx="600" cy="300" r="7" />
-              </g>
-
-              <!-- Motherboard -->
-              <g v-if="isInstalled('motherboard')" class="interactive-part" :class="partMotionClass('motherboard')"
-                data-key="motherboard" @pointerdown.stop="startSvgDrag('motherboard', $event)"
-                @click.stop="selectPart('motherboard')">
-                <rect x="215" y="120" width="430" height="355" rx="9" fill="url(#boardGreen)" stroke="#123827"
-                  stroke-width="3" />
-                <path d="M245 145 H590 M245 165 H470 M270 420 H605" stroke="#83A994" stroke-opacity=".35"
-                  stroke-width="3" />
-                <path d="M315 120 V475 M480 120 V475" stroke="#9BC2A8" stroke-opacity=".15" />
-                <g fill="#B9C2BC" opacity=".85">
-                  <circle cx="237" cy="142" r="5" />
-                  <circle cx="620" cy="142" r="5" />
-                  <circle cx="237" cy="450" r="5" />
-                  <circle cx="620" cy="450" r="5" />
-                  <circle cx="425" cy="142" r="5" />
-                  <circle cx="425" cy="450" r="5" />
-                  <circle cx="620" cy="300" r="5" />
-                </g>
-                <rect x="245" y="180" width="118" height="114" rx="8" fill="#244D38" stroke="#86A593" />
-                <rect x="263" y="198" width="82" height="78" rx="4" fill="#B8BDBC" stroke="#777" />
-                <rect x="516" y="156" width="12" height="162" rx="3" fill="#242728" />
-                <rect x="538" y="156" width="12" height="162" rx="3" fill="#242728" />
-                <rect x="560" y="156" width="12" height="162" rx="3" fill="#242728" />
-                <rect x="582" y="156" width="12" height="162" rx="3" fill="#242728" />
-                <rect x="270" y="342" width="320" height="13" rx="3" fill="#E5E5DD" />
-                <rect x="270" y="371" width="285" height="11" rx="3" fill="#C5C5BE" />
-                <rect x="270" y="399" width="250" height="11" rx="3" fill="#C5C5BE" />
-                <circle cx="545" cy="407" r="28" fill="#C7C7BE" stroke="#6F6F69" />
-                <circle cx="545" cy="407" r="19" fill="#A5A59F" />
-                <rect x="603" y="180" width="18" height="92" rx="3" fill="#ECE8D2" />
-                <rect x="593" y="310" width="28" height="42" rx="3" fill="#1A1B1A" />
-                <g fill="#D4D8D1">
-                  <rect x="238" y="310" width="42" height="18" rx="2" />
-                  <rect x="289" y="310" width="42" height="18" rx="2" />
-                  <rect x="340" y="310" width="42" height="18" rx="2" />
-                </g>
-              </g>
-
-              <!-- RAM chips -->
-              <g v-if="isInstalled('ram')" class="interactive-part" :class="partMotionClass('ram')"
-                @pointerdown.stop="startSvgDrag('ram', $event)" @click.stop="selectPart('ram')">
-                <rect x="521" y="162" width="8" height="148" rx="3" fill="#1B2331" stroke="#8492A2" />
-                <rect x="543" y="162" width="8" height="148" rx="3" fill="#1B2331" stroke="#8492A2" />
-                <g fill="#252B2F">
-                  <rect x="520" y="180" width="10" height="18" rx="2" />
-                  <rect x="520" y="212" width="10" height="18" rx="2" />
-                  <rect x="520" y="244" width="10" height="18" rx="2" />
-                  <rect x="542" y="180" width="10" height="18" rx="2" />
-                  <rect x="542" y="212" width="10" height="18" rx="2" />
-                  <rect x="542" y="244" width="10" height="18" rx="2" />
-                </g>
-                <rect x="520" y="303" width="10" height="5" fill="url(#goldEdge)" />
-                <rect x="542" y="303" width="10" height="5" fill="url(#goldEdge)" />
-              </g>
-
-              <!-- CPU cooler -->
-              <g v-if="isInstalled('cpu_fan')" class="interactive-part" :class="partMotionClass('cpu_fan')"
-                @pointerdown.stop="startSvgDrag('cpu_fan', $event)" @click.stop="selectPart('cpu_fan')">
-                <circle cx="304" cy="238" r="65" fill="#242728" stroke="#7A7F82" stroke-width="4" />
-                <circle cx="304" cy="238" r="50" fill="none" stroke="#515558" stroke-width="7" />
-                <g fill="#5F6467">
-                  <path d="M304 202 C330 197 338 212 322 231 C317 220 309 211 304 202Z" />
-                  <path d="M340 238 C345 264 330 272 311 256 C322 251 331 243 340 238Z" />
-                  <path d="M304 274 C278 279 270 264 286 245 C291 256 299 265 304 274Z" />
-                  <path d="M268 238 C263 212 278 204 297 220 C286 225 277 233 268 238Z" />
-                </g>
-                <circle cx="304" cy="238" r="14" fill="url(#fanHub)" />
-              </g>
-
-              <!-- CPU fan screws -->
-              <g v-if="isInstalled('cpu_fan_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('cpu_fan_screws', $event)" @click.stop="selectPart('cpu_fan_screws')">
-                <circle cx="252" cy="186" r="8" />
-                <circle cx="356" cy="186" r="8" />
-                <circle cx="252" cy="290" r="8" />
-                <circle cx="356" cy="290" r="8" />
-              </g>
-
-              <!-- CPU fan wire -->
-              <g v-if="isInstalled('cpu_fan_wire')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('cpu_fan_wire', $event)" @click.stop="selectPart('cpu_fan_wire')">
-                <path d="M353 249 C402 245 416 212 454 211" fill="none" stroke="#202326" stroke-width="7" />
-                <path d="M353 249 C402 245 416 212 454 211" fill="none" stroke="#E6C94C" stroke-width="2" />
-                <rect x="448" y="202" width="20" height="17" rx="2" fill="#F2F2E8" stroke="#777" />
-              </g>
-
-              <!-- Expansion cards -->
-              <g v-if="isInstalled('expansion_cards')" class="interactive-part"
-                :class="partMotionClass('expansion_cards')" @pointerdown.stop="startSvgDrag('expansion_cards', $event)"
-                @click.stop="selectPart('expansion_cards')">
-                <rect x="245" y="345" width="330" height="62" rx="6" fill="#242729" stroke="#767B7E" stroke-width="2" />
-                <circle cx="310" cy="376" r="22" fill="#121415" stroke="#5E6366" stroke-width="4" />
-                <circle cx="425" cy="376" r="22" fill="#121415" stroke="#5E6366" stroke-width="4" />
-                <rect x="255" y="405" width="270" height="8" fill="url(#goldEdge)" />
-                <rect x="531" y="354" width="34" height="20" rx="3" fill="#2F3234" stroke="#74787A" />
-              </g>
-
-              <!-- Expansion card power -->
-              <g v-if="isInstalled('gpu_power')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('gpu_power', $event)" @click.stop="selectPart('gpu_power')">
-                <path d="M550 352 C618 345 650 374 692 414" fill="none" stroke="#1F2223" stroke-width="9" />
-                <path d="M550 352 C618 345 650 374 692 414" fill="none" stroke="#D7BC44" stroke-width="2" />
-              </g>
-
-              <!-- Expansion slot covers -->
-              <g v-if="isInstalled('expansion_covers')" class="interactive-part"
-                @pointerdown.stop="startSvgDrag('expansion_covers', $event)"
-                @click.stop="selectPart('expansion_covers')">
-                <rect x="139" y="352" width="76" height="13" rx="3" fill="#AEB1B3" stroke="#717577" />
-                <rect x="139" y="374" width="76" height="13" rx="3" fill="#AEB1B3" stroke="#717577" />
-              </g>
-
-              <!-- Expansion screws -->
-              <g v-if="isInstalled('expansion_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('expansion_screws', $event)"
-                @click.stop="selectPart('expansion_screws')">
-                <circle cx="206" cy="358" r="7" />
-                <circle cx="206" cy="380" r="7" />
-              </g>
-
-              <!-- PSU -->
-              <g v-if="isInstalled('psu')" class="interactive-part" :class="partMotionClass('psu')"
-                @pointerdown.stop="startSvgDrag('psu', $event)" @click.stop="selectPart('psu')">
-                <rect x="105" y="430" width="250" height="100" rx="8" fill="url(#driveMetal)" stroke="#2B2E30"
-                  stroke-width="3" />
-                <circle cx="172" cy="480" r="35" fill="#161819" stroke="#6D7275" stroke-width="4" />
-                <circle cx="172" cy="480" r="12" fill="url(#fanHub)" />
-                <rect x="280" y="452" width="49" height="19" rx="3" fill="#17191A" />
-                <rect x="290" y="486" width="28" height="17" rx="2" fill="#111" />
-                <text x="255" y="516" fill="#D7D9DA" font-size="12" font-weight="700">POWER SUPPLY</text>
-              </g>
-
-              <!-- PSU screws -->
-              <g v-if="isInstalled('psu_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('psu_screws', $event)" @click.stop="selectPart('psu_screws')">
-                <circle cx="112" cy="438" r="7" />
-                <circle cx="347" cy="438" r="7" />
-                <circle cx="112" cy="521" r="7" />
-                <circle cx="347" cy="521" r="7" />
-              </g>
-
-              <!-- ATX power -->
-              <g v-if="isInstalled('atx_24pin')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('atx_24pin', $event)" @click.stop="selectPart('atx_24pin')">
-                <path d="M342 444 C430 490 590 418 615 235" fill="none" stroke="#1C1E20" stroke-width="15" />
-                <path d="M342 444 C430 490 590 418 615 235" fill="none" stroke="#D1B646" stroke-width="3" />
-                <rect x="600" y="212" width="29" height="48" rx="3" fill="#EEEDE2" stroke="#676B6E" />
-              </g>
-
-              <!-- CPU power -->
-              <g v-if="isInstalled('cpu_power')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('cpu_power', $event)" @click.stop="selectPart('cpu_power')">
-                <path d="M324 443 C248 393 196 234 236 144" fill="none" stroke="#1B1D1F" stroke-width="11" />
-                <path d="M324 443 C248 393 196 234 236 144" fill="none" stroke="#B83434" stroke-width="2" />
-                <rect x="226" y="130" width="25" height="22" rx="3" fill="#EFEFE7" stroke="#666" />
-              </g>
-
-              <!-- Rear / large system fan -->
-              <g v-if="isInstalled('system_fan')" class="interactive-part" :class="partMotionClass('system_fan')"
-                @pointerdown.stop="startSvgDrag('system_fan', $event)" @click.stop="selectPart('system_fan')">
-                <circle cx="157" cy="195" r="58" fill="#202325" stroke="#656A6D" stroke-width="4" />
-                <circle cx="157" cy="195" r="45" fill="none" stroke="#414649" stroke-width="7" />
-                <g fill="#595E61">
-                  <path d="M157 160 C181 154 193 169 175 186 C171 175 164 166 157 160Z" />
-                  <path d="M192 195 C198 219 183 231 166 213 C177 209 186 202 192 195Z" />
-                  <path d="M157 230 C133 236 121 221 139 204 C143 215 150 224 157 230Z" />
-                  <path d="M122 195 C116 171 131 159 148 177 C137 181 128 188 122 195Z" />
-                </g>
-                <circle cx="157" cy="195" r="12" fill="url(#fanHub)" />
-              </g>
-
-              <!-- Large fan screws -->
-              <g v-if="isInstalled('system_fan_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('system_fan_screws', $event)"
-                @click.stop="selectPart('system_fan_screws')">
-                <circle cx="112" cy="150" r="7" />
-                <circle cx="202" cy="150" r="7" />
-                <circle cx="112" cy="240" r="7" />
-                <circle cx="202" cy="240" r="7" />
-              </g>
-
-              <!-- Large fan wire -->
-              <g v-if="isInstalled('system_fan_wire')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('system_fan_wire', $event)" @click.stop="selectPart('system_fan_wire')">
-                <path d="M205 210 C237 218 254 304 286 316" fill="none" stroke="#222426" stroke-width="7" />
-                <path d="M205 210 C237 218 254 304 286 316" fill="none" stroke="#BF3C3C" stroke-width="2" />
-                <rect x="279" y="307" width="20" height="17" rx="2" fill="#EEEEEA" stroke="#6A6A68" />
-              </g>
-
-              <!-- Drive cage -->
-              <rect x="678" y="110" width="177" height="350" rx="9" fill="#BFC2C4" stroke="#777B7E" stroke-width="2" />
-              <path d="M696 125 V445 M837 125 V445" stroke="#8E9295" stroke-width="2" />
-              <g fill="none" stroke="#95999C">
-                <rect x="693" y="137" width="149" height="77" rx="5" />
-                <rect x="693" y="228" width="149" height="59" rx="5" />
-                <rect x="693" y="303" width="149" height="70" rx="5" />
-                <rect x="693" y="389" width="149" height="46" rx="5" />
-              </g>
-
-              <!-- Optical drive -->
-              <g v-if="isInstalled('optical_drive')" class="interactive-part" :class="partMotionClass('optical_drive')"
-                @pointerdown.stop="startSvgDrag('optical_drive', $event)" @click.stop="selectPart('optical_drive')">
-                <rect x="702" y="144" width="132" height="61" rx="5" fill="url(#driveMetal)" stroke="#484B4D" />
-                <rect x="714" y="162" width="99" height="7" rx="3" fill="#252728" />
-                <circle cx="820" cy="188" r="3" fill="#C4C6C7" />
-              </g>
-
-              <!-- Optical screws -->
-              <g v-if="isInstalled('optical_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('optical_screws', $event)" @click.stop="selectPart('optical_screws')">
-                <circle cx="695" cy="157" r="7" />
-                <circle cx="840" cy="157" r="7" />
-              </g>
-
-              <!-- Card reader -->
-              <g v-if="isInstalled('card_reader')" class="interactive-part" :class="partMotionClass('card_reader')"
-                @pointerdown.stop="startSvgDrag('card_reader', $event)" @click.stop="selectPart('card_reader')">
-                <rect x="704" y="236" width="128" height="43" rx="5" fill="#303335" stroke="#656A6D" />
-                <rect x="718" y="249" width="44" height="7" rx="2" fill="#121415" />
-                <rect x="773" y="249" width="42" height="7" rx="2" fill="#121415" />
-                <rect x="718" y="263" width="95" height="5" rx="2" fill="#17191A" />
-              </g>
-
-              <!-- Card reader screws -->
-              <g v-if="isInstalled('card_reader_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('card_reader_screws', $event)"
-                @click.stop="selectPart('card_reader_screws')">
-                <circle cx="696" cy="246" r="7" />
-                <circle cx="840" cy="246" r="7" />
-              </g>
-
-              <!-- HDD -->
-              <g v-if="isInstalled('hdd')" class="interactive-part" :class="partMotionClass('hdd')"
-                @pointerdown.stop="startSvgDrag('hdd', $event)" @click.stop="selectPart('hdd')">
-                <rect x="704" y="312" width="128" height="52" rx="5" fill="#45494B" stroke="#777C7F" />
-                <circle cx="743" cy="338" r="17" fill="#B5B9BB" stroke="#5D6265" />
-                <circle cx="743" cy="338" r="5" fill="#5D6265" />
-                <path d="M760 338 L795 325" stroke="#D4D6D7" stroke-width="4" stroke-linecap="round" />
-              </g>
-
-              <!-- HDD screws -->
-              <g v-if="isInstalled('hdd_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('hdd_screws', $event)" @click.stop="selectPart('hdd_screws')">
-                <circle cx="697" cy="319" r="7" />
-                <circle cx="839" cy="319" r="7" />
-                <circle cx="697" cy="356" r="7" />
-                <circle cx="839" cy="356" r="7" />
-              </g>
-
-              <!-- Portable HDD slot -->
-              <g v-if="isInstalled('portable_hdd_slot')" class="interactive-part"
-                @pointerdown.stop="startSvgDrag('portable_hdd_slot', $event)"
-                @click.stop="selectPart('portable_hdd_slot')">
-                <rect x="712" y="394" width="112" height="34" rx="5" fill="#696E71" stroke="#404346" />
-                <rect x="729" y="401" width="78" height="19" rx="4" fill="#252729" />
-              </g>
-
-              <!-- Drive slot cover -->
-              <g v-if="isInstalled('drive_slot_cover')" class="interactive-part"
-                @pointerdown.stop="startSvgDrag('drive_slot_cover', $event)"
-                @click.stop="selectPart('drive_slot_cover')">
-                <rect x="854" y="140" width="22" height="75" rx="3" fill="#2D3032" stroke="#777" />
-                <path d="M858 152 H872 M858 162 H872 M858 172 H872 M858 182 H872 M858 192 H872" stroke="#7E8285" />
-              </g>
-
-              <!-- Connectivity center -->
-              <g v-if="isInstalled('connectivity_center')" class="interactive-part"
-                @pointerdown.stop="startSvgDrag('connectivity_center', $event)"
-                @click.stop="selectPart('connectivity_center')">
-                <rect x="852" y="235" width="27" height="105" rx="5" fill="#333638" stroke="#74797C" />
-                <rect x="858" y="248" width="15" height="10" rx="2" fill="#151718" />
-                <rect x="858" y="266" width="15" height="10" rx="2" fill="#151718" />
-                <circle cx="865" cy="294" r="4" fill="#8E9295" />
-                <circle cx="865" cy="311" r="4" fill="#8E9295" />
-              </g>
-
-              <!-- Connectivity center screws -->
-              <g v-if="isInstalled('io_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('io_screws', $event)" @click.stop="selectPart('io_screws')">
-                <circle cx="849" cy="244" r="6" />
-                <circle cx="881" cy="331" r="6" />
-              </g>
-
-              <!-- LED plastic piece -->
-              <g v-if="isInstalled('plastic_led_piece')" class="interactive-part"
-                @pointerdown.stop="startSvgDrag('plastic_led_piece', $event)"
-                @click.stop="selectPart('plastic_led_piece')">
-                <rect x="851" y="365" width="29" height="61" rx="7" fill="#D5D7D8" fill-opacity=".65"
-                  stroke="#8D9194" />
-                <circle cx="865" cy="383" r="6" fill="#8F9396" />
-                <circle cx="865" cy="404" r="3" fill="#3A6B4C" />
-              </g>
-
-              <!-- Motherboard screws -->
-              <g v-if="isInstalled('motherboard_screws')" class="interactive-part screw-group"
-                @pointerdown.stop="startSvgDrag('motherboard_screws', $event)"
-                @click.stop="selectPart('motherboard_screws')">
-                <circle cx="237" cy="142" r="7" />
-                <circle cx="620" cy="142" r="7" />
-                <circle cx="237" cy="450" r="7" />
-                <circle cx="620" cy="450" r="7" />
-                <circle cx="425" cy="142" r="7" />
-                <circle cx="425" cy="450" r="7" />
-                <circle cx="620" cy="300" r="7" />
-              </g>
-
-              <!-- SATA cable -->
-              <g v-if="isInstalled('sata_cable_hdd')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('sata_cable_hdd', $event)" @click.stop="selectPart('sata_cable_hdd')">
-                <path d="M694 346 C630 350 610 374 598 393" fill="none" stroke="#BE2F2F" stroke-width="8" />
-                <rect x="586" y="384" width="23" height="17" rx="2" fill="#161819" />
-              </g>
-
-              <!-- Portable HDD wires -->
-              <g v-if="isInstalled('portable_hdd_wires')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('portable_hdd_wires', $event)"
-                @click.stop="selectPart('portable_hdd_wires')">
-                <path d="M710 411 C653 432 628 423 602 407" fill="none" stroke="#242729" stroke-width="8" />
-                <path d="M710 421 C664 449 640 449 610 431" fill="none" stroke="#D5B943" stroke-width="5" />
-              </g>
-
-              <!-- Optical ribbon -->
-              <g v-if="isInstalled('optical_ribbon')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('optical_ribbon', $event)" @click.stop="selectPart('optical_ribbon')">
-                <path d="M702 184 C652 183 626 205 593 294" fill="none" stroke="#777B7D" stroke-width="18" />
-                <path d="M702 184 C652 183 626 205 593 294" fill="none" stroke="#AEB1B3" stroke-width="11" />
-              </g>
-
-              <!-- Card reader wire -->
-              <g v-if="isInstalled('card_reader_wire')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('card_reader_wire', $event)"
-                @click.stop="selectPart('card_reader_wire')">
-                <path d="M703 257 C653 270 642 318 600 333" fill="none" stroke="#282A2C" stroke-width="7" />
-                <path d="M703 257 C653 270 642 318 600 333" fill="none" stroke="#4D74A6" stroke-width="2" />
-              </g>
-
-              <!-- Front panel wire -->
-              <g v-if="isInstalled('front_panel_wire')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('front_panel_wire', $event)"
-                @click.stop="selectPart('front_panel_wire')">
-                <path d="M850 392 C730 456 662 452 605 432" fill="none" stroke="#222426" stroke-width="8" />
-                <path d="M850 392 C730 456 662 452 605 432" fill="none" stroke="#D7D7D1" stroke-width="2" />
-              </g>
-
-              <!-- Drive power -->
-              <g v-if="isInstalled('drive_power')" class="interactive-part cable-part"
-                @pointerdown.stop="startSvgDrag('drive_power', $event)" @click.stop="selectPart('drive_power')">
-                <path d="M330 458 C515 533 664 503 707 357" fill="none" stroke="#202224" stroke-width="12" />
-                <path d="M330 458 C515 533 664 503 707 357" fill="none" stroke="#D0AF39" stroke-width="3" />
-              </g>
-
-              <!-- Side panel under its screws but above internals -->
-              <g v-if="isInstalled('side_panel')" class="interactive-part side-panel-part"
-                :class="partMotionClass('side_panel')" @pointerdown.stop="startSvgDrag('side_panel', $event)"
-                @click.stop="selectPart('side_panel')">
-                <rect x="72" y="64" width="810" height="485" rx="16" fill="#D8DBDC" fill-opacity=".82" stroke="#8B9093"
-                  stroke-width="3" />
-                <rect x="124" y="112" width="695" height="379" rx="11" fill="#FFFFFF" fill-opacity=".09"
-                  stroke="#A9ADAF" />
-                <path d="M102 92 H853 M102 523 H853" stroke="#F8F8F8" stroke-opacity=".55" stroke-width="3" />
-                <text x="478" y="302" text-anchor="middle" fill="#606467" font-size="17" font-weight="700"
-                  letter-spacing="3">SYSTEM UNIT SIDE PANEL</text>
-              </g>
-
-              <!-- Side panel screws -->
-              <g v-if="isInstalled('side_panel_screws')" class="interactive-part screw-group side-screw-group"
-                @pointerdown.stop="startSvgDrag('side_panel_screws', $event)"
-                @click.stop="selectPart('side_panel_screws')">
-                <circle cx="857" cy="98" r="10" />
-                <circle cx="857" cy="513" r="10" />
-              </g>
-
-              <!-- AC cable outside chassis -->
-              <g v-if="isInstalled('ac_power_cable')" class="interactive-part cable-part"
-                :class="partMotionClass('ac_power_cable')" @pointerdown.stop="startSvgDrag('ac_power_cable', $event)"
-                @click.stop="selectPart('ac_power_cable')">
-                <path d="M105 486 C45 498 26 544 61 605 C90 632 131 623 147 594" fill="none" stroke="#202224"
-                  stroke-width="15" stroke-linecap="round" />
-                <rect x="84" y="475" width="28" height="24" rx="4" fill="#111314" stroke="#676B6E" />
-                <rect x="135" y="580" width="32" height="31" rx="5" fill="#1C1E20" stroke="#656A6D" />
-                <rect x="141" y="608" width="5" height="15" fill="#B9BBBC" />
-                <rect x="156" y="608" width="5" height="15" fill="#B9BBBC" />
-              </g>
-            </svg>
-          </div>
+        <!-- LOADING -->
+        <section v-if="loading" class="state" role="status" aria-live="polite">
+            <span class="spinner" aria-hidden="true"></span>
+            <p class="state-title">Preparing the practical</p>
+            <p class="state-text">Loading the chassis and starting your attempt.</p>
         </section>
 
-        <aside class="bench-column">
-          <section ref="partsTrayRef" class="tray-panel frost-panel"
-            :class="{ selected: selectedPart && itemType(selectedPart) !== 'cable' && itemType(selectedPart) !== 'fastener' }"
-            @click="handleTrayClick('parts_tray')">
-            <div class="tray-heading"><span>REMOVED HARDWARE</span><strong>{{ hardwareTray.length }}</strong></div>
-            <div class="tray-list">
-              <button v-for="item in hardwareTray" :key="item.component_key" type="button" class="tray-item"
-                :class="{ chosen: selectedPart === item.component_key }"
-                @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)">
-                <img v-if="item.image" :src="item.image" :alt="item.display_name" />
-                <span>{{ item.display_name }}</span><small v-if="item.quantity > 1">×{{ item.quantity }}</small>
-              </button>
-              <p v-if="!hardwareTray.length" class="tray-empty">Empty</p>
+        <!-- LOAD ERROR -->
+        <section v-else-if="loadError" class="state" role="alert">
+            <span class="state-icon" aria-hidden="true"><i class="fas fa-triangle-exclamation"></i></span>
+            <p class="state-title">The practical could not start</p>
+            <p class="state-text">{{ loadError }}</p>
+            <div class="state-actions">
+                <button class="btn btn-primary" type="button" @click="load">Try again</button>
+                <button class="btn btn-ghost" type="button" @click="goToAssessments">Back to assessments</button>
             </div>
-          </section>
+        </section>
 
-          <section ref="cableTrayRef" class="tray-panel frost-panel" @click="handleTrayClick('cable_tray')">
-            <div class="tray-heading"><span>DISCONNECTED CABLES</span><strong>{{ cableTray.length }}</strong></div>
-            <div class="tray-list compact">
-              <button v-for="item in cableTray" :key="item.component_key" type="button" class="tray-item cable-card"
-                :class="{ chosen: selectedPart === item.component_key }"
-                @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)">
-                <span>{{ item.display_name }}</span><small v-if="item.quantity > 1">×{{ item.quantity }}</small>
-              </button>
-              <p v-if="!cableTray.length" class="tray-empty">Empty</p>
+        <template v-else>
+            <div v-if="attemptEnded && !showResult" class="banner banner-warn" role="status">
+                <i class="fas fa-clock" aria-hidden="true"></i>
+                <span>{{ endedReason }}</span>
             </div>
-          </section>
 
-          <section ref="screwTrayRef" class="tray-panel frost-panel" @click="handleTrayClick('screw_tray')">
-            <div class="tray-heading"><span>SCREWS / FASTENERS</span><strong>{{ screwQuantity }}</strong></div>
-            <div class="tray-list compact">
-              <button v-for="item in screwTray" :key="item.component_key" type="button" class="tray-item screw-card"
-                :class="{ chosen: selectedPart === item.component_key }"
-                @pointerdown.stop="startTrayDrag(item.component_key, $event)"
-                @click.stop="selectPart(item.component_key)">
-                <span class="screw-icon">✣</span><span>{{ item.display_name }}</span><small>×{{ item.quantity }}</small>
-              </button>
-              <p v-if="!screwTray.length" class="tray-empty">Empty</p>
+            <div v-if="submitError" class="banner banner-error" role="alert">
+                <i class="fas fa-circle-exclamation" aria-hidden="true"></i>
+                <span>{{ submitError }}</span>
             </div>
-          </section>
 
-          <section class="attempt-note frost-panel">
-            <strong>Assessment mode</strong>
-            <p>No procedure hints are shown. Incorrect actions are recorded and the unit remains unchanged until the
-              action is valid.</p>
-          </section>
-        </aside>
-      </main>
+            <main class="stage">
+                <!-- BENCH -->
+                <section class="bench" aria-label="Practical workspace">
+                    <!-- HAND -->
+                    <div class="hand" :class="{ held: !!currentComponent }">
+                        <template v-if="currentComponent">
+                            <span class="hand-icon" aria-hidden="true">
+                                <svg viewBox="0 0 24 24" focusable="false">
+                                    <component v-for="(shape, i) in iconShapes(currentComponent)" :key="i"
+                                        :is="shape.tag" v-bind="shape.attrs" />
+                                </svg>
+                            </span>
+                            <div class="hand-copy">
+                                <span class="kicker">Holding</span>
+                                <strong>{{ displayName(currentComponent) }}</strong>
+                            </div>
+                            <span class="hand-hint">{{ holdingHint() }}</span>
+                            <button class="btn btn-ghost btn-sm" type="button" @click="releaseHeld">Put down</button>
+                        </template>
+                        <span v-else class="hand-empty">
+                            <i class="fas fa-hand" aria-hidden="true"></i>
+                            Hands free. Select a part to pick it up.
+                        </span>
+                        <span class="phase-tag">{{ phaseLabel }}</span>
+                    </div>
 
-      <div v-else class="loading-card frost-panel">Loading practical assessment…</div>
+                    <!-- CHASSIS -->
+                    <div class="case" role="group" aria-label="Computer chassis">
+                        <p class="case-title">Chassis</p>
 
-      <div v-if="dragState" class="drag-preview" :style="{ left: `${dragState.x}px`, top: `${dragState.y}px` }"
-        aria-hidden="true">
-        <strong>{{ displayName(dragState.key) }}</strong>
-        <small>{{ itemType(dragState.key) }}</small>
-      </div>
+                        <div class="case-grid">
+                            <button v-for="slot in CASE_SLOTS" :key="slot.key" type="button" class="slot"
+                                :class="slotClasses(slot.key)" :style="{ gridArea: slot.area }"
+                                :aria-label="slotLabel(slot.key)"
+                                :aria-disabled="slotDisabled(slot.key) ? 'true' : 'false'"
+                                :draggable="canDragSlot(slot.key) ? 'true' : 'false'" @click="onSlotClick(slot.key)"
+                                @dragstart="onDragStart(slot.key, $event)" @dragend="onDragEnd"
+                                @dragover="onDragOver($event, slotId(slot.key))"
+                                @dragleave="onDragLeave($event, slotId(slot.key))"
+                                @drop.prevent="onDrop($event, slotId(slot.key))">
+                                <span class="slot-icon" aria-hidden="true">
+                                    <svg viewBox="0 0 24 24" focusable="false">
+                                        <component v-for="(shape, i) in iconShapes(slot.key)" :key="i" :is="shape.tag"
+                                            v-bind="shape.attrs" />
+                                    </svg>
+                                </span>
+                                <span class="slot-name">{{ displayName(slot.key) }}</span>
+                                <span class="slot-state">{{ slotStateText(slot.key) }}</span>
+                            </button>
+                        </div>
+                    </div>
 
-      <div v-if="submitted && result" class="result-overlay">
-        <div class="result-card frost-panel">
-          <span class="eyebrow">ATTEMPT RECORDED</span>
-          <h2>{{ result.passed ? 'Passed' : 'Recorded as failed' }}</h2>
-          <strong class="result-score">{{ Number(result.percentage || 0).toFixed(2) }}%</strong>
-          <p>{{ result.correct_actions }} first-try actions · {{ result.mistake_count }} mistakes</p>
-          <button type="button" class="submit-button" @click="goBack">Back to assessments</button>
+                    <!-- TRAYS -->
+                    <div class="trays">
+                        <section class="tray" :class="zoneClasses('parts_tray')" aria-labelledby="table-heading"
+                            @dragover="onDragOver($event, zoneId('parts_tray'))"
+                            @dragleave="onDragLeave($event, zoneId('parts_tray'))"
+                            @drop.prevent="onDrop($event, zoneId('parts_tray'))">
+                            <header class="tray-head">
+                                <h2 id="table-heading">Parts table <span class="count">{{ tableParts.length }}</span>
+                                </h2>
+                                <button type="button" class="place-btn" :class="{ ready: zoneAccepts('parts_tray') }"
+                                    :aria-disabled="zoneAccepts('parts_tray') ? 'false' : 'true'"
+                                    @click="placeInZone('parts_tray')">
+                                    <i class="fas fa-arrow-down" aria-hidden="true"></i> Place here
+                                </button>
+                            </header>
+
+                            <p v-if="!tableParts.length" class="tray-empty">Empty</p>
+                            <ul v-else class="parts">
+                                <li v-for="item in tableParts" :key="item.component_key">
+                                    <button type="button" class="part" :class="partClasses(item.component_key)"
+                                        :aria-label="partLabel(item.component_key)"
+                                        :aria-pressed="currentComponent === item.component_key ? 'true' : 'false'"
+                                        :aria-disabled="isDraggable(item.component_key) ? 'false' : 'true'"
+                                        :draggable="isDraggable(item.component_key) ? 'true' : 'false'"
+                                        @click="selectPart(item.component_key)"
+                                        @dragstart="onDragStart(item.component_key, $event)" @dragend="onDragEnd">
+                                        <span class="part-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" focusable="false">
+                                                <component v-for="(shape, i) in iconShapes(item.component_key)" :key="i"
+                                                    :is="shape.tag" v-bind="shape.attrs" />
+                                            </svg>
+                                        </span>
+                                        <span class="part-name">{{ displayName(item.component_key) }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </section>
+
+                        <section class="tray" :class="zoneClasses('cable_tray')" aria-labelledby="cable-heading"
+                            @dragover="onDragOver($event, zoneId('cable_tray'))"
+                            @dragleave="onDragLeave($event, zoneId('cable_tray'))"
+                            @drop.prevent="onDrop($event, zoneId('cable_tray'))">
+                            <header class="tray-head">
+                                <h2 id="cable-heading">Cable tray <span class="count">{{ cableParts.length }}</span>
+                                </h2>
+                                <button type="button" class="place-btn" :class="{ ready: zoneAccepts('cable_tray') }"
+                                    :aria-disabled="zoneAccepts('cable_tray') ? 'false' : 'true'"
+                                    @click="placeInZone('cable_tray')">
+                                    <i class="fas fa-arrow-down" aria-hidden="true"></i> Place here
+                                </button>
+                            </header>
+
+                            <p v-if="!cableParts.length" class="tray-empty">Empty</p>
+                            <ul v-else class="parts">
+                                <li v-for="item in cableParts" :key="item.component_key">
+                                    <button type="button" class="part" :class="partClasses(item.component_key)"
+                                        :aria-label="partLabel(item.component_key)"
+                                        :aria-pressed="currentComponent === item.component_key ? 'true' : 'false'"
+                                        :aria-disabled="isDraggable(item.component_key) ? 'false' : 'true'"
+                                        :draggable="isDraggable(item.component_key) ? 'true' : 'false'"
+                                        @click="selectPart(item.component_key)"
+                                        @dragstart="onDragStart(item.component_key, $event)" @dragend="onDragEnd">
+                                        <span class="part-icon" aria-hidden="true">
+                                            <svg viewBox="0 0 24 24" focusable="false">
+                                                <component v-for="(shape, i) in iconShapes(item.component_key)" :key="i"
+                                                    :is="shape.tag" v-bind="shape.attrs" />
+                                            </svg>
+                                        </span>
+                                        <span class="part-name">{{ displayName(item.component_key) }}</span>
+                                    </button>
+                                </li>
+                            </ul>
+                        </section>
+                    </div>
+
+                    <p class="bench-help">
+                        Select a part, then select where it goes. On desktop you can also drag parts.
+                        Press Esc to put a part down.
+                    </p>
+                </section>
+
+                <!-- SIDE -->
+                <aside class="side" aria-label="Checklist, current step, and activity">
+                    <section class="card">
+                        <button class="accordion" type="button" :aria-expanded="showPrep ? 'true' : 'false'"
+                            aria-controls="prep-list" @click="showPrep = !showPrep">
+                            <span>
+                                <span class="kicker">Safety check</span>
+                                <strong class="card-title">
+                                    {{ phase === "assemble" ? "Before assembly" : "Before disassembly" }}
+                                </strong>
+                            </span>
+                            <span class="count" :class="{ ready: prepDone }">{{ prepCount }}/{{ prepItems.length
+                                }}</span>
+                        </button>
+
+                        <ul id="prep-list" v-show="showPrep || !prepDone" class="tasks">
+                            <li v-for="(item, index) in prepItems" :key="item">
+                                <label class="task" :class="{ done: currentPrepChecked[index], muted: !editablePrep }">
+                                    <input class="sr-check" type="checkbox" :checked="currentPrepChecked[index]"
+                                        :disabled="!editablePrep" @change="togglePrep(index)" />
+                                    <span class="box" aria-hidden="true">
+                                        <i v-if="currentPrepChecked[index]" class="fas fa-check"></i>
+                                    </span>
+                                    <span>{{ item }}</span>
+                                </label>
+                            </li>
+                        </ul>
+                    </section>
+
+                    <section class="card guide" aria-live="polite">
+                        <span class="kicker">Current step</span>
+                        <strong class="guide-title">{{ statusTitle }}</strong>
+                        <p class="muted">{{ statusText }}</p>
+
+                        <div class="progress" role="progressbar" aria-label="Steps completed" :aria-valuemin="0"
+                            :aria-valuemax="totalActions" :aria-valuenow="completedActions">
+                            <span :style="{ width: progressPercent + '%' }"></span>
+                        </div>
+                        <p class="muted small">{{ completedActions }} of {{ totalActions }} steps done</p>
+
+                        <button v-if="procedureComplete && !attemptEnded" class="btn btn-primary btn-block"
+                            type="button" :disabled="completing || busy" @click="completeAssessment">
+                            <i :class="completing ? 'fas fa-spinner fa-spin' : 'fas fa-paper-plane'"
+                                aria-hidden="true"></i>
+                            {{ completing ? "Submitting…" : "Submit assessment" }}
+                        </button>
+                    </section>
+
+                    <section class="card log" aria-label="Activity">
+                        <span class="kicker">Activity</span>
+                        <ol v-if="logs.length">
+                            <li v-for="entry in logs" :key="entry.id" :class="entry.type">
+                                <i :class="iconForLog(entry.type)" aria-hidden="true"></i>
+                                <span>{{ entry.text }}</span>
+                                <time>{{ entry.time }}</time>
+                            </li>
+                        </ol>
+                        <p v-else class="muted small">No moves yet.</p>
+                    </section>
+                </aside>
+            </main>
+
+            <!-- TOAST (visual; the live region announces it) -->
+            <div v-if="lastFeedback" :key="lastFeedback.id" class="toast" :class="lastFeedback.correct ? 'ok' : 'bad'"
+                aria-hidden="true">
+                <i :class="lastFeedback.correct ? 'fas fa-circle-check' : 'fas fa-circle-exclamation'"></i>
+                <span>{{ lastFeedback.message }}</span>
+            </div>
+        </template>
+
+        <!-- RESULT -->
+        <div v-if="showResult" class="overlay">
+            <section class="dialog" role="dialog" aria-modal="true" aria-labelledby="result-title"
+                aria-describedby="result-message">
+                <span class="kicker">Practical result</span>
+                <h2 id="result-title" ref="resultTitle" tabindex="-1">{{ resultHeading }}</h2>
+
+                <p class="result-score" :class="{ bad: !resultPassed }">{{ resultPercentage }}%</p>
+
+                <dl class="stat-row">
+                    <div>
+                        <dt>Steps</dt>
+                        <dd>{{ resultCompleted }}/{{ totalActions }}</dd>
+                    </div>
+                    <div>
+                        <dt>Mistakes</dt>
+                        <dd>{{ resultMistakes }}</dd>
+                    </div>
+                </dl>
+
+                <p id="result-message" class="result-message">{{ resultMessage }}</p>
+
+                <button v-if="!resultTimedOut" class="btn btn-primary btn-block" type="button" @click="goToRecords">
+                    View records
+                </button>
+                <button v-else class="btn btn-primary btn-block" type="button" @click="goToAssessments">
+                    Back to assessments
+                </button>
+            </section>
         </div>
-      </div>
-
-      <p class="sr-only" aria-live="polite">{{ announcement }}</p>
     </div>
-  </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { computed, nextTick, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { hardwareProcedureRequest } from '@/assessmentrequests/hardwareProcedure'
 
+/* =========================================================
+   CONSTANTS
+========================================================= */
+
+const TOTAL_SECONDS = 10 * 60
+const WARNING_SECONDS = 2 * 60
+const PASSING_SCORE = 75
+const LOG_LIMIT = 6
+
+// Fixed slots inside the chassis. Each slot accepts only its own component.
+const CASE_SLOTS = [
+    { key: 'side_panel', area: 'cov' },
+    { key: 'cpu_heatsink', area: 'cpu' },
+    { key: 'ram', area: 'ram' },
+    { key: 'system_fan', area: 'fan' },
+    { key: 'motherboard', area: 'mb' },
+    { key: 'psu', area: 'psu' },
+    { key: 'expansion_card', area: 'exp' },
+    { key: 'storage_drive', area: 'drv' },
+    { key: 'internal_cables', area: 'cab' },
+]
+
+const DISASSEMBLY_PREP = [
+    'Turn off the computer and switch off the power supply.',
+    'Unplug the power cord from the wall outlet.',
+    'Disconnect the monitor, keyboard, mouse, and network cable.',
+    'Put on the anti-static wrist strap or ESD gloves.',
+    'Clip the wrist strap to a grounded metal surface.',
+    'Place the system unit on a clean, non-carpeted table.',
+    'Prepare a Phillips screwdriver and a container for the screws.',
+]
+
+const ASSEMBLY_PREP = [
+    'Put on the anti-static wrist strap or ESD gloves again.',
+    'Check that every part is on the table and cables are in the cable tray.',
+    'Keep the screw container within reach.',
+    'Check for loose screws or tools inside the chassis before closing it.',
+]
+
+// Static icon shapes, rendered as Vue elements (no raw HTML).
+const rect = (x, y, width, height, rx = 0) => ({ tag: 'rect', attrs: { x, y, width, height, rx } })
+const circle = (cx, cy, r) => ({ tag: 'circle', attrs: { cx, cy, r } })
+const path = (d) => ({ tag: 'path', attrs: { d } })
+
+const ICONS = {
+    side_panel: [rect(3, 3, 18, 18, 2), circle(6.5, 6.5, 0.7), circle(17.5, 6.5, 0.7), circle(6.5, 17.5, 0.7), circle(17.5, 17.5, 0.7)],
+    motherboard: [rect(3, 3, 18, 18, 1.5), rect(6, 6, 5, 5), path('M14 5v9M16.5 5v9M19 5v9M6 15h12M6 18h5')],
+    cpu_heatsink: [path('M4 4h16M4 7.5h16M4 11h16M4 14.5h16'), rect(4, 17, 16, 3, 1)],
+    ram: [rect(2, 7, 20, 10, 1), path('M6 7v3M10 7v3M14 7v3M18 7v3M6 17v3M18 17v3')],
+    expansion_card: [path('M4 4h10l4 4v12H4z'), path('M8 16h8M8 18.5h8M8 8h3v3H8z')],
+    storage_drive: [rect(3, 6, 18, 12, 2), path('M7 10h5M7 14h8'), circle(17, 12, 1)],
+    psu: [rect(3, 4, 18, 16, 2), circle(14, 12, 4), path('M11.5 12h5M14 9.5v5'), rect(5, 6, 3, 2, 0.4)],
+    system_fan: [circle(12, 12, 9), circle(12, 12, 2), path('M12 10c0-3 1-5 3-5M14 12c3 0 5 1 5 3M10 14c0 3-1 5-3 5')],
+    internal_cables: [rect(2, 6, 4, 12, 1), rect(18, 6, 4, 12, 1), path('M6 9h12M6 12h12M6 15h12')],
+}
+
+const FALLBACK_ICON = [rect(3, 3, 18, 18, 2)]
+
+/* =========================================================
+   ROUTER
+========================================================= */
+
 const route = useRoute()
 const router = useRouter()
-const emit = defineEmits(['complete'])
+
+const quizId = computed(() => Number(route.params.quizId || route.params.id || route.query.quiz))
+
+/* =========================================================
+   STATE
+========================================================= */
 
 const quiz = ref({})
 const assessment = ref({})
-const question = ref({})
 const catalog = ref([])
+const passingScore = ref(PASSING_SCORE)
+
 const attemptId = ref(null)
-const phase = ref('disassemble')
-const loading = ref(true)
-const saving = ref(false)
-const submitted = ref(false)
-const result = ref(null)
+const installedState = ref({})
+
 const completedActions = ref(0)
 const totalActions = ref(0)
 const mistakeCount = ref(0)
-const actionCount = ref(0)
-const selectedPart = ref(null)
-const dragState = ref(null)
-const movingKey = ref(null)
-const movingDirection = ref(null)
-const announcement = ref('')
-const warning = ref({ visible: false, title: '', message: '' })
-const startedAt = ref(Date.now())
-const now = ref(Date.now())
-const chassisSvg = ref(null)
-const partsTrayRef = ref(null)
-const cableTrayRef = ref(null)
-const screwTrayRef = ref(null)
-const installedState = ref({})
-let timer = null
-let warningTimer = null
-let ignoreClickUntil = 0
 
-const quizId = computed(() => route.params.id)
-const catalogByKey = computed(() => Object.fromEntries(catalog.value.map(item => [item.component_key, item])))
+const phase = ref('disassemble')
+const procedureComplete = ref(false)
+
+const attemptEnded = ref(false)
+const endedReason = ref('')
+const submitted = ref(false)
+
+const deadlineMs = ref(null)
+const remainingSeconds = ref(TOTAL_SECONDS)
+let timer = null
+
+const loading = ref(true)
+const loadError = ref('')
+const actionPending = ref(false)
+const completing = ref(false)
+const submitError = ref('')
+
+const currentComponent = ref(null)
+const draggedKey = ref(null)
+const activeTarget = ref(null)
+const flashTarget = ref(null)
+
+const showPrep = ref(true)
+const prepChecked = ref({
+    disassemble: DISASSEMBLY_PREP.map(() => false),
+    assemble: ASSEMBLY_PREP.map(() => false),
+})
+
+const logs = ref([])
+const lastFeedback = ref(null)
+const announcement = ref('')
+let feedbackTimer = null
+let flashTimer = null
+let logId = 0
+
+const showResult = ref(false)
+const resultPassed = ref(false)
+const resultTimedOut = ref(false)
+const resultPercentage = ref(0)
+const resultCompleted = ref(0)
+const resultMistakes = ref(0)
+const resultTitle = ref(null)
+
+/* =========================================================
+   COMPUTED
+========================================================= */
+
+const busy = computed(() => actionPending.value || completing.value)
+
+const prepKey = computed(() => (phase.value === 'assemble' ? 'assemble' : 'disassemble'))
+const prepItems = computed(() => (prepKey.value === 'assemble' ? ASSEMBLY_PREP : DISASSEMBLY_PREP))
+const currentPrepChecked = computed(() => prepChecked.value[prepKey.value])
+const prepCount = computed(() => currentPrepChecked.value.filter(Boolean).length)
+const prepDone = computed(() => prepCount.value === prepItems.value.length)
+const editablePrep = computed(() => !loading.value && !attemptEnded.value && !procedureComplete.value)
+
+const interactive = computed(() =>
+    !loading.value &&
+    !loadError.value &&
+    !attemptEnded.value &&
+    !submitted.value &&
+    !showResult.value &&
+    !procedureComplete.value &&
+    !busy.value &&
+    phase.value !== 'complete' &&
+    prepDone.value
+)
 
 const phaseLabel = computed(() => {
-  if (phase.value === 'assemble') return 'Assembly'
-  if (phase.value === 'complete') return 'Complete'
-  return 'Disassembly'
+    if (phase.value === 'disassemble') return 'Disassembly'
+    if (phase.value === 'assemble') return 'Assembly'
+    return 'Complete'
 })
 
-const elapsedLabel = computed(() => {
-  const seconds = Math.max(0, Math.floor((now.value - startedAt.value) / 1000))
-  const minutes = Math.floor(seconds / 60)
-  const remain = seconds % 60
-  return `${String(minutes).padStart(2, '0')}:${String(remain).padStart(2, '0')}`
+const railSteps = computed(() => {
+    const finished = phase.value === 'complete'
+
+    return [
+        { key: 'disassemble', number: 1, label: 'Disassemble', state: phase.value === 'disassemble' ? 'current' : 'done' },
+        { key: 'assemble', number: 2, label: 'Assemble', state: phase.value === 'assemble' ? 'current' : finished ? 'done' : '' },
+        {
+            key: 'submit',
+            number: 3,
+            label: 'Submit',
+            state: submitted.value ? 'done' : finished ? 'current' : '',
+        },
+    ]
 })
 
-const canSubmit = computed(() => Boolean(attemptId.value) && actionCount.value > 0 && !saving.value && !submitted.value)
-const hardwareTray = computed(() => catalog.value.filter(item => !isInstalled(item.component_key) && !['cable', 'fastener'].includes(item.item_type)))
-const cableTray = computed(() => catalog.value.filter(item => !isInstalled(item.component_key) && item.item_type === 'cable'))
-const screwTray = computed(() => catalog.value.filter(item => !isInstalled(item.component_key) && item.item_type === 'fastener'))
-const screwQuantity = computed(() => screwTray.value.reduce((sum, item) => sum + Number(item.quantity || 1), 0))
+const progressPercent = computed(() =>
+    totalActions.value ? Math.round((completedActions.value / totalActions.value) * 100) : 0
+)
 
-const installedZoneByKey = {
-  ac_power_cable: 'ac_inlet',
-  side_panel_screws: 'side_screws',
-  side_panel: 'side_panel',
-  front_panel_wire: 'front_header',
-  card_reader_wire: 'reader_header',
-  sata_cable_hdd: 'sata_port',
-  portable_hdd_wires: 'dock_ports',
-  optical_ribbon: 'optical_header',
-  atx_24pin: 'atx_24pin',
-  cpu_power: 'cpu_power',
-  drive_power: 'drive_power',
-  gpu_power: 'gpu_power',
-  drive_slot_cover: 'drive_cover',
-  expansion_screws: 'exp_screws',
-  expansion_cards: 'pcie_slots',
-  expansion_covers: 'exp_covers',
-  ram: 'ram_slots',
-  cpu_fan_wire: 'cpu_fan_header',
-  cpu_fan_screws: 'cpu_fan_screws',
-  cpu_fan: 'cpu_fan_mount',
-  system_fan_wire: 'case_fan_header',
-  system_fan_screws: 'case_fan_screws',
-  system_fan: 'case_fan_mount',
-  card_reader_screws: 'reader_screws',
-  card_reader: 'reader_bay',
-  optical_screws: 'optical_screws',
-  optical_drive: 'optical_bay',
-  hdd_screws: 'hdd_screws',
-  hdd: 'hdd_bay',
-  portable_hdd_slot: 'dock_bay',
-  plastic_led_piece: 'led_mount',
-  io_screws: 'io_screws',
-  connectivity_center: 'io_center',
-  psu_screws: 'psu_screws',
-  psu: 'psu_bay',
-  motherboard_screws: 'mb_screws',
-  motherboard: 'mb_mount',
+const timeWarning = computed(() => !attemptEnded.value && remainingSeconds.value <= WARNING_SECONDS)
+
+const formattedTime = computed(() => {
+    const seconds = Math.max(0, remainingSeconds.value)
+    const minutes = Math.floor(seconds / 60)
+    const remainder = seconds % 60
+
+    return `${String(minutes).padStart(2, '0')}:${String(remainder).padStart(2, '0')}`
+})
+
+const tableParts = computed(() =>
+    catalog.value.filter((item) => !componentVisible(item.component_key) && item.component_key !== 'internal_cables')
+)
+
+const cableParts = computed(() =>
+    catalog.value.filter((item) => !componentVisible(item.component_key) && item.component_key === 'internal_cables')
+)
+
+const statusTitle = computed(() => {
+    if (attemptEnded.value) return 'Attempt ended'
+    if (!prepDone.value) return 'Complete the safety check'
+    if (procedureComplete.value) return 'All parts handled'
+    return phase.value === 'assemble' ? 'Assemble the system unit' : 'Disassemble the system unit'
+})
+
+const statusText = computed(() => {
+    if (attemptEnded.value) return 'Start a new attempt from Assessments to try again.'
+    if (!prepDone.value) return 'Tick every safety task to unlock the bench.'
+    if (procedureComplete.value) return 'Submit to save this attempt to your records.'
+    return phase.value === 'assemble'
+        ? 'Pick up a part from the table and place it in its empty slot.'
+        : 'Pick up a part from the chassis and place it in the correct tray.'
+})
+
+const resultHeading = computed(() => {
+    if (resultTimedOut.value) return 'Time expired'
+    return resultPassed.value ? 'Assessment passed' : 'Assessment completed'
+})
+
+const resultMessage = computed(() => {
+    if (resultTimedOut.value) {
+        return 'The 10-minute limit ended before every part was handled. This attempt was not submitted.'
+    }
+
+    const score = Number(resultPercentage.value)
+
+    if (score >= 90) return 'Excellent. Precise handling with very few mistakes.'
+    if (score >= passingScore.value) return 'Passed. Review your mistakes to improve your handling.'
+
+    return 'Not passed yet. Review the disassembly and assembly order, then try again.'
+})
+
+/* =========================================================
+   HELPERS
+========================================================= */
+
+function normalizeComponent(item) {
+    return {
+        component_key: item.component_key,
+        display_name: item.display_name || item.component_key,
+        item_type: item.item_type ?? null,
+        quantity: Number(item.quantity ?? 1),
+        image: item.image || '',
+    }
 }
 
-const zoneRects = [
-  ['ac_inlet', { x: 70, y: 455, w: 75, h: 80 }],
-  ['side_screws', { x: 825, y: 75, w: 65, h: 465 }],
-  ['side_panel', { x: 65, y: 60, w: 825, h: 500 }],
-  ['front_header', { x: 565, y: 410, w: 85, h: 58 }],
-  ['reader_header', { x: 570, y: 305, w: 78, h: 55 }],
-  ['sata_port', { x: 565, y: 370, w: 85, h: 55 }],
-  ['dock_ports', { x: 680, y: 385, w: 170, h: 60 }],
-  ['optical_header', { x: 560, y: 270, w: 95, h: 60 }],
-  ['atx_24pin', { x: 585, y: 190, w: 65, h: 95 }],
-  ['cpu_power', { x: 215, y: 115, w: 70, h: 65 }],
-  ['drive_power', { x: 660, y: 300, w: 195, h: 95 }],
-  ['gpu_power', { x: 520, y: 330, w: 120, h: 75 }],
-  ['drive_cover', { x: 838, y: 125, w: 50, h: 105 }],
-  ['exp_screws', { x: 180, y: 335, w: 55, h: 70 }],
-  ['pcie_slots', { x: 235, y: 325, w: 360, h: 105 }],
-  ['exp_covers', { x: 120, y: 330, w: 100, h: 85 }],
-  ['ram_slots', { x: 495, y: 145, w: 115, h: 185 }],
-  ['cpu_fan_header', { x: 420, y: 185, w: 70, h: 65 }],
-  ['cpu_fan_screws', { x: 235, y: 170, w: 145, h: 140 }],
-  ['cpu_fan_mount', { x: 235, y: 165, w: 145, h: 145 }],
-  ['case_fan_header', { x: 250, y: 285, w: 80, h: 65 }],
-  ['case_fan_screws', { x: 90, y: 130, w: 135, h: 135 }],
-  ['case_fan_mount', { x: 90, y: 130, w: 135, h: 135 }],
-  ['reader_screws', { x: 675, y: 225, w: 180, h: 75 }],
-  ['reader_bay', { x: 690, y: 220, w: 160, h: 80 }],
-  ['optical_screws', { x: 675, y: 125, w: 180, h: 100 }],
-  ['optical_bay', { x: 690, y: 125, w: 160, h: 100 }],
-  ['hdd_screws', { x: 675, y: 295, w: 180, h: 90 }],
-  ['hdd_bay', { x: 690, y: 295, w: 160, h: 90 }],
-  ['dock_bay', { x: 690, y: 380, w: 160, h: 65 }],
-  ['led_mount', { x: 835, y: 345, w: 55, h: 95 }],
-  ['io_screws', { x: 830, y: 215, w: 60, h: 145 }],
-  ['io_center', { x: 830, y: 220, w: 60, h: 135 }],
-  ['psu_screws', { x: 90, y: 415, w: 285, h: 135 }],
-  ['psu_bay', { x: 90, y: 415, w: 285, h: 135 }],
-  ['mb_screws', { x: 200, y: 105, w: 465, h: 390 }],
-  ['mb_mount', { x: 200, y: 105, w: 465, h: 390 }],
-]
-
-function itemType(key) {
-  return catalogByKey.value[key]?.item_type || 'hardware'
+function componentVisible(key) {
+    return Boolean(installedState.value[key])
 }
 
 function displayName(key) {
-  return catalogByKey.value[key]?.display_name || key
+    return catalog.value.find((item) => item.component_key === key)?.display_name || key
 }
 
-function isInstalled(key) {
-  return installedState.value[key] !== false
+function iconShapes(key) {
+    return ICONS[key] || FALLBACK_ICON
 }
 
-function trayForKey(key) {
-  const type = itemType(key)
-  if (type === 'cable') return 'cable_tray'
-  if (type === 'fastener') return 'screw_tray'
-  return 'parts_tray'
+function holdingHint() {
+    return phase.value === 'assemble' ? 'Choose an empty slot in the chassis.' : 'Choose a tray to place it in.'
 }
 
-function sourceZoneForKey(key) {
-  return isInstalled(key) ? (installedZoneByKey[key] || 'chassis') : trayForKey(key)
+function sourceZoneFor(key) {
+    if (componentVisible(key)) return 'case'
+    return key === 'internal_cables' ? 'cable_tray' : 'parts_tray'
 }
 
-function inferAction(key, destinationZone) {
-  const type = itemType(key)
-  const fromInstalled = isInstalled(key)
-  const goingToTray = ['parts_tray', 'cable_tray', 'screw_tray'].includes(destinationZone)
-
-  if (fromInstalled && goingToTray) {
-    if (type === 'fastener') return 'unscrew'
-    if (type === 'cable') return key === 'ac_power_cable' ? 'unplug' : 'disconnect'
-    return 'remove'
-  }
-
-  if (!fromInstalled && !goingToTray) {
-    if (type === 'fastener') return 'screw'
-    if (type === 'cable') return key === 'ac_power_cable' ? 'plug' : 'connect'
-    return 'install'
-  }
-
-  if (fromInstalled) {
-    if (type === 'fastener') return 'unscrew'
-    if (type === 'cable') return key === 'ac_power_cable' ? 'unplug' : 'disconnect'
-    return 'remove'
-  }
-
-  if (type === 'fastener') return 'screw'
-  if (type === 'cable') return key === 'ac_power_cable' ? 'plug' : 'connect'
-  return 'install'
+function slotId(key) {
+    return `slot:${key}`
 }
 
-function partMotionClass(key) {
-  return {
-    'moving-out': movingKey.value === key && movingDirection.value === 'out',
-    'moving-in': movingKey.value === key && movingDirection.value === 'in',
-    selected: selectedPart.value === key,
-  }
+function zoneId(key) {
+    return `zone:${key}`
+}
+
+function parseTarget(id) {
+    const [kind, key] = id.split(':')
+    return { kind, key }
+}
+
+function errorText(error, fallback) {
+    const status = error?.response?.status
+
+    if (status === 401 || status === 419) return 'Your session has expired. Sign in again to continue.'
+    return error?.response?.data?.message || fallback
+}
+
+// Disassembly: an installed part can be picked up. Assembly: a loose part can be picked up.
+function isDraggable(key) {
+    if (!interactive.value) return false
+
+    return phase.value === 'disassemble' ? componentVisible(key) : !componentVisible(key)
+}
+
+// Disassembly: a held part goes to a tray. Assembly: a held part goes to an empty slot.
+function targetAccepts(id) {
+    if (!interactive.value || !currentComponent.value) return false
+
+    const { kind, key } = parseTarget(id)
+    const held = currentComponent.value
+
+    if (phase.value === 'disassemble') {
+        return kind === 'zone' && componentVisible(held)
+    }
+
+    return kind === 'slot' && !componentVisible(held) && !componentVisible(key)
+}
+
+function slotAccepts(key) {
+    return targetAccepts(slotId(key))
+}
+
+function zoneAccepts(key) {
+    return targetAccepts(zoneId(key))
+}
+
+function canDragSlot(key) {
+    return componentVisible(key) && isDraggable(key)
+}
+
+function slotDisabled(key) {
+    return !canDragSlot(key) && !slotAccepts(key)
+}
+
+function slotClasses(key) {
+    return {
+        occupied: componentVisible(key),
+        grab: canDragSlot(key),
+        accepts: slotAccepts(key),
+        over: activeTarget.value === slotId(key),
+        flash: flashTarget.value === slotId(key),
+        held: currentComponent.value === key,
+        done: procedureComplete.value && componentVisible(key),
+        cover: key === 'side_panel',
+    }
+}
+
+function zoneClasses(key) {
+    return {
+        accepts: zoneAccepts(key),
+        over: activeTarget.value === zoneId(key),
+        flash: flashTarget.value === zoneId(key),
+    }
+}
+
+function partClasses(key) {
+    return {
+        grab: isDraggable(key),
+        held: currentComponent.value === key,
+    }
+}
+
+function slotStateText(key) {
+    if (componentVisible(key)) return canDragSlot(key) ? 'Select to remove' : 'Installed'
+    if (slotAccepts(key)) return 'Place here'
+    return 'Empty'
+}
+
+function slotLabel(key) {
+    const name = displayName(key)
+
+    if (componentVisible(key)) {
+        return `${name}, installed.${canDragSlot(key) ? ' Select to remove it.' : ''}`
+    }
+
+    if (slotAccepts(key)) {
+        return `${name} slot, empty. Place ${displayName(currentComponent.value)} here.`
+    }
+
+    return `${name} slot, empty.`
+}
+
+function partLabel(key) {
+    const name = displayName(key)
+
+    if (currentComponent.value === key) return `${name}, held. Select to put it down.`
+    if (isDraggable(key)) return `${name}. Select to pick it up.`
+    return `${name}. Not available yet.`
+}
+
+function iconForLog(type) {
+    if (type === 'ok') return 'fas fa-circle-check'
+    if (type === 'bad') return 'fas fa-circle-exclamation'
+    return 'fas fa-circle-info'
+}
+
+function announce(message) {
+    announcement.value = message
+}
+
+function addLog(text, type = 'info') {
+    const time = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })
+
+    logs.value = [{ id: ++logId, text, type, time }, ...logs.value].slice(0, LOG_LIMIT)
+}
+
+function notify(correct, message) {
+    lastFeedback.value = { id: Date.now(), correct, message }
+    announce(message)
+    addLog(message, correct ? 'ok' : 'bad')
+
+    window.clearTimeout(feedbackTimer)
+    feedbackTimer = window.setTimeout(() => {
+        lastFeedback.value = null
+    }, 2800)
+
+    if (!correct) navigator.vibrate?.(60)
+}
+
+function flashAt(id) {
+    flashTarget.value = id
+    window.clearTimeout(flashTimer)
+    flashTimer = window.setTimeout(() => {
+        flashTarget.value = null
+    }, 500)
+}
+
+function togglePrep(index) {
+    const list = currentPrepChecked.value
+    list[index] = !list[index]
+}
+
+/* =========================================================
+   PICK UP, HOLD, PLACE
+========================================================= */
+
+function selectPart(key) {
+    if (!interactive.value) {
+        if (!prepDone.value && !attemptEnded.value) {
+            announce('Finish the safety check before you start.')
+        }
+        return
+    }
+
+    if (!isDraggable(key)) {
+        announce(`${displayName(key)} is not available yet.`)
+        return
+    }
+
+    if (currentComponent.value === key) {
+        releaseHeld()
+        return
+    }
+
+    currentComponent.value = key
+    announce(`Holding ${displayName(key)}. ${holdingHint()}`)
+}
+
+function releaseHeld() {
+    if (!currentComponent.value) return
+
+    announce(`${displayName(currentComponent.value)} put down.`)
+    currentComponent.value = null
+}
+
+function onSlotClick(key) {
+    if (componentVisible(key) && phase.value === 'disassemble') {
+        selectPart(key)
+        return
+    }
+
+    tapTarget(slotId(key))
+}
+
+function placeInZone(key) {
+    tapTarget(zoneId(key))
+}
+
+function tapTarget(id) {
+    if (!interactive.value) return
+
+    if (!currentComponent.value) {
+        announce('Select a part first, then choose where it goes.')
+        return
+    }
+
+    if (!targetAccepts(id)) {
+        announce('That place is not available for this part right now.')
+        return
+    }
+
+    placeOn(id)
+}
+
+function onDragStart(key, event) {
+    if (!isDraggable(key)) {
+        event?.preventDefault()
+        return
+    }
+
+    draggedKey.value = key
+    currentComponent.value = key
+
+    if (event?.dataTransfer) {
+        event.dataTransfer.effectAllowed = 'move'
+        event.dataTransfer.setData('text/plain', key)
+    }
+}
+
+function onDragEnd() {
+    draggedKey.value = null
+    activeTarget.value = null
+}
+
+function onDragOver(event, id) {
+    if (!targetAccepts(id)) return
+
+    event.preventDefault()
+    activeTarget.value = id
+
+    if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
+}
+
+function onDragLeave(event, id) {
+    if (event.currentTarget?.contains(event.relatedTarget)) return
+    if (activeTarget.value === id) activeTarget.value = null
+}
+
+function onDrop(event, id) {
+    activeTarget.value = null
+
+    const key = draggedKey.value || event?.dataTransfer?.getData('text/plain') || null
+    draggedKey.value = null
+
+    if (!key || !isDraggable(key)) return
+
+    currentComponent.value = key
+
+    if (targetAccepts(id)) placeOn(id)
+}
+
+// Correct placement is sent as the proper destination. A wrong slot is sent as "wrong_slot",
+// which the server never accepts, so it is recorded as a mistake.
+function placeOn(id) {
+    const { key } = parseTarget(id)
+    const held = currentComponent.value
+
+    if (!held) return
+
+    const destination = phase.value === 'disassemble'
+        ? key
+        : held === key
+            ? 'case'
+            : 'wrong_slot'
+
+    performAction(held, destination, id)
+}
+
+/* =========================================================
+   PROGRESS
+========================================================= */
+
+function updateInstalledComponents(components) {
+    const next = {}
+
+    components.forEach((component) => {
+        const key = typeof component === 'string' ? component : component?.component_key
+        if (key) next[key] = true
+    })
+
+    installedState.value = next
+}
+
+function applyProgress(data) {
+    completedActions.value = Number(data.completed_actions ?? completedActions.value)
+    totalActions.value = Number(data.total_actions ?? totalActions.value)
+    mistakeCount.value = Number(data.mistake_count ?? mistakeCount.value)
+    phase.value = data.phase || phase.value
+    procedureComplete.value = Boolean(data.procedure_complete)
+
+    if (Array.isArray(data.installed_components)) {
+        updateInstalledComponents(data.installed_components)
+    }
+}
+
+/* =========================================================
+   ACTIONS
+========================================================= */
+
+async function performAction(componentKey, destinationZone, targetId) {
+    if (!attemptId.value || !interactive.value) return
+
+    actionPending.value = true
+
+    const verb = phase.value === 'assemble' ? 'installed' : 'removed'
+    const performed = phase.value === 'assemble' ? 'install' : 'remove'
+
+    try {
+        const { data } = await hardwareProcedureRequest.action(quizId.value, attemptId.value, {
+            component_key: componentKey,
+            performed_action: performed,
+            source_zone: sourceZoneFor(componentKey),
+            destination_zone: destinationZone,
+        })
+
+        if (!data?.success) {
+            throw new Error(data?.message || 'The server did not record this move.')
+        }
+
+        const result = data.data ?? {}
+
+        applyProgress(result)
+        currentComponent.value = null
+
+        if (result.allowed === true) {
+            notify(true, `${displayName(componentKey)} ${verb} correctly.`)
+        } else if (result.procedure_complete) {
+            notify(false, 'All steps are already done. Submit the assessment.')
+        } else {
+            flashAt(targetId)
+            notify(false, 'Not the correct move. It is recorded as a mistake.')
+        }
+    } catch (error) {
+        console.error('Hardware action failed:', error)
+        handleActionError(error)
+    } finally {
+        actionPending.value = false
+    }
+}
+
+function handleActionError(error) {
+    const status = error?.response?.status
+
+    if (status === 410) {
+        expireAttempt()
+        return
+    }
+
+    if (status === 409) {
+        currentComponent.value = null
+        endAttempt('This attempt was already submitted. Open Records to view it.')
+        return
+    }
+
+    // No response: the move may or may not have been saved, so check the attempt.
+    if (!error?.response) {
+        notify(false, 'Connection lost. This move was not confirmed.')
+        resyncAfterError()
+        return
+    }
+
+    notify(false, errorText(error, 'Could not record this move. Try again.'))
+}
+
+async function resyncAfterError() {
+    try {
+        const { data } = await hardwareProcedureRequest.start(quizId.value)
+        const attempt = data?.data
+
+        if (!attempt) return
+
+        if (Number(attempt.attempt_id) !== Number(attemptId.value)) {
+            endAttempt('This attempt has ended. Start a new attempt from Assessments.')
+            return
+        }
+
+        applyProgress(attempt)
+        currentComponent.value = null
+    } catch {
+        announce('Still cannot reach the server. Check your connection, then try again.')
+    }
+}
+
+/* =========================================================
+   LOAD
+========================================================= */
+
+function parseStart(value) {
+    if (!value) return null
+
+    // Strip microseconds so every browser can parse the timestamp.
+    const normalized = String(value).replace(' ', 'T').replace(/\.\d+/, '')
+    const time = Date.parse(normalized)
+
+    return Number.isNaN(time) ? null : time
+}
+
+function computeDeadline(attempt) {
+    if (typeof attempt.remaining_seconds === 'number') {
+        return Date.now() + attempt.remaining_seconds * 1000
+    }
+
+    const started = parseStart(attempt.started_at)
+    return (started ?? Date.now()) + TOTAL_SECONDS * 1000
 }
 
 async function load() {
-  loading.value = true
+    loading.value = true
+    loadError.value = ''
 
-  try {
-    const response = await hardwareProcedureRequest.get(quizId.value)
-    if (!response?.success || !response?.data) throw new Error('Invalid hardware API response.')
+    try {
+        const { data } = await hardwareProcedureRequest.get(quizId.value)
 
-    quiz.value = response.data.quiz || {}
-    assessment.value = response.data.assessment || {}
-    question.value = response.data.question || {}
-    catalog.value = Array.isArray(response.data.components) ? response.data.components : []
-    totalActions.value = Number(response.data.total_actions || 0)
+        if (!data?.success || !data?.data) {
+            throw new Error('Invalid hardware API response.')
+        }
 
-    installedState.value = Object.fromEntries(catalog.value.map(item => [item.component_key, true]))
+        const hardware = data.data
 
-    const started = await hardwareProcedureRequest.start(quizId.value)
-    if (!started?.success || !started?.data) throw new Error('Unable to start the practical attempt.')
+        quiz.value = hardware.quiz ?? {}
+        assessment.value = hardware.assessment ?? {}
+        catalog.value = (hardware.components ?? []).map(normalizeComponent)
+        passingScore.value = Number(hardware.passing_score ?? PASSING_SCORE)
 
-    attemptId.value = started.data.attempt_id
-    phase.value = started.data.phase || 'disassemble'
-    completedActions.value = Number(started.data.completed_actions || 0)
-    totalActions.value = Number(started.data.total_actions || totalActions.value)
+        const { data: started } = await hardwareProcedureRequest.start(quizId.value)
 
-    const history = Array.isArray(started.data.history) ? started.data.history : []
-    actionCount.value = history.length
-    history.filter(row => row.is_correct).forEach(applyHistoryAction)
-    startedAt.value = Date.now()
-  } catch (error) {
-    console.error('Failed to load hardware practical:', error)
-    showWarning('Unable to load assessment', error?.response?.data?.message || error?.message || 'Please try again.')
-  } finally {
-    loading.value = false
-  }
-}
+        if (!started?.success || !started?.data) {
+            throw new Error('Unable to start the practical attempt.')
+        }
 
-function applyHistoryAction(row) {
-  const outActions = ['unplug', 'disconnect', 'unscrew', 'remove']
-  const inActions = ['plug', 'connect', 'screw', 'install']
+        const attempt = started.data
 
-  if (outActions.includes(row.performed_action)) {
-    installedState.value = { ...installedState.value, [row.component_key]: false }
-  } else if (inActions.includes(row.performed_action)) {
-    installedState.value = { ...installedState.value, [row.component_key]: true }
-  }
-}
+        attemptId.value = attempt.attempt_id
+        totalActions.value = Number(attempt.total_actions ?? hardware.total_actions ?? 0)
+        applyProgress(attempt)
 
-function selectPart(key) {
-  if (submitted.value || saving.value || Date.now() < ignoreClickUntil) return
-  selectedPart.value = selectedPart.value === key ? null : key
-  announcement.value = selectedPart.value ? `${displayName(key)} selected.` : 'Selection cleared.'
-}
+        deadlineMs.value = computeDeadline(attempt)
+        startTimer()
 
-function startSvgDrag(key, event) {
-  beginDrag(key, event)
-}
-
-function startTrayDrag(key, event) {
-  beginDrag(key, event)
-}
-
-function beginDrag(key, event) {
-  if (submitted.value || saving.value) return
-  event.preventDefault()
-  selectedPart.value = key
-  dragState.value = {
-    key,
-    startX: event.clientX,
-    startY: event.clientY,
-    x: event.clientX + 14,
-    y: event.clientY + 14,
-    moved: false,
-  }
-  window.addEventListener('pointermove', onPointerMove, { passive: false })
-  window.addEventListener('pointerup', onPointerUp)
-  window.addEventListener('pointercancel', cancelDrag)
-}
-
-function onPointerMove(event) {
-  if (!dragState.value) return
-  event.preventDefault()
-  const dx = event.clientX - dragState.value.startX
-  const dy = event.clientY - dragState.value.startY
-  dragState.value = {
-    ...dragState.value,
-    x: event.clientX + 14,
-    y: event.clientY + 14,
-    moved: dragState.value.moved || Math.hypot(dx, dy) > 6,
-  }
-}
-
-async function onPointerUp(event) {
-  const state = dragState.value
-  if (!state) return
-
-  if (state.moved) {
-    const destination = destinationFromPointer(event.clientX, event.clientY)
-    if (destination) {
-      await attemptAction(state.key, destination)
+        addLog('Practical started. Complete the safety check to begin.', 'info')
+        announce(`Practical ready. Phase: ${phaseLabel.value}.`)
+    } catch (error) {
+        console.error('Failed to load hardware practical:', error)
+        loadError.value = errorText(error, 'Unable to load this practical. Check your connection and try again.')
+    } finally {
+        loading.value = false
     }
-    ignoreClickUntil = Date.now() + 250
-  }
-
-  cancelDrag()
 }
 
-function cancelDrag() {
-  dragState.value = null
-  window.removeEventListener('pointermove', onPointerMove)
-  window.removeEventListener('pointerup', onPointerUp)
-  window.removeEventListener('pointercancel', cancelDrag)
-}
+/* =========================================================
+   TIMER
+========================================================= */
 
-function destinationFromPointer(clientX, clientY) {
-  const trays = [
-    ['parts_tray', partsTrayRef.value],
-    ['cable_tray', cableTrayRef.value],
-    ['screw_tray', screwTrayRef.value],
-  ]
-
-  for (const [zone, element] of trays) {
-    const rect = element?.getBoundingClientRect?.()
-    if (rect && pointInRect(clientX, clientY, rect.left, rect.top, rect.width, rect.height)) return zone
-  }
-
-  const svg = chassisSvg.value
-  const rect = svg?.getBoundingClientRect?.()
-  if (!svg || !rect || rect.width <= 0 || rect.height <= 0) return null
-  if (!pointInRect(clientX, clientY, rect.left, rect.top, rect.width, rect.height)) return null
-
-  const x = ((clientX - rect.left) / rect.width) * 1000
-  const y = ((clientY - rect.top) / rect.height) * 650
-
-  return zoneFromSvgPoint(x, y)
-}
-
-function zoneFromSvgPoint(x, y) {
-  const preferred = selectedPart.value ? installedZoneByKey[selectedPart.value] : null
-  if (preferred) {
-    const preferredZone = zoneRects.find(([name]) => name === preferred)?.[1]
-    if (preferredZone && pointInZone(x, y, preferredZone)) return preferred
-  }
-
-  for (const [name, zone] of zoneRects) {
-    if (name === 'side_panel' || name === 'mb_mount') continue
-    if (pointInZone(x, y, zone)) return name
-  }
-
-  const sidePanelZone = zoneRects.find(([name]) => name === 'side_panel')?.[1]
-  if (sidePanelZone && pointInZone(x, y, sidePanelZone)) return 'side_panel'
-
-  const motherboardZone = zoneRects.find(([name]) => name === 'mb_mount')?.[1]
-  if (motherboardZone && pointInZone(x, y, motherboardZone)) return 'mb_mount'
-
-  return 'chassis'
-}
-
-function pointInZone(x, y, zone) {
-  return x >= zone.x && x <= zone.x + zone.w && y >= zone.y && y <= zone.y + zone.h
-}
-
-function pointInRect(x, y, left, top, width, height) {
-  return x >= left && x <= left + width && y >= top && y <= top + height
-}
-
-async function handleChassisClick(event) {
-  if (!selectedPart.value || Date.now() < ignoreClickUntil) return
-  const destination = destinationFromPointer(event.clientX, event.clientY)
-  if (destination && !destination.endsWith('_tray')) await attemptAction(selectedPart.value, destination)
-}
-
-async function handleTrayClick(zone) {
-  if (!selectedPart.value || Date.now() < ignoreClickUntil) return
-  await attemptAction(selectedPart.value, zone)
-}
-
-async function attemptAction(key, destinationZone) {
-  if (!attemptId.value || saving.value || submitted.value) return
-
-  const sourceZone = sourceZoneForKey(key)
-  if (sourceZone === destinationZone) return
-
-  const performedAction = inferAction(key, destinationZone)
-  saving.value = true
-  clearWarning()
-
-  try {
-    const response = await hardwareProcedureRequest.action(quizId.value, attemptId.value, {
-      component_key: key,
-      performed_action: performedAction,
-      source_zone: sourceZone,
-      destination_zone: destinationZone,
-    })
-
-    if (!response?.success || !response?.data) throw new Error('Invalid action response.')
-
-    actionCount.value += 1
-    completedActions.value = Number(response.data.completed_actions || 0)
-    totalActions.value = Number(response.data.total_actions || totalActions.value)
-    mistakeCount.value = Number(response.data.mistake_count || 0)
-
-    const oldPhase = phase.value
-    phase.value = response.data.phase || phase.value
-
-    if (!response.data.allowed) {
-      showWarning(
-        'Action not allowed yet',
-        'That action was recorded, but the unit was not changed. Check cables, screws, covers, and component dependencies before trying again.',
-      )
-      announcement.value = 'Incorrect action recorded.'
-      return
+function updateRemaining() {
+    if (!deadlineMs.value) {
+        remainingSeconds.value = TOTAL_SECONDS
+        return
     }
 
-    const movingOut = ['unplug', 'disconnect', 'unscrew', 'remove'].includes(performedAction)
-    movingKey.value = key
-    movingDirection.value = movingOut ? 'out' : 'in'
+    remainingSeconds.value = Math.max(0, Math.ceil((deadlineMs.value - Date.now()) / 1000))
+}
 
-    if (!movingOut) {
-      installedState.value = { ...installedState.value, [key]: true }
+function startTimer() {
+    window.clearInterval(timer)
+    updateRemaining()
+
+    if (remainingSeconds.value <= 0) {
+        expireAttempt()
+        return
     }
 
-    await sleep(220)
+    timer = window.setInterval(() => {
+        if (showResult.value || attemptEnded.value) {
+            window.clearInterval(timer)
+            return
+        }
 
-    installedState.value = { ...installedState.value, [key]: !movingOut }
-    movingKey.value = null
-    movingDirection.value = null
-    selectedPart.value = null
+        updateRemaining()
 
-    if (oldPhase !== phase.value && phase.value === 'assemble') {
-      showWarning('Assembly phase', 'Disassembly has been recorded. Reassemble the system unit.', false)
-    } else if (phase.value === 'complete') {
-      showWarning('Practical sequence complete', 'Submit the attempt to record the final result.', false)
+        if (remainingSeconds.value <= 0) expireAttempt()
+    }, 1000)
+}
+
+function expireAttempt() {
+    endAttempt('Time is up. This attempt was not submitted.', { timedOut: true })
+}
+
+function endAttempt(reason, { timedOut = false } = {}) {
+    if (attemptEnded.value) return
+
+    attemptEnded.value = true
+    endedReason.value = reason
+    remainingSeconds.value = 0
+
+    window.clearInterval(timer)
+
+    currentComponent.value = null
+    draggedKey.value = null
+    activeTarget.value = null
+
+    announce(reason)
+    addLog(reason, 'bad')
+
+    if (timedOut) {
+        resultTimedOut.value = true
+        resultPassed.value = false
+        resultPercentage.value = 0
+        resultCompleted.value = completedActions.value
+        resultMistakes.value = mistakeCount.value
+        showResult.value = true
     }
-
-    announcement.value = 'Action accepted.'
-  } catch (error) {
-    console.error('Hardware action failed:', error)
-    showWarning('Unable to record action', error?.response?.data?.message || error?.message || 'Try again.')
-  } finally {
-    saving.value = false
-  }
 }
 
-async function submitAttempt() {
-  if (!canSubmit.value) return
-  saving.value = true
+/* =========================================================
+   SUBMIT
+========================================================= */
 
-  try {
-    const response = await hardwareProcedureRequest.complete(quizId.value, attemptId.value)
-    if (!response?.success || !response?.data) throw new Error('Invalid submission response.')
+async function completeAssessment() {
+    if (!attemptId.value || attemptEnded.value || submitted.value || busy.value) return
 
-    result.value = response.data
-    submitted.value = true
-    mistakeCount.value = mistakeCount.value
-    completedActions.value = Number(response.data.completed_actions || completedActions.value)
-    emit('complete', response.data)
-  } catch (error) {
-    console.error('Failed to submit attempt:', error)
-    showWarning('Submission failed', error?.response?.data?.message || error?.message || 'Try again.')
-  } finally {
-    saving.value = false
-  }
+    completing.value = true
+    submitError.value = ''
+
+    try {
+        const { data } = await hardwareProcedureRequest.complete(quizId.value, attemptId.value)
+
+        if (!data?.success) {
+            throw new Error(data?.message || 'Unable to submit this attempt.')
+        }
+
+        const result = data.data ?? {}
+
+        resultTimedOut.value = false
+        resultPassed.value = Boolean(result.passed)
+        resultPercentage.value = Number(result.percentage ?? 0)
+        resultCompleted.value = Number(result.completed_actions ?? completedActions.value)
+        resultMistakes.value = Number(result.mistake_count ?? mistakeCount.value)
+
+        submitted.value = true
+        window.clearInterval(timer)
+        showResult.value = true
+
+        addLog(resultPassed.value ? 'Assessment passed.' : 'Assessment completed.', resultPassed.value ? 'ok' : 'info')
+        announce(resultPassed.value ? 'Assessment passed.' : 'Assessment completed.')
+    } catch (error) {
+        console.error('Failed to submit practical:', error)
+
+        const status = error?.response?.status
+
+        if (status === 410) {
+            expireAttempt()
+            return
+        }
+
+        if (status === 409) {
+            endAttempt('This attempt was already submitted. Open Records to view it.')
+            return
+        }
+
+        submitError.value = errorText(error, 'Could not submit this attempt. Please try again.')
+        announce(submitError.value)
+    } finally {
+        completing.value = false
+    }
 }
 
-function showWarning(title, message, autoHide = true) {
-  clearTimeout(warningTimer)
-  warning.value = { visible: true, title, message }
-  announcement.value = `${title}. ${message}`
-  if (autoHide) {
-    warningTimer = setTimeout(clearWarning, 4800)
-  }
-}
-
-function clearWarning() {
-  clearTimeout(warningTimer)
-  warning.value = { visible: false, title: '', message: '' }
-}
-
-function sleep(ms) {
-  return new Promise(resolve => setTimeout(resolve, ms))
-}
+/* =========================================================
+   NAVIGATION, KEYBOARD, WATCHERS
+========================================================= */
 
 function goBack() {
-  router.push(`/user/quizzes/assessment/${encodeURIComponent(String(quizId.value))}`)
+    if (!showResult.value) router.back()
 }
 
+function goToRecords() {
+    router.push({ name: 'user-records' })
+}
+
+function goToAssessments() {
+    router.push({ path: '/user/assessments' })
+}
+
+function handleKeydown(event) {
+    if (event.key !== 'Escape' || showResult.value) return
+    if (currentComponent.value) releaseHeld()
+}
+
+// Show the checklist again when a new stage starts, collapse it once it is done.
+watch(phase, () => {
+    showPrep.value = true
+})
+
+watch(prepDone, (done) => {
+    if (done) {
+        showPrep.value = false
+        addLog('Safety check complete. The bench is open.', 'ok')
+    }
+})
+
+watch(showResult, async (open) => {
+    if (!open) return
+
+    await nextTick()
+    resultTitle.value?.focus()
+})
+
+/* =========================================================
+   LIFECYCLE
+========================================================= */
+
 onMounted(() => {
-  load()
-  timer = window.setInterval(() => { now.value = Date.now() }, 1000)
+    load()
+    window.addEventListener('keydown', handleKeydown)
 })
 
 onBeforeUnmount(() => {
-  cancelDrag()
-  clearTimeout(warningTimer)
-  if (timer) window.clearInterval(timer)
+    window.clearInterval(timer)
+    window.clearTimeout(feedbackTimer)
+    window.clearTimeout(flashTimer)
+    window.removeEventListener('keydown', handleKeydown)
 })
 </script>
 
 <style scoped>
-.hardware-page {
-  --black: #000000;
-  --white: #ffffff;
-  --silver: #a9a9a9;
-  --light: #d3d3d3;
-  --dim: #696969;
-  --green: #1b7f45;
-  --red: #bf2f38;
-  min-height: 100vh;
-  color: var(--black);
+/* REVERSE FROSTED NOIR (light)
+   Surfaces: translucent white with blur. Ink: #07080a. Sharp corners.
+   Pass #11813D, fail #C4161F, warning text #5C3D00 on #FFF8E6. */
+
+.lab {
+  --bg: #eef0f3;
+  --bg-soft: #e3e6eb;
+  --surface: rgba(255, 255, 255, 0.55);
+  --surface-strong: rgba(255, 255, 255, 0.8);
+  --ink: #07080a;
+  --muted: #4b5563;
+  --line: rgba(7, 8, 10, 0.12);
+  --line-strong: rgba(7, 8, 10, 0.35);
+  --grid: rgba(7, 8, 10, 0.07);
+  --pass: #11813d;
+  --fail: #c4161f;
+  --warn-ink: #5c3d00;
+  --warn-bg: rgba(255, 248, 230, 0.92);
+  --warn-line: #c99a2e;
+  --shadow: 0 18px 40px rgba(15, 23, 42, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+  --shadow-sm: 0 8px 20px rgba(15, 23, 42, 0.1);
+  --blur: blur(18px) saturate(120%);
+
+  position: relative;
+  isolation: isolate;
+  min-height: 100dvh;
+  padding: 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
   background:
-    radial-gradient(circle at 10% 3%, rgba(211, 211, 211, .25), transparent 34%),
-    radial-gradient(circle at 95% 80%, rgba(211, 211, 211, .18), transparent 42%),
-    #f7f7f6;
-  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    radial-gradient(circle at 18% 0%, rgba(7, 8, 10, 0.05), transparent 45%),
+    radial-gradient(circle at 90% 100%, rgba(7, 8, 10, 0.04), transparent 40%),
+    var(--bg);
+  color: var(--ink);
+  font-family: "Inter", system-ui, -apple-system, "Segoe UI", sans-serif;
+  font-size: 13px;
+  line-height: 1.45;
 }
 
-.hardware-page *,
-.hardware-page *::before,
-.hardware-page *::after {
+/* Background grid, same treatment as the portfolio */
+.lab::before {
+  content: "";
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background-image:
+    linear-gradient(to right, var(--grid) 1px, transparent 1px),
+    linear-gradient(to bottom, var(--grid) 1px, transparent 1px);
+  background-size: 48px 48px;
+  -webkit-mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+  mask-image: radial-gradient(ellipse at center, #000 30%, transparent 80%);
+}
+
+.lab *,
+.lab *::before,
+.lab *::after {
   box-sizing: border-box;
+  border-radius: 0;
 }
 
-button {
+.lab h1,
+.lab h2,
+.lab p,
+.lab dl,
+.lab dd,
+.lab ol,
+.lab ul {
+  margin: 0;
+}
+
+.lab ul,
+.lab ol {
+  padding: 0;
+  list-style: none;
+}
+
+.lab button {
+  cursor: pointer;
   font: inherit;
 }
 
-.page-shell {
-  width: min(1500px, 100%);
-  margin: auto;
-  padding: 24px;
-}
-
-.frost-panel {
-  border: 1px solid rgba(169, 169, 169, .38);
-  background: rgba(255, 255, 255, .88);
-  box-shadow: 0 16px 38px rgba(0, 0, 0, .055);
-  backdrop-filter: blur(16px);
-}
-
-.page-header {
-  display: flex;
-  align-items: center;
-  gap: 18px;
-  margin-bottom: 18px;
-}
-
-.back-button {
-  width: 43px;
-  height: 43px;
-  flex: 0 0 43px;
-  border: 1px solid var(--light);
-  border-radius: 11px;
-  background: var(--white);
-  cursor: pointer;
-}
-
-.heading-copy {
-  min-width: 0;
-  flex: 1;
-}
-
-.project-line {
-  margin: 0 0 4px;
-  display: flex;
-  gap: 8px;
-  color: var(--dim);
-  font-size: 10px;
-  text-transform: uppercase;
-  letter-spacing: .08em;
-}
-
-.heading-copy h1 {
-  margin: 0;
-  font-size: clamp(22px, 2.5vw, 31px);
-  letter-spacing: -.04em;
-}
-
-.heading-copy>p:last-child {
-  margin: 4px 0 0;
-  color: var(--dim);
-  font-size: 12px;
-}
-
-.performance-strip {
-  display: grid;
-  grid-template-columns: repeat(4, auto);
-  gap: 9px;
-}
-
-.performance-strip>div {
-  min-width: 84px;
-  padding: 8px 10px;
-  border: 1px solid var(--light);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .85);
-}
-
-.performance-strip small {
-  display: block;
-  margin-bottom: 2px;
-  color: var(--silver);
-  font-size: 7px;
-  font-weight: 800;
-  letter-spacing: .1em;
-}
-
-.performance-strip strong {
-  font-size: 11px;
-}
-
-.lab-layout {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) 310px;
-  gap: 14px;
-  align-items: start;
-}
-
-.chassis-card {
-  min-width: 0;
-  padding: 18px;
-  border-radius: 18px;
-}
-
-.lab-topline {
-  display: flex;
-  justify-content: space-between;
-  gap: 20px;
-  align-items: flex-start;
-  margin-bottom: 13px;
-}
-
-.eyebrow {
-  display: block;
-  margin-bottom: 5px;
-  color: var(--dim);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .12em;
-}
-
-.lab-topline h2 {
-  margin: 0;
-  font-size: 20px;
-}
-
-.lab-topline p {
-  margin: 5px 0 0;
-  color: var(--dim);
-  font-size: 11px;
-}
-
-.submit-button {
-  min-height: 39px;
-  padding: 9px 14px;
-  border: 1px solid var(--black);
-  border-radius: 9px;
-  background: var(--black);
-  color: var(--white);
-  font-weight: 700;
-  font-size: 10px;
-  cursor: pointer;
-}
-
-.submit-button:disabled {
-  opacity: .38;
+.lab button:disabled {
   cursor: not-allowed;
+  opacity: 0.5;
 }
 
-.warning-card {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 5px 10px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
-  border: 1px solid rgba(191, 47, 56, .38);
-  border-radius: 10px;
-  background: rgba(191, 47, 56, .05);
-  color: #74232a;
-  font-size: 10px;
+.lab :focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
-.warning-card strong {
-  color: var(--red);
-}
-
-.svg-wrap {
-  overflow: hidden;
-  border: 1px solid #d2d4d5;
-  border-radius: 15px;
-  background: linear-gradient(145deg, #fdfdfd, #e9ebec);
-}
-
-.chassis-svg {
-  display: block;
-  width: 100%;
-  min-height: 520px;
-  max-height: 720px;
-  touch-action: none;
-  user-select: none;
-}
-
-.interactive-part {
-  cursor: grab;
-  transition: opacity .22s ease, filter .18s ease, transform .22s ease;
-  transform-box: fill-box;
-  transform-origin: center;
-}
-
-.interactive-part:hover {
-  filter: drop-shadow(0 0 8px rgba(0, 0, 0, .28));
-}
-
-.interactive-part.selected {
-  filter: drop-shadow(0 0 9px rgba(0, 0, 0, .4));
-}
-
-.interactive-part:active {
-  cursor: grabbing;
-}
-
-.interactive-part.moving-out {
-  opacity: 0;
-  transform: translate(110px, 55px) scale(.84);
-}
-
-.interactive-part.moving-in {
-  animation: installPart .22s ease-out;
-}
-
-@keyframes installPart {
-  from {
-    opacity: .25;
-    transform: translate(95px, 55px) scale(.82);
-  }
-
-  to {
-    opacity: 1;
-    transform: none;
-  }
-}
-
-.screw-group {
-  fill: #8f9395;
-  stroke: #46494b;
-  stroke-width: 2;
-}
-
-.screw-group circle::after {
-  content: '';
-}
-
-.cable-part {
-  cursor: grab;
-}
-
-.side-panel-part {
-  cursor: grab;
-}
-
-.bench-column {
-  display: grid;
-  gap: 10px;
-}
-
-.tray-panel {
-  min-height: 125px;
-  padding: 12px;
-  border-radius: 14px;
-  cursor: default;
-}
-
-.tray-panel:hover {
-  border-color: var(--silver);
-}
-
-.tray-heading {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 10px;
-  margin-bottom: 10px;
-  color: var(--dim);
-  font-size: 8px;
-  font-weight: 800;
-  letter-spacing: .08em;
-}
-
-.tray-heading strong {
-  min-width: 24px;
-  height: 24px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--light);
-  border-radius: 7px;
-  color: var(--black);
-  background: var(--white);
-}
-
-.tray-list {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 6px;
-}
-
-.tray-list.compact {
-  grid-template-columns: 1fr;
-}
-
-.tray-item {
-  min-width: 0;
-  min-height: 58px;
-  padding: 7px;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 5px;
-  border: 1px solid #e0e0e0;
-  border-radius: 9px;
-  background: #fafafa;
-  color: #333;
-  cursor: grab;
-  text-align: center;
-  font-size: 9px;
-}
-
-.tray-item:hover,
-.tray-item.chosen {
-  border-color: var(--black);
-  background: var(--white);
-}
-
-.tray-item img {
-  width: 42px;
-  height: 42px;
-  object-fit: contain;
-  pointer-events: none;
-}
-
-.tray-item small {
-  color: var(--dim);
-}
-
-.cable-card,
-.screw-card {
-  min-height: 43px;
-  flex-direction: row;
-  justify-content: flex-start;
-  text-align: left;
-}
-
-.screw-icon {
-  width: 20px;
-  height: 20px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--light);
-  border-radius: 50%;
-}
-
-.tray-empty {
-  grid-column: 1/-1;
-  margin: 18px 0;
-  color: var(--silver);
-  text-align: center;
-  font-size: 10px;
-}
-
-.attempt-note {
-  padding: 12px;
-  border-radius: 14px;
-}
-
-.attempt-note strong {
-  font-size: 10px;
-}
-
-.attempt-note p {
-  margin: 5px 0 0;
-  color: var(--dim);
-  font-size: 9px;
-  line-height: 1.55;
-}
-
-.drag-preview {
-  position: fixed;
-  z-index: 1000;
-  width: 140px;
-  transform: translate(-50%, -50%);
-  pointer-events: none;
-  padding: 9px 10px;
-  border: 1px solid var(--silver);
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .96);
-  box-shadow: 0 13px 30px rgba(0, 0, 0, .16);
-}
-
-.drag-preview strong,
-.drag-preview small {
-  display: block;
-}
-
-.drag-preview strong {
-  font-size: 10px;
-}
-
-.drag-preview small {
-  margin-top: 2px;
-  color: var(--dim);
-  font-size: 8px;
-  text-transform: uppercase;
-}
-
-.loading-card {
-  padding: 40px;
-  border-radius: 18px;
-  text-align: center;
-  color: var(--dim);
-}
-
-.result-overlay {
-  position: fixed;
-  z-index: 1100;
-  inset: 0;
-  display: grid;
-  place-items: center;
-  padding: 20px;
-  background: rgba(0, 0, 0, .35);
-  backdrop-filter: blur(4px);
-}
-
-.result-card {
-  width: min(420px, 100%);
-  padding: 27px;
-  border-radius: 18px;
-  text-align: center;
-}
-
-.result-card h2 {
-  margin: 5px 0;
-}
-
-.result-score {
-  display: block;
-  margin: 10px 0;
-  font-size: 42px;
-  letter-spacing: -.06em;
-}
-
-.result-card p {
-  color: var(--dim);
-  font-size: 11px;
+.lab .case :focus-visible {
+  outline-color: #ffffff;
 }
 
 .sr-only {
   position: absolute;
   width: 1px;
   height: 1px;
+  margin: -1px;
+  padding: 0;
   overflow: hidden;
-  clip: rect(0, 0, 0, 0);
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.kicker {
+  display: block;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 11.5px;
+}
+
+/* Frosted surface shared by cards and panels */
+.card,
+.topbar,
+.rail,
+.hand,
+.tray,
+.state,
+.toast,
+.dialog {
+  background: var(--surface);
+  backdrop-filter: var(--blur);
+  -webkit-backdrop-filter: var(--blur);
+  border: 1px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+/* TOP BAR */
+
+.topbar {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 14px;
+}
+
+.icon-btn {
+  width: 38px;
+  height: 38px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+  box-shadow: var(--shadow-sm);
+}
+
+.icon-btn:hover:not(:disabled) {
+  border-color: var(--ink);
+}
+
+.title {
+  flex: 1;
+  min-width: 0;
+}
+
+.title h1 {
+  overflow: hidden;
+  font-size: 16px;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-@media (max-width: 1120px) {
-  .lab-layout {
-    grid-template-columns: 1fr;
+.stats {
+  display: flex;
+  gap: 16px;
+}
+
+.stats > div {
+  text-align: right;
+}
+
+.stats dt {
+  color: var(--muted);
+  font-size: 10px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.stats dd {
+  font-size: 16px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.stats .warn dd {
+  color: var(--warn-ink);
+}
+
+.stats .bad dd {
+  color: var(--fail);
+}
+
+/* STAGE RAIL */
+
+.rail {
+  flex-shrink: 0;
+  padding: 8px;
+}
+
+.rail ol {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.rail li {
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 10px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.4);
+}
+
+.rail li.current {
+  border-color: var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+  box-shadow: var(--shadow-sm);
+}
+
+.rail li.done {
+  border-color: #b7dcc5;
+  color: var(--pass);
+  font-weight: 600;
+}
+
+.rail-dot {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  background: var(--bg-soft);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.rail li.current .rail-dot {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.rail li.done .rail-dot {
+  background: var(--pass);
+  color: #ffffff;
+}
+
+/* WARNING */
+
+.warning {
+  flex-shrink: 0;
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+  box-shadow: var(--shadow-sm);
+  font-size: 12.5px;
+}
+
+.warning i {
+  margin-top: 2px;
+  font-size: 15px;
+}
+
+.warning p {
+  line-height: 1.5;
+}
+
+.banner {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 12px;
+  border: 1px solid;
+  font-size: 12px;
+  box-shadow: var(--shadow-sm);
+}
+
+.banner-warn {
+  border-color: var(--warn-line);
+  background: var(--warn-bg);
+  color: var(--warn-ink);
+}
+
+.banner-error {
+  border-color: var(--fail);
+  background: #fff1f0;
+  color: #8a0f16;
+}
+
+/* LOADING / ERROR */
+
+.state {
+  flex: 1;
+  min-height: 320px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 24px;
+  text-align: center;
+}
+
+.state-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.state-text {
+  max-width: 420px;
+  color: var(--muted);
+}
+
+.state-actions {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.state-icon {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  background: #fff1f0;
+  color: var(--fail);
+  font-size: 18px;
+}
+
+.spinner {
+  width: 32px;
+  height: 32px;
+  border: 3px solid var(--line);
+  border-top-color: var(--ink);
+  border-radius: 50%;
+  animation: spin 0.9s linear infinite;
+}
+
+/* BUTTONS */
+
+.btn {
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 0 16px;
+  border: 1px solid var(--ink);
+  font-weight: 600;
+  text-align: center;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, background 0.15s, box-shadow 0.15s;
+}
+
+.btn:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: var(--shadow);
+}
+
+.btn-primary {
+  background: var(--ink);
+  color: #ffffff;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: #2a2d33;
+}
+
+.btn-ghost {
+  border-color: var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--ink);
+}
+
+.btn-sm {
+  min-height: 34px;
+  padding: 0 12px;
+  font-size: 12px;
+}
+
+.btn-block {
+  width: 100%;
+}
+
+/* MAIN STAGE */
+
+.stage {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 290px;
+  gap: 12px;
+  align-items: start;
+}
+
+.bench {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.side {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.card {
+  padding: 14px;
+}
+
+.card-title {
+  display: block;
+  margin-top: 2px;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.count {
+  min-width: 28px;
+  padding: 2px 8px;
+  border: 1px solid var(--line);
+  font-size: 11px;
+  font-weight: 700;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  background: var(--surface-strong);
+}
+
+.count.ready {
+  border-color: var(--pass);
+  color: var(--pass);
+}
+
+/* HAND */
+
+.hand {
+  flex-shrink: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px;
+  min-height: 56px;
+  padding: 8px 12px;
+}
+
+.hand.held {
+  border: 1px solid var(--ink);
+}
+
+.hand-empty {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hand-copy {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.hand strong {
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.hand-hint {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.hand-icon {
+  width: 30px;
+  height: 30px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+}
+
+.phase-tag {
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+/* ICONS */
+
+.slot-icon svg,
+.part-icon svg,
+.hand-icon svg {
+  width: 22px;
+  height: 22px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.part-icon svg {
+  width: 18px;
+  height: 18px;
+}
+
+.hand-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+/* CHASSIS */
+
+.case {
+  min-height: 340px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--ink);
+  background: linear-gradient(180deg, #111318, #07080a);
+  color: #ffffff;
+  box-shadow: var(--shadow);
+}
+
+.case-title {
+  color: #9ca3af;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+}
+
+.case-grid {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-rows: 44px minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+  grid-template-areas:
+    "cov cov cov"
+    "cpu ram fan"
+    "mb mb psu"
+    "exp drv cab";
+  gap: 6px;
+}
+
+/* SLOTS */
+
+.slot {
+  min-width: 0;
+  min-height: 62px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2px;
+  padding: 6px;
+  border: 1px dashed #4b5563;
+  background: rgba(255, 255, 255, 0.04);
+  color: #9ca3af;
+  text-align: center;
+  transition: border-color 0.15s, background 0.15s, transform 0.15s;
+}
+
+.slot.occupied {
+  border: 1px solid #d1d5db;
+  background: rgba(255, 255, 255, 0.12);
+  color: #ffffff;
+}
+
+.slot.grab {
+  cursor: grab;
+}
+
+.slot.grab:hover {
+  border-color: #ffffff;
+}
+
+.slot.cover {
+  border-style: solid;
+}
+
+.slot.held {
+  outline: 2px solid #ffffff;
+  outline-offset: 2px;
+}
+
+.slot.accepts {
+  border: 2px dashed #ffffff;
+  background: rgba(255, 255, 255, 0.16);
+  color: #ffffff;
+}
+
+.slot.over {
+  border-style: solid;
+  background: #ffffff;
+  color: var(--ink);
+}
+
+.slot.done {
+  border-color: #7fd39c;
+}
+
+.slot.flash {
+  animation: shake 0.45s ease;
+  border-color: #ff6b6b;
+}
+
+.slot[aria-disabled="true"] {
+  cursor: default;
+}
+
+.slot-name {
+  max-width: 100%;
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.25;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.slot-state {
+  font-size: 9.5px;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+.slot.over .slot-name,
+.slot.over .slot-state {
+  color: var(--ink);
+}
+
+.slot.accepts .slot-state {
+  color: #ffffff;
+  font-weight: 700;
+}
+
+/* TRAYS */
+
+.trays {
+  flex-shrink: 0;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.tray {
+  min-width: 0;
+  min-height: 150px;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  border-style: dashed;
+  transition: border-color 0.15s, background 0.15s;
+}
+
+.tray.accepts {
+  border: 2px dashed var(--ink);
+}
+
+.tray.over {
+  border: 2px solid var(--ink);
+  background: rgba(255, 255, 255, 0.85);
+}
+
+.tray.flash {
+  animation: shake 0.45s ease;
+}
+
+.tray-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tray-head h2 {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.place-btn {
+  min-height: 32px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border: 1px solid var(--line-strong);
+  background: var(--surface-strong);
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.place-btn.ready {
+  border-color: var(--ink);
+  color: var(--ink);
+  box-shadow: var(--shadow-sm);
+}
+
+.place-btn[aria-disabled="true"] {
+  cursor: not-allowed;
+}
+
+.tray-empty {
+  margin: auto 0;
+  padding: 8px;
+  color: var(--muted);
+  font-size: 12px;
+  text-align: center;
+}
+
+.parts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+/* PARTS */
+
+.part {
+  max-width: 100%;
+  min-height: 42px;
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 6px 10px;
+  border: 1px solid var(--line-strong);
+  background: rgba(255, 255, 255, 0.9);
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: left;
+  box-shadow: var(--shadow-sm);
+  transition: transform 0.15s, border-color 0.15s, box-shadow 0.15s;
+}
+
+.part.grab {
+  cursor: grab;
+}
+
+.part.grab:hover {
+  transform: translateY(-2px);
+  border-color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.part[aria-disabled="true"] {
+  cursor: default;
+  color: var(--muted);
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: none;
+}
+
+.part.held {
+  border: 2px solid var(--ink);
+  padding: 5px 9px;
+  transform: translateY(-2px);
+}
+
+.part-name {
+  min-width: 0;
+  display: -webkit-box;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.bench-help {
+  color: var(--muted);
+  font-size: 11.5px;
+  line-height: 1.5;
+}
+
+/* SAFETY CHECK */
+
+.accordion {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+}
+
+.tasks {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.task {
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 7px 9px;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.5);
+  font-size: 12px;
+  line-height: 1.35;
+  cursor: pointer;
+}
+
+.task:hover {
+  border-color: var(--line-strong);
+}
+
+.task.done {
+  border-color: var(--ink);
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.task.muted {
+  color: var(--muted);
+  cursor: not-allowed;
+}
+
+.sr-check {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: 0;
+  opacity: 0;
+}
+
+.sr-check:focus-visible + .box {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.box {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  margin-top: 1px;
+  border: 1px solid var(--muted);
+  color: #ffffff;
+  font-size: 9px;
+}
+
+.task.done .box {
+  background: var(--ink);
+  border-color: var(--ink);
+}
+
+/* CURRENT STEP */
+
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.guide-title {
+  font-size: 15px;
+  font-weight: 700;
+}
+
+.progress {
+  height: 6px;
+  margin: 6px 0 2px;
+  overflow: hidden;
+  background: rgba(7, 8, 10, 0.1);
+}
+
+.progress span {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+  transition: width 0.3s ease;
+}
+
+/* ACTIVITY LOG */
+
+.log ol {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 8px;
+}
+
+.log li {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--line);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.log li:last-child {
+  border-bottom: 0;
+}
+
+.log li.ok i {
+  color: var(--pass);
+}
+
+.log li.bad i {
+  color: var(--fail);
+}
+
+.log li.info i {
+  color: var(--muted);
+}
+
+.log time {
+  color: var(--muted);
+  font-size: 10.5px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* TOAST */
+
+.toast {
+  position: fixed;
+  left: 50%;
+  bottom: 18px;
+  transform: translateX(-50%);
+  z-index: 1100;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  max-width: min(420px, calc(100vw - 32px));
+  padding: 9px 14px;
+  font-size: 12px;
+  font-weight: 600;
+  animation: toast-in 0.2s ease-out;
+}
+
+.toast.ok {
+  color: var(--pass);
+}
+
+.toast.bad {
+  color: var(--fail);
+}
+
+/* RESULT */
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(7, 8, 10, 0.45);
+}
+
+.dialog {
+  width: min(380px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 24px;
+  background: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25);
+  text-align: center;
+}
+
+.dialog h2 {
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.dialog h2:focus {
+  outline: none;
+}
+
+.result-score {
+  font-size: 46px;
+  font-weight: 700;
+  line-height: 1;
+  letter-spacing: -0.03em;
+  color: var(--pass);
+}
+
+.result-score.bad {
+  color: var(--fail);
+}
+
+.stat-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+}
+
+.stat-row > div {
+  padding: 8px;
+  border: 1px solid var(--line);
+  background: var(--surface-strong);
+}
+
+.stat-row dt {
+  color: var(--muted);
+  font-size: 10px;
+  text-transform: uppercase;
+}
+
+.stat-row dd {
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.result-message {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* RESPONSIVE */
+
+/* Tablet: the side panel moves under the bench. The current-step card sticks to the bottom. */
+@media (max-width: 900px) {
+  .stage {
+    grid-template-columns: minmax(0, 1fr);
   }
 
-  .bench-column {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+  .guide {
+    position: sticky;
+    bottom: 8px;
+    z-index: 5;
+    box-shadow: 0 -6px 20px rgba(0, 0, 0, 0.08), var(--shadow);
   }
 
-  .attempt-note {
-    grid-column: 1/-1;
-  }
-
-  .chassis-svg {
-    min-height: 480px;
+  .case {
+    min-height: 360px;
   }
 }
 
-@media (max-width: 760px) {
-  .page-shell {
-    padding: 12px;
+/* Phone: single-column trays, wrapping top bar, larger tap targets. */
+@media (max-width: 600px) {
+  .lab {
+    padding: 10px;
+    gap: 10px;
   }
 
-  .page-header {
-    align-items: flex-start;
+  .topbar {
     flex-wrap: wrap;
+    gap: 10px;
+    padding: 8px 10px;
   }
 
-  .performance-strip {
+  .title {
+    flex-basis: calc(100% - 52px);
+  }
+
+  .title h1 {
+    font-size: 14px;
+  }
+
+  .stats {
     width: 100%;
-    grid-template-columns: repeat(4, 1fr);
+    justify-content: space-between;
+    gap: 8px;
   }
 
-  .performance-strip>div {
-    min-width: 0;
+  .stats > div {
+    text-align: left;
   }
 
-  .lab-topline {
-    flex-direction: column;
+  .stats dd {
+    font-size: 15px;
   }
 
-  .submit-button {
+  .rail li {
+    padding: 6px;
+    font-size: 11px;
+    gap: 6px;
+  }
+
+  .rail li > span:last-child {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .warning {
+    font-size: 12px;
+    padding: 9px 10px;
+  }
+
+  .case {
+    min-height: 0;
+    padding: 10px;
+  }
+
+  .case-grid {
+    grid-template-rows: 36px minmax(0, 1fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 5px;
+  }
+
+  .slot {
+    min-height: 66px;
+    padding: 5px 4px;
+  }
+
+  .slot-name {
+    font-size: 11px;
+  }
+
+  .slot-state {
+    font-size: 9px;
+  }
+
+  .trays {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .tray {
+    min-height: 0;
+  }
+
+  .part {
+    min-height: 46px;
+  }
+
+  .place-btn {
+    min-height: 40px;
+  }
+
+  .hand {
+    padding: 8px 10px;
+  }
+
+  .phase-tag {
     width: 100%;
+    margin-left: 0;
   }
 
-  .bench-column {
-    grid-template-columns: 1fr;
-  }
-
-  .attempt-note {
-    grid-column: auto;
-  }
-
-  .chassis-card {
-    padding: 11px;
-  }
-
-  .chassis-svg {
-    min-height: auto;
-  }
-
-  .tray-list {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
+  .toast {
+    bottom: 96px;
   }
 }
 
-@media (max-width: 440px) {
-  .performance-strip {
-    grid-template-columns: repeat(2, 1fr);
+/* Very small phones */
+@media (max-width: 360px) {
+  .rail li > span:last-child {
+    display: none;
   }
 
-  .tray-list {
-    grid-template-columns: 1fr;
+  .case-grid {
+    gap: 4px;
   }
 
-  .heading-copy h1 {
-    font-size: 20px;
+  .slot-name {
+    font-size: 10px;
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 6px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+@keyframes shake {
+  0%, 100% {
+    transform: translateX(0);
+  }
+
+  20% {
+    transform: translateX(-5px);
+  }
+
+  40% {
+    transform: translateX(5px);
+  }
+
+  60% {
+    transform: translateX(-3px);
+  }
+
+  80% {
+    transform: translateX(3px);
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .interactive-part {
-    transition: none;
+  .lab *,
+  .lab *::before,
+  .lab *::after {
     animation: none !important;
+    transition: none !important;
   }
 }
 </style>

@@ -41,9 +41,9 @@ class RouteServiceProvider extends ServiceProvider
      */
     protected function configureRateLimiting(): void
     {
-        // General API — 60 req/min per user or IP
+        // General API — 120 req/min per user or IP
         RateLimiter::for('api', function (Request $request) {
-            return Limit::perMinute(60)->by($request->user()?->id ?: $request->ip());
+            return Limit::perMinute(120)->by($request->user()?->id ?: $request->ip());
         });
 
         // Public auth endpoints — 30 req/min per IP (no user yet)

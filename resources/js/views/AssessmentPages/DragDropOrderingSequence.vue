@@ -1,6 +1,5 @@
 <template>
     <div class="ordering-container">
-
         <!-- HEADER -->
         <div class="assessment-header">
             <div class="header-left">
@@ -14,9 +13,7 @@
                 </div>
             </div>
 
-            <div class="step-count">
-                {{ sequenceSteps.length }} Steps
-            </div>
+            <div class="step-count">{{ sequenceSteps.length }} Steps</div>
         </div>
 
         <!-- INSTRUCTION -->
@@ -33,7 +30,6 @@
 
         <!-- SEQUENCE -->
         <section class="sequence-section">
-
             <div class="section-heading">
                 <div>
                     <span class="section-kicker">01</span>
@@ -46,15 +42,21 @@
             </div>
 
             <div class="sequence-grid">
-
-                <div v-for="(step, index) in sequenceSteps" :key="`drop-${index}`" class="sequence-slot" :class="{
-                    'has-item': step.item,
-                    'drag-over': false
-                }" @dragover="dragover" @drop="drop($event, index)" @dragleave="dragleave">
-
+                <div
+                    v-for="(step, index) in sequenceSteps"
+                    :key="`drop-${index}`"
+                    class="sequence-slot"
+                    :class="{
+                        'has-item': step.item,
+                        'drag-over': false,
+                    }"
+                    @dragover="dragover"
+                    @drop="drop($event, index)"
+                    @dragleave="dragleave"
+                >
                     <!-- NUMBER -->
                     <div class="slot-number">
-                        {{ String(index + 1).padStart(2, '0') }}
+                        {{ String(index + 1).padStart(2, "0") }}
                     </div>
 
                     <!-- EMPTY -->
@@ -71,20 +73,21 @@
                             </span>
                         </div>
 
-                        <button class="remove-btn" @click="removeFromSequence(index)" title="Remove step"
-                            aria-label="Remove step">
+                        <button
+                            class="remove-btn"
+                            @click="removeFromSequence(index)"
+                            title="Remove step"
+                            aria-label="Remove step"
+                        >
                             <i class="fas fa-xmark"></i>
                         </button>
                     </div>
-
                 </div>
-
             </div>
         </section>
 
         <!-- AVAILABLE STEPS -->
         <section class="available-section">
-
             <div class="section-heading">
                 <div>
                     <span class="section-kicker">02</span>
@@ -97,11 +100,15 @@
             </div>
 
             <div class="steps-container">
-
-                <div v-for="step in availableSteps" :key="`step-${step.id}`" class="step-item"
-                    :class="{ 'is-used': isStepUsed(step.id) }" draggable="true" @dragstart="dragstart($event, step)"
-                    @dragend="dragend">
-
+                <div
+                    v-for="step in availableSteps"
+                    :key="`step-${step.id}`"
+                    class="step-item"
+                    :class="{ 'is-used': isStepUsed(step.id) }"
+                    draggable="true"
+                    @dragstart="dragstart($event, step)"
+                    @dragend="dragend"
+                >
                     <span class="step-drag">
                         <i class="fas fa-grip-vertical"></i>
                     </span>
@@ -113,16 +120,17 @@
                     <span v-if="isStepUsed(step.id)" class="step-used">
                         <i class="fas fa-check"></i>
                     </span>
-
                 </div>
-
             </div>
         </section>
 
         <!-- ACTION BAR -->
         <div class="action-bar">
-
-            <button class="reset-btn" @click="resetSequence" title="Reset sequence">
+            <button
+                class="reset-btn"
+                @click="resetSequence"
+                title="Reset sequence"
+            >
                 <i class="fas fa-rotate-left"></i>
                 <span>Reset</span>
             </button>
@@ -131,12 +139,10 @@
                 <i class="fas fa-check"></i>
                 <span>Check Sequence</span>
             </button>
-
         </div>
 
         <!-- FEEDBACK -->
         <transition name="fade">
-
             <div v-if="feedback" :class="['feedback', feedback.type]">
                 <div class="feedback-icon">
                     <i :class="feedback.icon"></i>
@@ -144,9 +150,10 @@
 
                 <div class="feedback-content">
                     <strong>
-                        {{ feedback.type === 'success'
-                            ? 'Correct Sequence'
-                            : 'Check Your Sequence'
+                        {{
+                            feedback.type === "success"
+                                ? "Correct Sequence"
+                                : "Check Your Sequence"
                         }}
                     </strong>
 
@@ -155,129 +162,134 @@
                     </span>
                 </div>
 
-                <button class="feedback-close" @click="feedback = null" aria-label="Close feedback">
+                <button
+                    class="feedback-close"
+                    @click="feedback = null"
+                    aria-label="Close feedback"
+                >
                     <i class="fas fa-xmark"></i>
                 </button>
             </div>
-
         </transition>
-
     </div>
 </template>
 
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed } from "vue";
 
-const instruction = ref('Arrange the steps for shutting down a computer properly.')
+const instruction = ref(
+    "Arrange the steps for shutting down a computer properly.",
+);
 
 // Available steps to drag
 const availableSteps = ref([
-    { id: 1, label: 'Click Start > Power' },
-    { id: 2, label: 'Close all programs' },
-    { id: 3, label: 'Turn off the monitor' },
-    { id: 4, label: 'Select Shut Down' }
-])
+    { id: 1, label: "Click Start > Power" },
+    { id: 2, label: "Close all programs" },
+    { id: 3, label: "Turn off the monitor" },
+    { id: 4, label: "Select Shut Down" },
+]);
 
 // Correct sequence
-const correctSequence = [1, 2, 4, 3]
+const correctSequence = [1, 2, 4, 3];
 
 // Sequence slots
 const sequenceSteps = ref([
     { item: null },
     { item: null },
     { item: null },
-    { item: null }
-])
+    { item: null },
+]);
 
-const draggedItem = ref(null)
-const feedback = ref(null)
-const svgWidth = ref(450)
+const draggedItem = ref(null);
+const feedback = ref(null);
+const svgWidth = ref(450);
 
 const getCircleX = (index) => {
-    const spacing = svgWidth.value / (sequenceSteps.value.length + 1)
-    return spacing * (index + 1)
-}
+    const spacing = svgWidth.value / (sequenceSteps.value.length + 1);
+    return spacing * (index + 1);
+};
 
 const dragstart = (event, step) => {
-    draggedItem.value = step
-    event.dataTransfer.effectAllowed = 'move'
-}
+    draggedItem.value = step;
+    event.dataTransfer.effectAllowed = "move";
+};
 
 const dragend = () => {
-    draggedItem.value = null
-}
+    draggedItem.value = null;
+};
 
 const dragover = (event) => {
-    event.preventDefault()
-    event.dataTransfer.dropEffect = 'move'
-    event.currentTarget.classList.add('drag-over')
-}
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "move";
+    event.currentTarget.classList.add("drag-over");
+};
 
 const dragleave = (event) => {
-    event.currentTarget.classList.remove('drag-over')
-}
+    event.currentTarget.classList.remove("drag-over");
+};
 
 const drop = (event, index) => {
-    event.preventDefault()
-    event.currentTarget.classList.remove('drag-over')
+    event.preventDefault();
+    event.currentTarget.classList.remove("drag-over");
 
-    if (!draggedItem.value) return
+    if (!draggedItem.value) return;
 
     // Remove item from other sequences if it exists
     sequenceSteps.value.forEach((step, i) => {
         if (step.item?.id === draggedItem.value.id) {
-            sequenceSteps.value[i].item = null
+            sequenceSteps.value[i].item = null;
         }
-    })
+    });
 
     // Add to this sequence
-    sequenceSteps.value[index].item = draggedItem.value
-    draggedItem.value = null
-}
+    sequenceSteps.value[index].item = draggedItem.value;
+    draggedItem.value = null;
+};
 
 const removeFromSequence = (index) => {
-    sequenceSteps.value[index].item = null
-    feedback.value = null
-}
+    sequenceSteps.value[index].item = null;
+    feedback.value = null;
+};
 
 const isStepUsed = (id) => {
-    return sequenceSteps.value.some(step => step.item?.id === id)
-}
+    return sequenceSteps.value.some((step) => step.item?.id === id);
+};
 
 const resetSequence = () => {
-    sequenceSteps.value = sequenceSteps.value.map(() => ({ item: null }))
-    feedback.value = null
-}
+    sequenceSteps.value = sequenceSteps.value.map(() => ({ item: null }));
+    feedback.value = null;
+};
 
 const checkAnswer = () => {
     // Check if all slots are filled
-    if (sequenceSteps.value.some(step => !step.item)) {
+    if (sequenceSteps.value.some((step) => !step.item)) {
         feedback.value = {
-            type: 'error',
-            message: 'Please fill all steps.',
-            icon: 'fas fa-exclamation-circle'
-        }
-        return
+            type: "error",
+            message: "Please fill all steps.",
+            icon: "fas fa-exclamation-circle",
+        };
+        return;
     }
 
     // Check if sequence is correct
-    const userSequence = sequenceSteps.value.map(step => step.item.id)
-    const isCorrect = JSON.stringify(userSequence) === JSON.stringify(correctSequence)
+    const userSequence = sequenceSteps.value.map((step) => step.item.id);
+    const isCorrect =
+        JSON.stringify(userSequence) === JSON.stringify(correctSequence);
 
     if (isCorrect) {
         feedback.value = {
-            type: 'success',
-            message: 'Perfect! Your sequence is correct.',
-            icon: 'fas fa-check-circle'
-        }
+            type: "success",
+            message: "Perfect! Your sequence is correct.",
+            icon: "fas fa-check-circle",
+        };
     } else {
         feedback.value = {
-            type: 'error',
-            message: 'Incorrect sequence. Try again!',
-            icon: 'fas fa-times-circle'
-        }
+            type: "error",
+            message: "Incorrect sequence. Try again!",
+            icon: "fas fa-times-circle",
+        };
     }
-}
+};
 </script>
 
 <style scoped>
@@ -294,11 +306,7 @@ const checkAnswer = () => {
     color: #111111;
     background: #ffffff;
 
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Segoe UI",
-        sans-serif;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
 /* =========================
@@ -454,7 +462,7 @@ const checkAnswer = () => {
     margin-bottom: 12px;
 }
 
-.section-heading>div {
+.section-heading > div {
     display: flex;
     align-items: baseline;
     gap: 9px;
@@ -887,7 +895,6 @@ const checkAnswer = () => {
 ========================= */
 
 @media (max-width: 700px) {
-
     .ordering-container {
         padding: 22px 18px 32px;
     }
@@ -916,7 +923,6 @@ const checkAnswer = () => {
 ========================= */
 
 @media (max-width: 480px) {
-
     .ordering-container {
         padding: 18px 14px 28px;
     }

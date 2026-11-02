@@ -322,6 +322,72 @@
       </footer>
       <p class="sr-only" aria-live="polite">{{ announcement }}</p>
     </div>
+
+    <Transition name="rj45-modal">
+      <div v-if="showResult && submitResult" class="rj45-modal-overlay" @click.self="closeResult">
+        <section class="rj45-modal" role="dialog" aria-modal="true" :aria-labelledby="`${uid}-result`">
+          <header class="rj45-modal-header">
+            <div>
+              <p class="eyebrow">Assessment result</p>
+              <h2 :id="`${uid}-result`">
+                {{ submitResult.passed ? 'Passed' : 'Not yet passed' }}
+              </h2>
+              <p class="rj45-modal-sub">{{ assessment.title }} · T568{{ submitResult.standard }}</p>
+            </div>
+
+            <button type="button" class="icon-close" aria-label="Close result" @click="closeResult">
+              <UiIcon name="x" />
+            </button>
+          </header>
+
+          <div class="rj45-modal-body">
+            <div class="result-summary-row">
+              <div class="big-score" :class="submitResult.passed ? 'passed' : 'failed'">
+                {{ resultPercent }}<small>%</small>
+              </div>
+
+              <dl class="stat-grid">
+                <div>
+                  <dt>Correct</dt>
+                  <dd>{{ submitResult.correct_pins }} / 8</dd>
+                </div>
+                <div>
+                  <dt>Attempt</dt>
+                  <dd>#{{ submitResult.attempt_count || 1 }}</dd>
+                </div>
+                <div>
+                  <dt>Time</dt>
+                  <dd>{{ formatDuration(submitResult.elapsed_time) }}</dd>
+                </div>
+              </dl>
+            </div>
+
+            <h3 class="pin-review-title">Pin by pin</h3>
+
+            <ul class="pin-review">
+              <li v-for="pin in resultPins" :key="pin.pin_number" :class="pin.is_correct ? 'ok' : 'bad'">
+                <span class="pin-no">{{ pin.pin_number }}</span>
+                <span class="pin-led" aria-hidden="true">
+                  <UiIcon :name="pin.is_correct ? 'check' : 'x'" />
+                </span>
+                <span class="pin-detail">
+                  <strong>{{ pin.actualShort }}</strong>
+                  <small v-if="!pin.is_correct">expected {{ pin.expectedShort }}</small>
+                </span>
+                <span class="pin-verdict">{{ pin.is_correct ? 'Correct' : 'Wrong' }}</span>
+              </li>
+            </ul>
+          </div>
+
+          <footer class="rj45-modal-footer">
+            <button type="button" class="button" @click="closeResult">Review wiring</button>
+            <button type="button" class="button termination-button" @click="leaveAfterResult">
+              Back to assessments
+            </button>
+          </footer>
+        </section>
+      </div>
+    </Transition>
   </div>
 </template>
 
@@ -372,6 +438,9 @@ const trayOpen = ref(true)
 const announcement = ref('')
 const bundleDragging = ref(false)
 const bundleOffset = ref({ x: 0, y: 0 })
+const showResult = ref(false)
+const submitResult = ref(null)
+
 let bundleStart = null
 let activePointerId = null
 let testTimer = null
@@ -418,6 +487,15 @@ const resultDescription = computed(() => {
   if (tested.value) return `${correctCount.value}/8 positions match T568${selectedStandard.value}. ${testPassed.value ? 'You can now submit this assessment.' : 'Correct the red positions and test again.'}`
   return crimped.value ? 'The virtual cable is crimped. Test all eight positions.' : 'Arrange the conductors, then insert and crimp the cable.'
 })
+
+const resultPercent = computed(() => Number(submitResult.value?.score_percent ?? 0))
+const resultPins = computed(() =>
+  (submitResult.value?.pins ?? []).map(pin => ({
+    ...pin,
+    actualShort: wireById.value[pin.actual_wire]?.short ?? '—',
+    expectedShort: wireById.value[pin.expected_wire]?.short ?? pin.expected_wire,
+  }))
+)
 
 function normalizeInitialWiring(values) {
   const used = new Set()
@@ -525,21 +603,17 @@ function startWireDrag(id, event) {
     event.dataTransfer.setData('text/plain', `css-prep-wire:${id}`)
   }
 }
-
 function endWireDrag() { draggedWireId.value = null }
-
 function dropOnPin(index, event) {
   if (event.dataTransfer) event.dataTransfer.dropEffect = 'move'
   if (draggedWireId.value) placeWire(draggedWireId.value, index)
 }
-
 function dropToTray() {
   if (!canEdit.value || !draggedWireId.value) return
   selectedWireId.value = draggedWireId.value
   returnSelectedWire()
   draggedWireId.value = null
 }
-
 function removePin(index) {
   if (!canEdit.value || !Number.isInteger(index) || index < 0 || index > 7 || !pins.value[index]) return
   markStarted()
@@ -550,12 +624,10 @@ function removePin(index) {
   invalidateTermination()
   announcement.value = `Pin ${index + 1} returned to the conductor tray.`
 }
-
 function returnSelectedWire() {
   if (!selectedWireId.value) return
   removePin(pins.value.indexOf(selectedWireId.value))
 }
-
 function clearWiring() {
   if (!canEdit.value) return
   markStarted()
@@ -566,7 +638,6 @@ function clearWiring() {
   trayOpen.value = true
   announcement.value = 'All wires returned to the conductor tray.'
 }
-
 function insertCable() {
   if (!canInsert.value) return
   markStarted()
@@ -599,9 +670,14 @@ function svgPoint(event) {
   return point.matrixTransform(matrix.inverse())
 }
 function startBundle(event) {
-  if (!canInsert.value || event.button > 0) return
+  if (!canInsert.value || event.button > 0) {
+    return
+  }
+
   const point = svgPoint(event)
-  if (!point) return
+  if (!point) {
+    return
+  }
   event.preventDefault()
   bundleStart = point
   activePointerId = event.pointerId
@@ -621,7 +697,9 @@ function releaseBundle(event) {
   const tapped = Math.hypot(x, y) < 8
   const aligned = Math.abs(x) < 24 && 306 + y >= 125 && 306 + y <= 282
   cancelBundle()
-  if (tapped || aligned) insertCable()
+  if (tapped || aligned) {
+    insertCable()
+  }
   else announcement.value = 'Move the cable upward so its tips reach the housing opening.'
 }
 function cancelBundle() {
@@ -634,7 +712,10 @@ function cancelBundle() {
 }
 function stopTest() {
   testToken += 1
-  if (testTimer !== null) { clearInterval(testTimer); testTimer = null }
+  if (testTimer !== null) {
+    clearInterval(testTimer)
+    testTimer = null
+  }
   testing.value = false
 }
 function invalidateTermination() {
@@ -722,10 +803,10 @@ async function finishActivity() {
     const response = await rj45HandsOnRequest.submit(quizId.value, {
       standard: selectedStandard.value,
       wirings: [...pins.value],
+      crimped: crimped.value,
+      tested: tested.value,
       started_at: startedAt?.toISOString() ?? null,
-      duration_ms: startedAt
-        ? Date.now() - startedAt.getTime()
-        : null,
+      duration_ms: startedAt ? Date.now() - startedAt.getTime() : null,
     })
 
     const result = response?.data
@@ -742,27 +823,23 @@ async function finishActivity() {
     )
 
     tested.value = true
-
-    // Submitted successfully whether passed or failed.
     completed.value = true
 
     emit('complete', result)
 
+    submitResult.value = result
+    showResult.value = true
+
     announcement.value = result.passed
       ? 'RJ-45 assessment submitted and saved.'
       : `Assessment submitted. ${result.correct_pins} of 8 pins were correct.`
-
   } catch (error) {
-    console.error(
-      'Failed to submit RJ-45 assessment:',
-      error
-    )
+    console.error('Failed to submit RJ-45 assessment:', error)
 
     announcement.value =
       error?.response?.data?.message ||
       error?.message ||
       'Unable to save the RJ-45 attempt.'
-
   } finally {
     saving.value = false
   }
@@ -789,11 +866,35 @@ function resetBench() {
 }
 function goBack() {
   stopTest()
-  router.push(`/user/quizzes/assessment/${encodeURIComponent(String(quizId.value))}`)
+  router.push(`/user/assessments/assessment/${encodeURIComponent(String(quizId.value))}`)
 }
+
+function formatDuration(seconds) {
+  if (seconds === null || seconds === undefined) return '—'
+  const total = Math.max(0, Math.round(Number(seconds)))
+  const minutes = Math.floor(total / 60)
+  const secs = total % 60
+  return minutes > 0 ? `${minutes}m ${secs}s` : `${secs}s`
+}
+function closeResult() {
+  showResult.value = false
+}
+function leaveAfterResult() {
+  showResult.value = false
+  goBack()
+}
+function handleResultEscape(event) {
+  if (event.key === 'Escape' && showResult.value) closeResult()
+}
+
 watch(() => route.params.id, () => loadAssessment())
 onMounted(loadAssessment)
-onUnmounted(() => { stopTest(); cancelBundle() })
+onMounted(() => window.addEventListener('keydown', handleResultEscape))
+onUnmounted(() => {
+  stopTest()
+  cancelBundle()
+  window.removeEventListener('keydown', handleResultEscape)
+})
 
 const ICON_PATHS = {
   'arrow-left': ['M19 12H5', 'm12 5-7 7 7 7'],
@@ -814,7 +915,6 @@ function UiIcon(props) {
 }
 UiIcon.props = ['name']
 </script>
-
 
 <style scoped>
 /* FROSTED NOIR. Wire colors, metal contacts and test feedback are functional accents. */
@@ -851,6 +951,7 @@ input {
 button {
   cursor: pointer;
   -webkit-tap-highlight-color: transparent;
+  color: inherit;
 }
 
 button:disabled {
@@ -866,14 +967,11 @@ input:focus-visible,
 
 h1,
 h2,
+h3,
 p,
 figure,
 fieldset {
   margin: 0;
-}
-
-button {
-  color: inherit;
 }
 
 .page-shell {
@@ -1510,6 +1608,8 @@ figcaption {
   background: var(--red);
 }
 
+
+
 .result-banner {
   min-height: 99px;
   display: flex;
@@ -1664,13 +1764,6 @@ figcaption {
   opacity: .6;
 }
 
-.test-help {
-  margin: 15px 2px 0;
-  font-size: 11px;
-  color: var(--dim);
-  line-height: 1.6;
-}
-
 .return-button {
   align-self: flex-start;
   margin-top: 16px;
@@ -1704,6 +1797,254 @@ figcaption {
   padding: 0;
   border: 0;
 }
+
+/* Result modal */
+
+.rj45-modal-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 20px;
+  background: rgba(0, 0, 0, .35);
+  backdrop-filter: blur(6px);
+}
+
+.rj45-modal {
+  width: min(560px, 100%);
+  max-height: min(90vh, 760px);
+  display: flex;
+  flex-direction: column;
+  border: 1px solid rgba(169, 169, 169, .45);
+  border-radius: 20px;
+  background: var(--white);
+  box-shadow: 0 30px 80px rgba(0, 0, 0, .22);
+  overflow: hidden;
+}
+
+.rj45-modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 22px 24px 18px;
+  border-bottom: 1px solid rgba(211, 211, 211, .6);
+}
+
+.rj45-modal-header h2 {
+  font-size: 22px;
+}
+
+.rj45-modal-sub {
+  margin-top: 5px;
+  color: var(--dim);
+  font-size: 12px;
+}
+
+.icon-close {
+  flex: 0 0 36px;
+  width: 36px;
+  height: 36px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--light);
+  border-radius: 10px;
+  background: var(--white);
+  color: var(--dim);
+}
+
+.icon-close:hover {
+  border-color: var(--black);
+  color: var(--black);
+}
+
+.rj45-modal-body {
+  padding: 20px 24px;
+  overflow-y: auto;
+}
+
+.result-summary-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  padding: 18px;
+  border: 1px solid var(--light);
+  border-radius: 14px;
+  background: rgba(211, 211, 211, .08);
+}
+
+.big-score {
+  flex: 0 0 auto;
+  font-size: 48px;
+  font-weight: 750;
+  letter-spacing: -.05em;
+  line-height: 1;
+}
+
+.big-score small {
+  font-size: 20px;
+  margin-left: 2px;
+}
+
+.big-score.passed {
+  color: var(--green);
+}
+
+.big-score.failed {
+  color: var(--red);
+}
+
+.stat-grid {
+  flex: 1;
+  min-width: 0;
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+}
+
+.stat-grid>div {
+  min-width: 0;
+}
+
+.stat-grid dt {
+  font-size: 9px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.stat-grid dd {
+  margin: 4px 0 0;
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.pin-review-title {
+  margin: 22px 0 10px;
+  font-size: 11px;
+  font-weight: 750;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: var(--dim);
+}
+
+.pin-review {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--light);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.pin-review li {
+  display: grid;
+  grid-template-columns: 28px 26px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border-bottom: 1px solid rgba(211, 211, 211, .6);
+  font-size: 12px;
+}
+
+.pin-review li:last-child {
+  border-bottom: 0;
+}
+
+.pin-no {
+  color: var(--dim);
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.pin-led {
+  width: 24px;
+  height: 24px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  color: var(--white);
+}
+
+.pin-led svg {
+  width: 14px;
+  height: 14px;
+  stroke-width: 3;
+}
+
+.pin-review li.ok .pin-led {
+  background: var(--green);
+}
+
+.pin-review li.bad .pin-led {
+  background: var(--red);
+}
+
+.pin-detail {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+
+.pin-detail small {
+  color: var(--red);
+  font-size: 10px;
+}
+
+.pin-verdict {
+  font-size: 10px;
+  font-weight: 750;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+
+.pin-review li.ok .pin-verdict {
+  color: var(--green);
+}
+
+.pin-review li.bad .pin-verdict {
+  color: var(--red);
+}
+
+.rj45-modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  padding: 16px 24px;
+  border-top: 1px solid rgba(211, 211, 211, .6);
+  background: var(--white);
+}
+
+.rj45-modal-footer .button {
+  min-height: 40px;
+}
+
+.rj45-modal-enter-active,
+.rj45-modal-leave-active {
+  transition: opacity .16s ease;
+}
+
+.rj45-modal-enter-active .rj45-modal,
+.rj45-modal-leave-active .rj45-modal {
+  transition: transform .16s ease, opacity .16s ease;
+}
+
+.rj45-modal-enter-from,
+.rj45-modal-leave-to {
+  opacity: 0;
+}
+
+.rj45-modal-enter-from .rj45-modal,
+.rj45-modal-leave-to .rj45-modal {
+  opacity: 0;
+  transform: translateY(8px) scale(.985);
+}
+
+/* Responsive */
 
 @media (max-width: 1200px) and (min-width: 981px) {
   .page-shell {
@@ -2018,10 +2359,6 @@ figcaption {
     font-size: 8px;
   }
 
-  .test-help {
-    font-size: 10px;
-  }
-
   .page-footer {
     font-size: 9px;
     gap: 15px;
@@ -2030,6 +2367,28 @@ figcaption {
   .page-footer>span:last-child {
     max-width: 170px;
     text-align: right;
+  }
+
+  .rj45-modal-overlay {
+    padding: 10px;
+  }
+
+  .result-summary-row {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 14px;
+  }
+
+  .stat-grid {
+    width: 100%;
+  }
+
+  .rj45-modal-footer {
+    flex-direction: column-reverse;
+  }
+
+  .rj45-modal-footer .button {
+    width: 100%;
   }
 }
 

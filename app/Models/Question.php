@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Question extends Model
 {
@@ -23,6 +24,11 @@ class Question extends Model
     public function options()
     {
         return $this->hasMany(QuestionOption::class);
+    }
+
+    public function dragDropItems(): HasMany
+    {
+        return $this->hasMany(DragDropItem::class, 'question_id');
     }
 
 }

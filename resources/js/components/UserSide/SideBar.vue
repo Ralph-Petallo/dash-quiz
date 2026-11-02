@@ -1,491 +1,316 @@
 <template>
-  <aside class="user-sidebar" :class="{ open: isSidebarOpen }">
-    <!-- Logo Section -->
-    <div class="logo-section">
-      <img src="/public/lightning.png" alt="DASHQUIZ Logo" width="32" height="32">
+  <aside class="sidebar" :class="{ open: isSidebarOpen }" aria-label="Main navigation">
+    <!-- Brand -->
+    <router-link to="/user" class="brand" @click="onNavigate">
+      <img :src="logoUrl" alt="" width="28" height="28" />
+      <span class="brand-name">CSS<span>Prep</span></span>
+    </router-link>
 
-      <span class="logo-text">
-        CSS<span>Prep</span>
-      </span>
-    </div>
+    <div class="divider"></div>
 
-    <!-- Menu Label -->
-    <div class="nav-label">
-      MAIN MENU
-    </div>
+    <!-- Menu: this wrapper keeps every item inside the sidebar width -->
+    <div class="menu">
+      <nav class="nav" aria-label="Menu">
+        <p class="group-label">Learn</p>
 
-    <!-- Navigation -->
-    <nav class="sidebar-nav">
+        <router-link v-for="item in learnItems" :key="item.to" :to="item.to" class="nav-item"
+          :class="{ active: isActive(item) }" @click="onNavigate">
+          <i :class="item.icon" aria-hidden="true"></i>
+          <span class="nav-text">{{ item.label }}</span>
+        </router-link>
 
-      <router-link to="/user" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
-        <span class="nav-icon">
-          <i class="fas fa-home"></i>
-        </span>
+        <p class="group-label">Account</p>
 
-        <span class="nav-text">
-          Home
-        </span>
-      </router-link>
+        <router-link v-for="item in accountItems" :key="item.to" :to="item.to" class="nav-item"
+          :class="{ active: isActive(item) }" @click="onNavigate">
+          <i :class="item.icon" aria-hidden="true"></i>
+          <span class="nav-text">{{ item.label }}</span>
+        </router-link>
 
-      <router-link to="/user/assessments" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
-        <span class="nav-icon">
-          <i class="fas fa-clipboard-list"></i>
-        </span>
-
-        <span class="nav-text">
-          Assessments
-        </span>
-      </router-link>
-
-      <router-link to="/user/records" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
-        <span class="nav-icon">
-          <i class="fas fa-chart-simple"></i>
-        </span>
-
-        <span class="nav-text">
-          Records
-        </span>
-      </router-link>
-
-      <router-link to="/user/profile" exact-active-class="active" @click="$emit('closeSidebar')" class="nav-link">
-        <span class="nav-icon">
-          <i class="fas fa-user"></i>
-        </span>
-
-        <span class="nav-text">
-          Profile
-        </span>
-      </router-link>
-
-    </nav>
-
-    <!-- Spacer -->
-    <div class="sidebar-spacer"></div>
-
-    <!-- Footer -->
-    <div class="sidebar-footer">
-      <button class="logout-btn" @click="$emit('logout')" title="Logout">
-        <i class="fas fa-power-off"></i> Log out
-      </button>
+        <button type="button" class="nav-item logout" @click="emit('logout')">
+          <i class="fa-solid fa-right-from-bracket" aria-hidden="true"></i>
+          <span class="nav-text">Log out</span>
+        </button>
+      </nav>
     </div>
   </aside>
 </template>
 
-
 <script setup>
+import { computed } from "vue"
+import { useRoute } from "vue-router"
+import { useUser } from "@/composables/useUser"
+import logoUrl from "@/assets/lightning.png"
+
 defineProps({
-  isSidebarOpen: Boolean
+  isSidebarOpen: { type: Boolean, default: false },
 })
 
-defineEmits([
-  'closeSidebar',
-  'logout'
-])
+const emit = defineEmits(["closeSidebar", "logout"])
+
+const route = useRoute()
+const { user } = useUser()
+
+const learnItems = [
+  { to: "/user", label: "Home", icon: "fa-solid fa-house", exact: true },
+  { to: "/user/assessments", label: "Competency", icon: "fa-solid fa-layer-group", section: "assessments" },
+  { to: "/user/records", label: "Records", icon: "fa-solid fa-chart-column" },
+]
+
+const accountItems = [
+  { to: "/user/profile", label: "Profile", icon: "fa-solid fa-user" },
+]
+
+const displayName = computed(() => {
+  const name = [user.value?.first_name, user.value?.last_name].filter(Boolean).join(" ")
+  return name || "Learner"
+})
+
+const initials = computed(() => {
+  const first = user.value?.first_name?.[0] ?? ""
+  const last = user.value?.last_name?.[0] ?? ""
+  return (first + last).toUpperCase() || "CP"
+})
+
+const roleLabel = computed(() => (user.value?.role === "admin" ? "Admin" : "Learner"))
+
+// Competency stays highlighted on its sub-pages, such as a single COC.
+const isActive = (item) => {
+  if (item.section) return route.meta?.navSection === item.section
+  if (item.exact) return route.path === item.to || route.path === `${item.to}/`
+  return route.path.startsWith(item.to)
+}
+
+// Close the drawer on phones and tablets after choosing a page.
+const onNavigate = () => emit("closeSidebar")
 </script>
 
-
 <style scoped>
-/* =========================================
-   FROSTED NOIR PALETTE
-========================================= */
+/* FROSTED NOIR
+   #FFFFFF surface   #000000 text   #696969 secondary
+   #A9A9A9 icons     #D3D3D3 lines  #F5F5F5 hover
+   Red appears only on logout hover. */
 
-.user-sidebar {
-
-  --white: #FFFFFF;
-  --black: #000000;
-  --gray-light: #D3D3D3;
-  --gray: #A9A9A9;
-  --gray-dark: #696969;
-
-  --bg-primary: #FFFFFF;
-  --bg-hover: #F5F5F5;
-  --bg-active: #D3D3D3;
-
-  --text-primary: #000000;
-  --text-secondary: #696969;
-  --text-muted: #A9A9A9;
-
-  --border: #D3D3D3;
-
-  width: 240px;
-
-  background: var(--bg-primary);
+.sidebar {
+  --ink: #000000;
+  --muted: #696969;
+  --icon: #a9a9a9;
+  --line: #d3d3d3;
+  --hover: #f5f5f5;
+  --selected: #ededed;
+  --danger: #c81e2e;
+  --danger-soft: #fdf1f2;
 
   position: fixed;
-
-  left: 0;
   top: 0;
-
+  left: 0;
+  z-index: 1000;
   display: flex;
   flex-direction: column;
-
+  width: 240px;
   height: 100vh;
-
-  padding: 1.5rem;
-
-  transition:
-    transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-
-  z-index: 1000;
-
-  border-right: 1px solid var(--border);
-
+  height: 100dvh;
+  padding: 1.5rem 1rem 1rem;
+  overflow-x: hidden;
   overflow-y: auto;
-
-  font-family:
-    'Inter',
-    -apple-system,
-    BlinkMacSystemFont,
-    'Segoe UI',
-    sans-serif;
-
   box-sizing: border-box;
+  background: #ffffff;
+  border-right: 1px solid var(--line);
+  color: var(--ink);
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-size: 0.875rem;
+  line-height: 1.3;
+  -webkit-font-smoothing: antialiased;
+  transition: transform 0.25s ease, box-shadow 0.25s ease;
 }
 
-
-/* =========================================
-   RESPONSIVE
-========================================= */
-
-@media (max-width: 1024px) and (min-width: 769px) {
-
-  .user-sidebar {
-    width: 220px;
-    padding: 1.25rem;
-  }
-
+/* Every direct child stays inside the sidebar width */
+.sidebar>* {
+  min-width: 0;
+  max-width: 100%;
 }
 
-
-@media (max-width: 768px) {
-
-  .user-sidebar {
-
-    transform: translateX(-100%);
-
-    width: 280px;
-
-    height: 100vh;
-
-    padding: 1.25rem;
-  }
-
-  .user-sidebar.open {
-
-    transform: translateX(0);
-
-    box-shadow:
-      12px 0 40px rgba(0, 0, 0, 0.15);
-  }
-
+/* Buttons and links do not inherit the font by default */
+.sidebar a,
+.sidebar button {
+  font: inherit;
+  color: inherit;
 }
 
+/* BRAND */
 
-@media (max-width: 480px) {
-
-  .user-sidebar.open {
-
-    width: 100%;
-
-    max-width: 280px;
-  }
-
-}
-
-
-/* =========================================
-   LOGO
-========================================= */
-
-.logo-section {
-
+.brand {
   display: flex;
-
   align-items: center;
-
-  gap: 12px;
-
-  margin-bottom: 2.5rem;
-
-  padding-right: 0.5rem;
+  gap: 0.625rem;
+  justify-content: center;
+  margin: 0 0.5rem 1.5rem;
+  text-decoration: none;
 }
 
-.logo-section img {
-
-  width: 32px;
-  height: 32px;
-
+.brand img {
+  display: block;
+  width: 28px;
+  height: 28px;
   object-fit: contain;
-
   flex-shrink: 0;
 }
 
-.logo-text {
-
+.brand-name {
+  font-size: 1.0625rem;
   font-weight: 800;
-
-  font-size: 1.1rem;
-
-  color: var(--black);
-
-  letter-spacing: 0.5px;
+  letter-spacing: -0.02em;
+  color: var(--ink);
 }
 
-.logo-text span {
-
-  color: var(--gray-dark);
+.brand-name span {
+  color: var(--muted);
 }
 
+/* divider */
 
-/* =========================================
-   NAV LABEL
-========================================= */
-
-.nav-label {
-
-  font-size: 0.7rem;
-
-  font-weight: 700;
-
-  color: var(--gray);
-
-  letter-spacing: 1.5px;
-
-  margin-bottom: 1rem;
-
-  padding-left: 0.25rem;
-}
-
-
-/* =========================================
-   NAVIGATION
-========================================= */
-
-.sidebar-nav {
-
+.divider {
   display: flex;
-
-  flex-direction: column;
-
-  gap: 5px;
-}
-
-
-.nav-link {
-
-  position: relative;
-
-  display: flex;
-
   align-items: center;
+  margin-bottom: 1.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+}
 
-  gap: 12px;
 
-  padding: 12px 12px 12px 16px;
+/* MENU: the wrapper that keeps all items inside the sidebar */
 
+.menu {
+  width: 100%;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.nav {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  width: 100%;
+  min-width: 0;
+}
+
+.group-label {
+  margin: 0.75rem 0 0.375rem 0.75rem;
+  color: var(--muted);
+  font-size: 0.6875rem;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+}
+
+.group-label:first-child {
+  margin-top: 0;
+}
+
+/* One row style for every item, including logout */
+
+.nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  min-width: 0;
+  min-height: 42px;
+  padding: 0 0.75rem;
+  border: 0;
   border-radius: 8px;
-
-  color: var(--text-secondary);
-
-  text-decoration: none;
-
+  background: transparent;
+  color: var(--muted);
+  font-size: 0.875rem;
   font-weight: 500;
-
-  font-size: 0.9375rem;
-
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    transform 0.2s ease;
+  text-align: left;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+  box-sizing: border-box;
+  transition: background 0.15s ease, color 0.15s ease;
 }
 
-
-/* Hover */
-
-.nav-link:hover {
-
-  background: var(--bg-hover);
-
-  color: var(--black);
-
-  transform: translateX(2px);
-}
-
-
-/* Active */
-
-.nav-link.active {
-
-  background: var(--bg-active);
-
-  color: var(--black);
-
-  font-weight: 600;
-
-  box-shadow:
-    inset 3px 0 0 var(--black);
-}
-
-
-.nav-link.active .nav-icon {
-
-  color: var(--black);
-}
-
-
-/* =========================================
-   ICONS
-========================================= */
-
-.nav-icon {
-
+.nav-item i {
   width: 18px;
-
+  flex-shrink: 0;
+  text-align: center;
+  color: var(--icon);
   font-size: 0.9375rem;
-
-  color: var(--gray-dark);
-
-  opacity: 0.9;
-
-  transition:
-    color 0.2s ease,
-    opacity 0.2s ease;
+  transition: color 0.15s ease;
 }
-
-
-.nav-link:hover .nav-icon {
-
-  color: var(--black);
-
-  opacity: 1;
-}
-
-
-.nav-link.active .nav-icon {
-
-  color: var(--black);
-
-  opacity: 1;
-}
-
 
 .nav-text {
-
-  opacity: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-
-/* =========================================
-   SPACER
-========================================= */
-
-.sidebar-spacer {
-
-  flex: 1;
-
-  min-height: 40px;
+.nav-item:hover {
+  background: var(--hover);
+  color: var(--ink);
 }
 
-
-/* =========================================
-   FOOTER
-========================================= */
-
-.sidebar-footer {
-
-  padding-top: 1rem;
-
-  padding-bottom: 0.25rem;
-
-  border-top: 1px solid var(--border);
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: space-between;
-
-  gap: 12px;
+.nav-item:hover i {
+  color: var(--ink);
 }
 
-
-/* =========================================
-   LOGOUT
-========================================= */
-
-.logout-btn {
-
-  background: var(--white);
-
-  border: 1px solid var(--border);
-
-  border-radius: 8px;
-
-  color: #696969;
-
-  cursor: pointer;
-
-  font-size: 1rem;
-
-  padding: 0.625rem;
-
-  display: flex;
-
-  align-items: center;
-
-  justify-content: center;
-
-  transition:
-    background 0.2s ease,
-    color 0.2s ease,
-    border-color 0.2s ease,
-    transform 0.2s ease;
-
-  flex-shrink: 0;
-
-  width: 100%;
-  height: 40px;
+.nav-item.active {
+  background: var(--selected);
+  color: var(--ink);
+  font-weight: 600;
 }
 
-
-.logout-btn:hover {
-
-  background: #000000;
-
-  border-color: #000000;
-
-  color: #FFFFFF;
-
-  transform: scale(1.04);
+.nav-item.active i {
+  color: var(--ink);
 }
 
-
-/* =========================================
-   SCROLLBAR
-========================================= */
-
-.user-sidebar::-webkit-scrollbar {
-
-  width: 4px;
+.nav-item:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
 }
 
+/* LOGOUT: same row as the others, red only on hover */
 
-.user-sidebar::-webkit-scrollbar-track {
-
-  background: transparent;
+.logout:hover,
+.logout:focus-visible {
+  background: var(--danger-soft);
+  color: var(--danger);
 }
 
-
-.user-sidebar::-webkit-scrollbar-thumb {
-
-  background: #D3D3D3;
-
-  border-radius: 4px;
+.logout:hover i,
+.logout:focus-visible i {
+  color: var(--danger);
 }
 
+/* RESPONSIVE */
 
-.user-sidebar::-webkit-scrollbar-thumb:hover {
+@media (max-width: 1024px) and (min-width: 769px) {
+  .sidebar {
+    width: 220px;
+  }
+}
 
-  background: #A9A9A9;
+/* Phone and small tablet: the sidebar slides in as a drawer */
+@media (max-width: 768px) {
+  .sidebar {
+    width: min(280px, 85vw);
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+    box-shadow: 8px 0 32px rgba(0, 0, 0, 0.12);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+
+  .sidebar,
+  .nav-item,
+  .nav-item i {
+    transition: none;
+  }
 }
 </style>

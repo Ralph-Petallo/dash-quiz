@@ -5,11 +5,11 @@ export const rj45HandsOnRequest = {
      * Load RJ-45 assessment data
      *
      * GET:
-     * /api/quizzes/{quiz}/rj45
+     * /api/rj45/{quiz}
      */
     async get(quizId) {
         const { data } = await api.get(
-            `/api/quizzes/${encodeURIComponent(quizId)}/rj45`
+            `/api/rj45/${encodeURIComponent(quizId)}`
         )
 
         return data
@@ -22,9 +22,9 @@ export const rj45HandsOnRequest = {
      * It only checks the wiring against the database pinout.
      *
      * POST:
-     * /api/quizzes/{quiz}/rj45/test
+     * /api/rj45/test/{quiz}
      *
-     * Payload example:
+     * Payload example: 
      * {
      *     standard: 'B',
      *     wirings: [
@@ -43,7 +43,7 @@ export const rj45HandsOnRequest = {
         await api.get('/sanctum/csrf-cookie')
 
         const { data } = await api.post(
-            `/api/quizzes/${encodeURIComponent(quizId)}/rj45/test`,
+            `/api/rj45/test/${encodeURIComponent(quizId)}`,
             payload
         )
 
@@ -64,7 +64,7 @@ export const rj45HandsOnRequest = {
      * - create rj45_attempt_pins
      *
      * POST:
-     * /api/quizzes/{quiz}/rj45/attempts
+     * /api/rj45/{id}
      *
      * Payload example:
      * {
@@ -78,7 +78,7 @@ export const rj45HandsOnRequest = {
         await api.get('/sanctum/csrf-cookie')
 
         const { data } = await api.post(
-            `/api/quizzes/${encodeURIComponent(quizId)}/rj45/attempts`,
+            `/api/rj45/attempt/${encodeURIComponent(quizId)}`,
             payload
         )
 

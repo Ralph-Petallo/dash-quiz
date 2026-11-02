@@ -1,51 +1,31 @@
 import api from '@/bootstrap'
 
-const encodeId = (value) =>
-    encodeURIComponent(String(value))
-
-const baseUrl = (quizId) =>
-    `/api/quizzes/${encodeId(quizId)}/hardware-procedure`
+const BASE = '/api/hardware'
 
 export const hardwareProcedureRequest = {
-    async get(quizId) {
-        const response = await api.get(
-            baseUrl(quizId)
-        )
-
-        return response.data
+    show(quizId) {
+        return api.get(`${BASE}/${quizId}`)
     },
 
-    async start(quizId) {
-        const response = await api.post(
-            `${baseUrl(quizId)}/attempts/start`
-        )
-
-        return response.data
+    get(quizId) {
+        return hardwareProcedureRequest.show(quizId)
     },
 
-    async action(quizId, attemptId, payload) {
-        const response = await api.post(
-            `${baseUrl(quizId)}/attempts/${encodeId(attemptId)}/actions`,
-            payload
-        )
-
-        return response.data
+    start(quizId) {
+        return api.post(`${BASE}/${quizId}/start`)
     },
 
-    async complete(quizId, attemptId) {
-        const response = await api.post(
-            `${baseUrl(quizId)}/attempts/${encodeId(attemptId)}/complete`
-        )
-
-        return response.data
+    action(quizId, attemptId, payload) {
+        return api.post(`${BASE}/${quizId}/${attemptId}/actions`, payload)
     },
 
-    async record(recordId) {
-        const response = await api.get(
-            `/api/records/${encodeId(recordId)}/hardware-procedure`
-        )
+    complete(quizId, attemptId) {
+        return api.post(`${BASE}/${quizId}/${attemptId}/complete`)
+    },
 
-        return response.data
+    record(recordIdOrQuizId, maybeRecordId) {
+        const recordId = maybeRecordId !== undefined ? maybeRecordId : recordIdOrQuizId
+        return api.get(`/api/records/${recordId}/hardware`)
     },
 }
 

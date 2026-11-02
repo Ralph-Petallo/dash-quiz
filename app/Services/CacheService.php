@@ -3,79 +3,59 @@
 namespace App\Services;
 
 use Illuminate\Support\Facades\Cache;
-use App\Models\User;
+use App\Models\Dasher;
 use App\Models\Quiz;
-use App\Models\QuizAttempt;
+use App\Models\QuizRecord;
 
 class CacheService
 {
-    /* =========================
-       🏆 LEADERBOARD
-    ========================== */
-    public static function cacheLeaderboard(int $quizId)
+    public function __construct(private PerformanceService $performance)
+    {
+    }
+
+    /* 🏆 LEADERBOARD: one assessment, best attempt per learner */
+    public static function cacheLeaderboard(int $cocId, string $quizType, int $limit = 100)
     {
         return Cache::remember(
-            "dashquiz:leaderboard:$quizId",
+            "dashquiz:leaderboard:{$cocId}:{$quizType}:{$limit}",
             300,
-            function () use ($quizId) {
-                return QuizAttempt::where('quiz_id', $quizId)
-                    ->with('user:id,name')
-                    ->orderByDesc('score')
-                    ->take(10)
-                    ->get();
-            }
+            fn() => app(PerformanceService::class)->leaderboard($cocId, $quizType, $limit)
         );
     }
 
-    /* =========================
-       🧪 PUBLISHED QUIZZES
-    ========================== */
+    /* 🧪 PUBLISHED QUIZZES (unchanged) */
     public static function cachePublishedQuizzes()
     {
         return Cache::remember(
-            "dashquiz:quizzes:published",
+            'dashquiz:quizzes:published',
             600,
-            function () {
-                return Quiz::where('is_published', true)
-                    ->latest()
-                    ->get();
-            }
+            fn() => Quiz::where('is_published', true)->latest()->get()
         );
     }
 
-    //USER RECORDS (attempt history)
+    /* 📋 USER RECORDS: from quiz_records, not attempts */
     public static function cacheUserRecords(int $userId)
     {
         return Cache::remember(
-            "dashquiz:records:user:$userId",
+            "dashquiz:records:user:{$userId}",
             300,
-            function () use ($userId) {
-                return QuizAttempt::where('user_id', $userId)
-                    ->with('quiz:id,title')
-                    ->latest()
-                    ->get();
-            }
+            fn() => QuizRecord::where('user_id', $userId)
+                ->with('quiz:id,title,coc_number')
+                ->latest('completed_at')
+                ->get()
         );
     }
 
-    /* =========================
-       👤 PROFILE PAGE DATA
-    ========================== */
+    /* 👤 PROFILE STATS: same numbers as the dashboard */
     public static function cacheProfile(int $userId)
     {
         return Cache::remember(
-            "dashquiz:profile:$userId",
+            "dashquiz:profile:{$userId}",
             600,
-            function () use ($userId) {
-                $user = User::findOrFail($userId);
-
-                return [
-                    'user' => $user,
-                    'total_attempts' => QuizAttempt::where('user_id', $userId)->count(),
-                    'avg_score' => QuizAttempt::where('user_id', $userId)->avg('score'),
-                    'best_score' => QuizAttempt::where('user_id', $userId)->max('score'),
-                ];
-            }
+            fn() => [
+                'user' => Dasher::findOrFail($userId),
+                'summary' => app(PerformanceService::class)->summary(userId: $userId),
+            ]
         );
     }
 }

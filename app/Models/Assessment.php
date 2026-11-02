@@ -5,12 +5,11 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
-
 class Assessment extends Model
 {
     use HasFactory;
 
-    protected $table = 'assessments';
+    public $table = 'assessments';
 
     protected $fillable = [
         'coc_id',
@@ -26,6 +25,7 @@ class Assessment extends Model
     ];
 
     protected $casts = [
+        'meta' => 'array',
         'available' => 'boolean',
     ];
 
@@ -34,6 +34,6 @@ class Assessment extends Model
      */
     public function coc()
     {
-        return $this->belongsTo(Quiz::class);
+        return $this->belongsTo(Quiz::class, 'coc_id');
     }
 }
