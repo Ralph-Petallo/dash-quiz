@@ -420,10 +420,26 @@ async function loadDevices() {
   loadError.value = ''
 
   try {
-    const { data } = await inputOutputRequest.fetch()
+    const response = await inputOutputRequest.fetch()
+    const body = response.data
 
-    devices.value = data.data
-    assessmentId.value = data.data.assessment_id ?? null
+    if (!Array.isArray(body?.data)) {
+      throw new Error('The server returned an invalid device list.')
+    }
+
+    devices.value = body.data
+
+    // Adjust these fields to match your actual API response.
+    assessmentId.value =
+      body.assessment_id
+      ?? body.assessment?.id
+      ?? body.assessment?.assessment_id
+      ?? null
+
+    if (!assessmentId.value) {
+      throw new Error('The API response did not include an assessment ID.')
+    }
+
     assignments.value = {}
     selectedId.value = null
     draggingId.value = null
@@ -435,12 +451,13 @@ async function loadDevices() {
     sessionUuid.value = createSessionUuid()
     startedAt.value = Date.now()
 
-    Object.keys(brokenImages).forEach((key) => delete brokenImages[key])
+    Object.keys(brokenImages).forEach((key) => {
+      delete brokenImages[key]
+    })
   } catch (error) {
     console.error('Failed to load input/output devices:', error)
 
     const status = error.response?.status
-
     loadError.value =
       status === 401 || status === 403
         ? 'Your session may have expired. Please sign in again.'
