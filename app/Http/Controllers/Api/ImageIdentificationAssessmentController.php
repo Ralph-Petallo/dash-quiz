@@ -40,7 +40,7 @@ class ImageIdentificationAssessmentController extends Controller
             ->where('available', true)
             ->first();
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No available image identification assessment was found.',
@@ -134,7 +134,7 @@ class ImageIdentificationAssessmentController extends Controller
             ->where('token', $validated['attempt_token'])
             ->first();
 
-        if (! $attempt || (int) $attempt->quiz_id !== (int) $validated['quiz_id']) {
+        if (!$attempt || (int) $attempt->quiz_id !== (int) $validated['quiz_id']) {
             return $this->error('The assessment attempt is invalid or has expired.', 404);
         }
 
@@ -159,7 +159,7 @@ class ImageIdentificationAssessmentController extends Controller
                 ->where('available', true)
                 ->first();
 
-            if (! $assessment) {
+            if (!$assessment) {
                 abort(404, 'No available image identification assessment was found.');
             }
 
@@ -177,7 +177,7 @@ class ImageIdentificationAssessmentController extends Controller
             }
 
             $itemIds = collect($questionSet)
-                ->flatMap(fn (array $question) => array_merge(
+                ->flatMap(fn(array $question) => array_merge(
                     [(int) $question['item_id']],
                     array_map('intval', array_values($question['options']))
                 ))
@@ -200,7 +200,7 @@ class ImageIdentificationAssessmentController extends Controller
                 $answer = $answers->get($questionToken);
                 $optionMap = $questionData['options'];
 
-                if (! array_key_exists($answer['answer_id'], $optionMap)) {
+                if (!array_key_exists($answer['answer_id'], $optionMap)) {
                     throw ValidationException::withMessages([
                         'answers' => ['A selected option does not belong to its issued question.'],
                     ]);
@@ -285,7 +285,7 @@ class ImageIdentificationAssessmentController extends Controller
             ->orderBy('sort_order')
             ->orderBy('id')
             ->get()
-            ->map(fn (ImageIdentificationItem $item) => [
+            ->map(fn(ImageIdentificationItem $item) => [
                 'id' => $item->id,
                 'assessment_id' => $item->assessment_id,
                 'item_name' => $item->item_name,
@@ -317,7 +317,7 @@ class ImageIdentificationAssessmentController extends Controller
             'assessment.title' => ['required', 'string', 'max:255'],
             'assessment.description' => ['nullable', 'string', 'max:2000'],
             'assessment.category' => ['nullable', 'string', 'max:100'],
-            'assessment.difficulty' => ['nullable', 'in:'.implode(',', self::DIFFICULTIES)],
+            'assessment.difficulty' => ['nullable', 'in:' . implode(',', self::DIFFICULTIES)],
             'assessment.icon' => ['nullable', 'string', 'max:100'],
             'assessment.available' => ['required', 'boolean'],
 
@@ -351,12 +351,12 @@ class ImageIdentificationAssessmentController extends Controller
                 $submittedItemIds = [];
 
                 foreach ($submittedItems as $index => $itemData) {
-                    if (! empty($itemData['id'])) {
+                    if (!empty($itemData['id'])) {
                         $item = ImageIdentificationItem::query()
                             ->where('assessment_id', $assessment->id)
                             ->find($itemData['id']);
 
-                        if (! $item) {
+                        if (!$item) {
                             throw ValidationException::withMessages([
                                 "items.$index.id" => 'This item does not belong to this assessment.',
                             ]);
@@ -375,12 +375,12 @@ class ImageIdentificationAssessmentController extends Controller
                     if ($image) {
                         $this->deleteStoredImage($item->image_path);
                         $item->image_path = $image->store('image-identification', 'public');
-                    } elseif (! empty($itemData['remove_image'])) {
+                    } elseif (!empty($itemData['remove_image'])) {
                         $this->deleteStoredImage($item->image_path);
                         $item->image_path = null;
                     }
 
-                    if (! $item->image_path) {
+                    if (!$item->image_path) {
                         throw ValidationException::withMessages([
                             "items.$index.image" => 'An image is required for each item.',
                         ]);
@@ -514,7 +514,7 @@ class ImageIdentificationAssessmentController extends Controller
             ])
             ->shuffle()
             ->values()
-            ->map(fn ($option) => [
+            ->map(fn($option) => [
                 'id' => $option->id,
                 'description' => $option->description,
             ]);
@@ -522,7 +522,7 @@ class ImageIdentificationAssessmentController extends Controller
 
     private function imageUrl(?string $path): ?string
     {
-        if (! $path) {
+        if (!$path) {
             return null;
         }
 
@@ -537,7 +537,7 @@ class ImageIdentificationAssessmentController extends Controller
     {
         if (
             $path &&
-            ! filter_var($path, FILTER_VALIDATE_URL) &&
+            !filter_var($path, FILTER_VALIDATE_URL) &&
             Storage::disk('public')->exists($path)
         ) {
             Storage::disk('public')->delete($path);

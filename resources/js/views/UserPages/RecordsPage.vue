@@ -236,6 +236,11 @@
               : 'Complete an assessment and your saved result will appear here.'
           }}
         </p>
+
+        <button type="button" class="btn btn-primary"
+          @click="hasActiveFilters ? clearFilters() : $router.push('/user/assessments')">
+          {{ hasActiveFilters ? 'Clear filters' : 'Take an assessment' }}
+        </button>
       </div>
 
       <footer v-if="pagination.total_pages > 1" class="pagination-bar">
@@ -848,6 +853,36 @@ onMounted(async () => {
   border: 1px solid var(--border);
   border-radius: 12px;
   background: var(--surface);
+}
+
+
+.btn-primary {
+  padding: 10px 16px;
+  margin-top: 12px;
+  border: 1px solid var(--ink);
+  border-radius: 9px;
+  background: var(--ink);
+  color: #fff;
+  font-size: 12px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, border-color 0.2s ease;
+}
+
+.btn-primary:hover {
+  border-color: var(--line);
+  background: #fff;
+  color: var(--ink);
+}
+
+.btn-primary:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 3px;
+}
+
+.btn-primary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .notice>div {
@@ -1659,4 +1694,3 @@ onMounted(async () => {
   }
 }
 </style>
-

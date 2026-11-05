@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\QuizRecord;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Collection;
 
 class PerformanceService
@@ -13,17 +14,20 @@ class PerformanceService
     /**
      * Completed attempts, optionally narrowed by user, COC, or assessment type.
      */
-    public function attempts(?int $userId = null, ?int $cocId = null, ?string $quizType = null): Builder
-    {
+    public function attempts(
+        ?int $userId = null,
+        ?int $cocId = null,
+        ?string $quizType = null
+    ): Builder {
         return QuizRecord::query()
             ->whereNotNull('completed_at')
-            ->when($userId, fn(Builder $q) => $q->where('user_id', $userId))
-            ->when($cocId, fn(Builder $q) => $q->where('quiz_id', $cocId))
-            ->when($quizType, fn(Builder $q) => $q->where('quiz_type', $quizType));
+            ->when($userId, fn(Builder $query) => $query->where('user_id', $userId))
+            ->when($cocId, fn(Builder $query) => $query->where('quiz_id', $cocId))
+            ->when($quizType, fn(Builder $query) => $query->where('quiz_type', $quizType));
     }
 
     /**
-     * The percentage used everywhere.
+     * The percentage used throughout the application.
      */
     public function percentage(QuizRecord $record): float
     {
@@ -31,11 +35,13 @@ class PerformanceService
     }
 
     /**
-     * The pass rule used everywhere. Uses the passing score stored on the attempt.
+     * The pass rule used throughout the application.
      */
     public function passed(QuizRecord $record): bool
     {
-        $threshold = (float) ($record->passing_score ?? self::DEFAULT_PASSING_SCORE);
+        $threshold = (float) (
+            $record->passing_score ?? self::DEFAULT_PASSING_SCORE
+        );
 
         return $this->percentage($record) >= $threshold;
     }
@@ -43,12 +49,21 @@ class PerformanceService
     /**
      * Summary for a learner, a COC, an assessment type, or everyone.
      */
-    public function summary(?int $userId = null, ?int $cocId = null, ?string $quizType = null): array
-    {
+    public function summary(
+        ?int $userId = null,
+        ?int $cocId = null,
+        ?string $quizType = null
+    ): array {
         $records = $this->attempts($userId, $cocId, $quizType)->get();
 
-        $percentages = $records->map(fn(QuizRecord $r) => $this->percentage($r));
-        $passed = $records->filter(fn(QuizRecord $r) => $this->passed($r))->count();
+        $percentages = $records->map(
+            fn(QuizRecord $record) => $this->percentage($record)
+        );
+
+        $passed = $records
+            ->filter(fn(QuizRecord $record) => $this->passed($record))
+            ->count();
+
         $total = $records->count();
 
         return [
@@ -61,14 +76,25 @@ class PerformanceService
     }
 
     /**
-     * Leaderboard for one assessment: each learner's best attempt, ranked.
+     * Leaderboard for one assessment.
+     *
+     * Each learner appears once, using their best attempt.
      */
-    public function leaderboard(int $cocId, string $quizType, int $limit = 100): Collection
-    {
+    public function leaderboard(
+        int $cocId,
+        string $quizType,
+        int $limit = 100,
+        ?Carbon $since = null
+    ): Collection {
+        $limit = max(1, min($limit, 200));
+
         return $this->attempts(null, $cocId, $quizType)
+            ->when(
+                $since,
+                fn(Builder $query) => $query->where('completed_at', '>=', $since)
+            )
             ->with([
                 'user:id,first_name,last_name,profile_photo',
-                'quiz:id,title,coc_number',
             ])
             ->orderByDesc('percentage')
             ->orderByDesc('score')

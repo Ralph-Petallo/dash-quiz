@@ -20,7 +20,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         $admin = auth('sanctum')->user();
 
-        if (! $admin) {
+        if (!$admin) {
             return;
         }
 
@@ -44,7 +44,7 @@ class MultipleChoiceAssessmentController extends Controller
         $assessment = $quiz->assessments
             ->firstWhere('type', 'multiple_choice');
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No multiple-choice assessment is associated with this quiz.',
@@ -52,7 +52,7 @@ class MultipleChoiceAssessmentController extends Controller
         }
 
         $questions = $quiz->questions
-            ->filter(fn ($question) => $question->options->isNotEmpty())
+            ->filter(fn($question) => $question->options->isNotEmpty())
             ->shuffle()
             ->take(20)
             ->values();
@@ -102,7 +102,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         if (
             $path &&
-            ! filter_var($path, FILTER_VALIDATE_URL) &&
+            !filter_var($path, FILTER_VALIDATE_URL) &&
             Storage::disk('public')->exists($path)
         ) {
             Storage::disk('public')->delete($path);
@@ -116,7 +116,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -148,7 +148,7 @@ class MultipleChoiceAssessmentController extends Controller
         $assessment = $quiz->assessments
             ->firstWhere('type', 'multiple_choice');
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'No multiple-choice assessment is associated with this quiz.',
@@ -163,7 +163,7 @@ class MultipleChoiceAssessmentController extends Controller
         foreach ($answers as $answer) {
             $question = $questionsById->get((int) $answer['question_id']);
 
-            if (! $question) {
+            if (!$question) {
                 throw ValidationException::withMessages([
                     'answers_array' => [
                         'A submitted question does not belong to this quiz.',
@@ -172,10 +172,10 @@ class MultipleChoiceAssessmentController extends Controller
             }
 
             $optionBelongsToQuestion = $question->options->contains(
-                fn ($option) => (int) $option->id === (int) $answer['answer_id']
+                fn($option) => (int) $option->id === (int) $answer['answer_id']
             );
 
-            if (! $optionBelongsToQuestion) {
+            if (!$optionBelongsToQuestion) {
                 throw ValidationException::withMessages([
                     'answers_array' => [
                         'A selected option does not belong to its question.',
@@ -187,7 +187,7 @@ class MultipleChoiceAssessmentController extends Controller
         $expectedQuestionCount = min(
             20,
             $quiz->questions
-                ->filter(fn ($question) => $question->options->isNotEmpty())
+                ->filter(fn($question) => $question->options->isNotEmpty())
                 ->count()
         );
 
@@ -238,11 +238,11 @@ class MultipleChoiceAssessmentController extends Controller
                 $question = $questionsById->get((int) $answer['question_id']);
 
                 $selectedOption = $question->options->first(
-                    fn ($option) => (int) $option->id === (int) $answer['answer_id']
+                    fn($option) => (int) $option->id === (int) $answer['answer_id']
                 );
 
                 $correctOption = $question->options->first(
-                    fn ($option) => (bool) $option->is_correct
+                    fn($option) => (bool) $option->is_correct
                 );
 
                 $isCorrect = $correctOption !== null
@@ -353,7 +353,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         $quiz = Quiz::query()->find($id);
 
-        if (! $quiz) {
+        if (!$quiz) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Quiz not found.',
@@ -436,12 +436,12 @@ class MultipleChoiceAssessmentController extends Controller
                 $submittedQuestionIds = [];
 
                 foreach ($validated['questions'] as $index => $questionData) {
-                    if (! empty($questionData['id'])) {
+                    if (!empty($questionData['id'])) {
                         $question = Question::query()
                             ->where('quiz_id', $quiz->id)
                             ->find($questionData['id']);
 
-                        if (! $question) {
+                        if (!$question) {
                             throw ValidationException::withMessages([
                                 "questions.$index.id" => 'The selected question does not belong to this quiz.',
                             ]);
@@ -459,7 +459,7 @@ class MultipleChoiceAssessmentController extends Controller
                         $question->image_path = $request
                             ->file("questions.$index.image")
                             ->store('questions', 'public');
-                    } elseif (! empty($questionData['remove_image'])) {
+                    } elseif (!empty($questionData['remove_image'])) {
                         $this->deleteStoredImage($question->image_path);
                         $question->image_path = null;
                     }
@@ -513,7 +513,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         $quiz = Quiz::query()->find($id);
 
-        if (! $quiz) {
+        if (!$quiz) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Quiz not found.',
@@ -559,7 +559,7 @@ class MultipleChoiceAssessmentController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -575,7 +575,7 @@ class MultipleChoiceAssessmentController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (! $record) {
+        if (!$record) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Result not found.',
@@ -585,18 +585,18 @@ class MultipleChoiceAssessmentController extends Controller
         $quiz = $record->quiz;
 
         $assessment = $quiz?->assessments
-            ?->firstWhere('type', $record->quiz_type);
+                ?->firstWhere('type', $record->quiz_type);
 
         $answers = $record->attempts
             ->map(function ($attempt) {
                 $question = $attempt->question;
 
-                if (! $question) {
+                if (!$question) {
                     return null;
                 }
 
                 $correctOption = $question->options?->first(
-                    fn ($option) => (bool) $option->is_correct
+                    fn($option) => (bool) $option->is_correct
                 );
 
                 return [

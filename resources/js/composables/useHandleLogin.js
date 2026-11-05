@@ -1,11 +1,12 @@
-import { ref } from "vue"
+import { ref, onBeforeUnmount } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useUser } from "./useUser"
 import api from "../bootstrap"
 
-export function useHandleLogin() {
-    const maxAttempts = 3
+const MAX_ATTEMPTS = 3
+const LOCK_MS = 30000
 
+export function useHandleLogin() {
     const loading = ref(false)
     const errors = ref({})
     const generalError = ref("")
@@ -13,32 +14,51 @@ export function useHandleLogin() {
     const showPassword = ref(false)
     const attempts = ref(0)
 
+    // Shown when the password is correct but the email is not confirmed yet.
+    const needsVerification = ref(false)
+    const verifyEmail = ref("")
+    const resending = ref(false)
+    const resendMessage = ref("")
+
     const router = useRouter()
     const route = useRoute()
     const { setUser, fetchUser } = useUser()
 
-    const homeFor = function (user) {
-        if (user?.role === "admin") {
-            return { name: "admin-dashboard" }
-        } else {
-            return { name: "user-home" }
-        }
+    let lockTimer = null
+
+    const homeFor = (user) =>
+        user?.role === "admin" ? { name: "admin-dashboard" } : { name: "user-home" }
+
+    const clearVerificationNotice = () => {
+        needsVerification.value = false
+        verifyEmail.value = ""
+        resendMessage.value = ""
     }
 
+    const lockAccount = () => {
+        isLocked.value = true
+        generalError.value = "Too many failed attempts. Please try again in 30 seconds."
 
+        clearTimeout(lockTimer)
+        lockTimer = setTimeout(() => {
+            attempts.value = 0
+            isLocked.value = false
+            generalError.value = ""
+        }, LOCK_MS)
+    }
+
+    /**
+     * Returns true when the learner is signed in, false otherwise.
+     * Failures are reported through errors, generalError, or the verification notice.
+     */
     const handleLogin = async (email, password) => {
-
         errors.value = {}
         generalError.value = ""
-
-        if (!email) errors.value.email = "Email is required."
-        if (!password) errors.value.password = "Password is required."
-
-        if (Object.keys(errors.value).length > 0) return
+        clearVerificationNotice()
 
         if (isLocked.value) {
             generalError.value = "Too many failed attempts. Please try again later."
-            return
+            return false
         }
 
         loading.value = true
@@ -49,7 +69,6 @@ export function useHandleLogin() {
 
             const { data } = await api.post("/api/login", { email, password })
 
-            // Accept the user wherever the controller returns it.
             const user = data?.user ?? data?.results ?? null
 
             if (!user) {
@@ -59,7 +78,7 @@ export function useHandleLogin() {
             attempts.value = 0
             setUser(user)
 
-            // Replace it with the full profile (photo, stats, dates) before the page opens.
+            // Replace with the full profile (photo, stats, dates) before the page opens.
             await fetchUser(true)
 
             const redirect = route.query.redirect
@@ -69,6 +88,8 @@ export function useHandleLogin() {
             } else {
                 await router.push(homeFor(user))
             }
+
+            return true
         } catch (error) {
             console.error("Login failed:", {
                 url: error.config?.url,
@@ -77,50 +98,68 @@ export function useHandleLogin() {
             })
 
             const status = error.response?.status
-            const responseData = error.response?.data
+            const body = error.response?.data
+
+            if (status === 403) {
+                // The backend checks the password before this status, so the email is known to be the learner's.
+                needsVerification.value = true
+                verifyEmail.value = body?.email ?? email
+                return false
+            }
 
             if (status === 422) {
-                errors.value = responseData?.errors ?? {}
-                generalError.value = responseData?.message ?? "Please check your information."
-                attempts.value++
-            } else if (status === 403) {
-                // Account exists but the email is not confirmed. Send them to the resend step.
-                await router.push({
-                    name: "register",
-                    query: { step: "resend", email: responseData?.email ?? email },
-                })
+                errors.value = body?.errors ?? {}
+                generalError.value = body?.message ?? "Please check your information."
             } else if (status === 401) {
                 attempts.value++
-                generalError.value = responseData?.message ?? "Invalid email or password."
+                generalError.value = body?.message ?? "Invalid email or password."
 
-                if (attempts.value >= maxAttempts) {
-                    isLocked.value = true
-                    generalError.value = "Too many failed attempts. Please try again later."
-
-                    setTimeout(() => {
-                        attempts.value = 0
-                        isLocked.value = false
-                        generalError.value = ""
-                    }, 30000)
-                }
+                if (attempts.value >= MAX_ATTEMPTS) lockAccount()
             } else if (status === 419) {
                 generalError.value = "Your session expired. Please try again."
             } else if (status >= 500) {
                 generalError.value = "Server error. Please try again later."
             } else {
-                generalError.value = error.message || "Unable to login. Please check your connection and try again."
+                generalError.value =
+                    error.message || "Unable to login. Please check your connection and try again."
             }
+
+            return false
         } finally {
             loading.value = false
         }
     }
 
-    const togglePassword = () => showPassword.value = !showPassword.value
+    const resendVerification = async () => {
+        if (!verifyEmail.value || resending.value) return
 
-    // Relative path, so it works on localhost and on the ngrok domain.
+        resending.value = true
+        resendMessage.value = ""
+
+        try {
+            const { data } = await api.post("/api/email/resend", { email: verifyEmail.value })
+            resendMessage.value =
+                data?.message ?? "If the account needs verification, a new link has been sent."
+        } catch (error) {
+            resendMessage.value =
+                error.response?.status === 429
+                    ? "Please wait a few minutes before requesting another link."
+                    : "Unable to send the link. Please try again."
+        } finally {
+            resending.value = false
+        }
+    }
+
+    const togglePassword = () => {
+        showPassword.value = !showPassword.value
+    }
+
+    // Relative path, so it works on localhost and on the deployed domain.
     const authGoogle = () => {
         location.href = "/auth/google/redirect"
     }
+
+    onBeforeUnmount(() => clearTimeout(lockTimer))
 
     return {
         loading,
@@ -128,9 +167,17 @@ export function useHandleLogin() {
         generalError,
         isLocked,
         showPassword,
-        authGoogle,
         attempts,
+
+        needsVerification,
+        verifyEmail,
+        resending,
+        resendMessage,
+
         handleLogin,
+        resendVerification,
+        clearVerificationNotice,
         togglePassword,
+        authGoogle,
     }
 }

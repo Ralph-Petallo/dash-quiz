@@ -868,7 +868,7 @@ onBeforeUnmount(() => {
   border: 1px solid var(--gray-300);
   border-top: 3px solid var(--coc-accent);
   border-radius: 16px;
-  background: linear-gradient(180deg, var(--coc-tint) 0%, var(--white) 70%);
+  background: var(--white);
   box-shadow: 0 8px 24px #0000000a;
 }
 
@@ -1112,10 +1112,6 @@ onBeforeUnmount(() => {
   height: 3px;
   border-radius: 0 0 3px 3px;
   background: var(--coc-accent);
-}
-
-.assessment-card.is-available {
-  background: linear-gradient(180deg, var(--coc-tint) 0%, var(--white) 55%);
 }
 
 .assessment-card.is-available:hover {

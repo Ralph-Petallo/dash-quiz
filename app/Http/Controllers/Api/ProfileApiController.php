@@ -14,7 +14,7 @@ class ProfileApiController extends Controller
     // Update user profile information
     public function uploadPhoto(Request $request)
     {
-        if (! $request->hasFile('photo')) {
+        if (!$request->hasFile('photo')) {
             return response()->json([
                 'debug' => 'NO FILE RECEIVED',
                 'all' => $request->all(),
@@ -28,7 +28,7 @@ class ProfileApiController extends Controller
 
         $user = $request->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -37,14 +37,14 @@ class ProfileApiController extends Controller
 
         $file = $request->file('photo');
 
-        $filename = Str::uuid().'.'.$file->getClientOriginalExtension();
+        $filename = Str::uuid() . '.' . $file->getClientOriginalExtension();
 
         // Store file properly
         $file->storeAs('public/images/profiles', $filename);
 
         // 🗑 Delete old photo if exists
         if ($user->profile_photo) {
-            Storage::delete('public/images/profiles/'.$user->profile_photo);
+            Storage::delete('public/images/profiles/' . $user->profile_photo);
         }
 
         //  Update user
@@ -58,7 +58,7 @@ class ProfileApiController extends Controller
             'status' => 'success',
             'message' => 'Profile photo updated successfully',
             'new_photo' => $filename,
-            'new_photo_url' => asset('storage/images/profiles/'.$filename),
+            'new_photo_url' => asset('storage/images/profiles/' . $filename),
         ]);
     }
 
@@ -69,14 +69,14 @@ class ProfileApiController extends Controller
         $validated = $request->validate([
             'first_name' => 'required|string|max:255',
             'last_name' => 'required|string|max:255',
-            'email' => 'required|email|unique:dasher,email,'.$user->id,
+            'email' => 'required|email|unique:dasher,email,' . $user->id,
             'password' => 'nullable|min:6|confirmed',
         ], [
             'password.min' => 'Password must be at least 6 characters.',
         ]);
 
         // Only hash & update password if it was provided
-        if (! empty($validated['password'])) {
+        if (!empty($validated['password'])) {
             $validated['password'] = Hash::make($validated['password']);
         } else {
             unset($validated['password']);
@@ -104,12 +104,12 @@ class ProfileApiController extends Controller
         if (
             $profilePhoto &&
             basename($profilePhoto) === $profilePhoto &&
-            ! filter_var($profilePhoto, FILTER_VALIDATE_URL)
+            !filter_var($profilePhoto, FILTER_VALIDATE_URL)
         ) {
-            $photoPath = 'images/profiles/'.$profilePhoto;
+            $photoPath = 'images/profiles/' . $profilePhoto;
             $publicDisk = Storage::disk('public');
 
-            if ($publicDisk->exists($photoPath) && ! $publicDisk->delete($photoPath)) {
+            if ($publicDisk->exists($photoPath) && !$publicDisk->delete($photoPath)) {
                 throw new RuntimeException('Unable to delete the profile photo.');
             }
         }

@@ -27,7 +27,7 @@ class AdminAssessmentController extends Controller
     {
         $admin = auth('sanctum')->user();
 
-        if (! $admin) {
+        if (!$admin) {
             return;
         }
 
@@ -87,12 +87,12 @@ class AdminAssessmentController extends Controller
                 $submittedQuestionIds = [];
 
                 foreach ($validated['questions'] as $index => $questionData) {
-                    if (! empty($questionData['id'])) {
+                    if (!empty($questionData['id'])) {
                         $question = Question::query()
                             ->where('quiz_id', $quiz->id)
                             ->find($questionData['id']);
 
-                        if (! $question) {
+                        if (!$question) {
                             throw ValidationException::withMessages([
                                 "questions.$index.id" => 'The selected question does not belong to this quiz.',
                             ]);
@@ -110,7 +110,7 @@ class AdminAssessmentController extends Controller
                         $question->image_path = $request
                             ->file("questions.$index.image")
                             ->store('questions', 'public');
-                    } elseif (! empty($questionData['remove_image'])) {
+                    } elseif (!empty($questionData['remove_image'])) {
                         $this->deleteStoredImage($question->image_path);
                         $question->image_path = null;
                     }
@@ -222,7 +222,7 @@ class AdminAssessmentController extends Controller
     {
         if (
             $path !== null &&
-            ! filter_var($path, FILTER_VALIDATE_URL) &&
+            !filter_var($path, FILTER_VALIDATE_URL) &&
             Storage::disk('public')->exists($path)
         ) {
             Storage::disk('public')->delete($path);
@@ -405,7 +405,7 @@ class AdminAssessmentController extends Controller
     {
         $quiz = Quiz::query()->find($id);
 
-        if (! $quiz) {
+        if (!$quiz) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Quiz not found.',

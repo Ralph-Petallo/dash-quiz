@@ -962,7 +962,7 @@ onBeforeUnmount(() => {
   overflow: hidden;
   border: 1px solid var(--border);
   border-radius: 18px;
-  background: linear-gradient(180deg, var(--coc-tint) 0%, var(--white) 52%);
+  background: var(--white);
   color: inherit;
   text-decoration: none;
   box-shadow: 0 8px 24px rgba(0, 0, 0, 0.04);

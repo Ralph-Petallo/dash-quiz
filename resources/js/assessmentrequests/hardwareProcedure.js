@@ -1,14 +1,16 @@
+// src/assessmentrequests/hardwareProcedure.js
 import api from '@/bootstrap'
 
 const BASE = '/api/hardware'
+const ADMIN = '/api/admin/assessment/hardware-procedure'
 
 export const hardwareProcedureRequest = {
-    show(quizId) {
-        return api.get(`${BASE}/${quizId}`)
-    },
+    /* =========================================================
+       USER (LEARNER) REQUESTS
+    ========================================================= */
 
     get(quizId) {
-        return hardwareProcedureRequest.show(quizId)
+        return api.get(`${BASE}/${quizId}`)
     },
 
     start(quizId) {
@@ -23,10 +25,23 @@ export const hardwareProcedureRequest = {
         return api.post(`${BASE}/${quizId}/${attemptId}/complete`)
     },
 
-    record(recordIdOrQuizId, maybeRecordId) {
-        const recordId = maybeRecordId !== undefined ? maybeRecordId : recordIdOrQuizId
+    record(recordId) {
         return api.get(`/api/records/${recordId}/hardware`)
     },
-}
 
-export default hardwareProcedureRequest
+    /* =========================================================
+       ADMIN REQUESTS
+    ========================================================= */
+
+    adminStore(cocId) {
+        return api.post(`${ADMIN}/create/${cocId}`)
+    },
+
+    adminEdit(assessmentId) {
+        return api.get(`${ADMIN}/edit/${assessmentId}`)
+    },
+
+    adminUpdate(assessmentId, payload) {
+        return api.put(`${ADMIN}/update/${assessmentId}`, payload)
+    },
+}

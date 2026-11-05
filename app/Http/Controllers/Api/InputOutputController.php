@@ -33,7 +33,7 @@ class InputOutputController extends Controller
             ->where('available', true)
             ->first();
 
-        if (! $assessment) {
+        if (!$assessment) {
             return response()->json([
                 'success' => false,
                 'message' => 'No available input/output assessment was found.',
@@ -91,10 +91,10 @@ class InputOutputController extends Controller
             ->get()
             ->keyBy('id');
 
-        $expectedIds = $devices->keys()->map(fn ($id) => (int) $id)->sort()->values()->all();
+        $expectedIds = $devices->keys()->map(fn($id) => (int) $id)->sort()->values()->all();
         $submittedIds = collect($validated['placements'])
             ->pluck('device_id')
-            ->map(fn ($id) => (int) $id)
+            ->map(fn($id) => (int) $id)
             ->sort()
             ->values()
             ->all();
@@ -321,7 +321,7 @@ class InputOutputController extends Controller
             $submittedIds = collect($validated['devices'])
                 ->pluck('id')
                 ->filter()
-                ->map(fn ($id) => (int) $id);
+                ->map(fn($id) => (int) $id);
 
             foreach ($validated['devices'] as $deviceData) {
                 $attributes = [
@@ -333,7 +333,7 @@ class InputOutputController extends Controller
                     'sort_order' => $deviceData['sort_order'],
                 ];
 
-                if (! empty($deviceData['id'])) {
+                if (!empty($deviceData['id'])) {
                     InputOutput::query()
                         ->whereKey($deviceData['id'])
                         ->update($attributes);
@@ -347,8 +347,8 @@ class InputOutputController extends Controller
             InputOutput::query()
                 ->when(
                     $submittedIds->isNotEmpty(),
-                    fn ($query) => $query->whereNotIn('id', $submittedIds),
-                    fn ($query) => $query
+                    fn($query) => $query->whereNotIn('id', $submittedIds),
+                    fn($query) => $query
                 )
                 ->update(['is_active' => false]);
 

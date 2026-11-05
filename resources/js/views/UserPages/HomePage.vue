@@ -1,7 +1,5 @@
 <template>
   <div class="home">
-
-    <!-- HEADER -->
     <header class="page-head">
       <div class="head-text">
         <p class="eyebrow">CSS Prep · NC II Readiness</p>
@@ -27,19 +25,16 @@
       </div>
     </header>
 
-    <!-- OFFLINE NOTICE -->
     <div v-if="!isOnline" class="notice notice-warn" role="status">
       <i class="fas fa-wifi" aria-hidden="true"></i>
-      <span>You're offline. Your results will refresh automatically when the connection returns.</span>
+      <span>Your connection is offline. Results will refresh when you reconnect.</span>
     </div>
 
-    <!-- SLOW NETWORK HINT -->
     <p v-if="refreshing && slowNetwork && !hasLoaded" class="slow-note" role="status">
       <i class="fas fa-hourglass-half" aria-hidden="true"></i>
       Still loading. Your connection may be slow.
     </p>
 
-    <!-- PAGE-LEVEL ERROR (session, permission, offline, network, server) -->
     <section v-if="pageError" class="state-panel" role="alert">
       <div class="state-icon" :class="`tone-${currentError.tone}`" aria-hidden="true">
         <i :class="currentError.icon"></i>
@@ -63,13 +58,11 @@
     </section>
 
     <template v-else>
-      <!-- SECTION ERROR: results -->
       <div v-if="dashboardErrorText" class="alert" role="alert">
         <span>{{ dashboardErrorText }}</span>
         <button type="button" @click="refreshDashboard">Try again</button>
       </div>
 
-      <!-- OVERVIEW -->
       <section v-if="!hasLoaded" class="overview skeleton-overview" role="status" aria-live="polite">
         <span class="sr-only">Loading your results</span>
 
@@ -90,7 +83,6 @@
       </section>
 
       <section v-else class="overview">
-        <!-- LATEST RESULT -->
         <article class="card latest" :class="latestStatus || 'empty'">
           <template v-if="latest">
             <div class="latest-top">
@@ -105,7 +97,7 @@
 
             <div class="meter" role="progressbar" aria-label="Latest result score"
               :aria-valuenow="safePercentage(latest.percentage)" aria-valuemin="0" aria-valuemax="100">
-              <span :style="{ width: safePercentage(latest.percentage) + '%' }"></span>
+              <span :style="{ width: `${safePercentage(latest.percentage)}%` }"></span>
             </div>
 
             <p class="threshold">
@@ -117,7 +109,9 @@
                 <strong>{{ latest.quiz_title || 'Assessment' }}</strong>
                 <small>
                   {{ metaLine(latest) }}
-                  <template v-if="formatDate(latest.completed_at)"> · {{ formatDate(latest.completed_at) }}</template>
+                  <template v-if="formatDate(latest.completed_at)">
+                    · {{ formatDate(latest.completed_at) }}
+                  </template>
                 </small>
               </div>
 
@@ -137,18 +131,19 @@
           </div>
         </article>
 
-        <!-- STATS -->
         <div class="stats">
           <article v-for="stat in stats" :key="stat.label" class="card stat">
             <div class="stat-top">
-              <span class="stat-icon"><i :class="stat.icon" aria-hidden="true"></i></span>
+              <span class="stat-icon">
+                <i :class="stat.icon" aria-hidden="true"></i>
+              </span>
               <span class="stat-label">{{ stat.label }}</span>
             </div>
 
             <strong class="stat-value">{{ stat.value }}</strong>
 
             <div v-if="stat.bar !== null" class="mini-bar" aria-hidden="true">
-              <span :style="{ width: stat.bar + '%' }"></span>
+              <span :style="{ width: `${stat.bar}%` }"></span>
             </div>
 
             <small class="stat-note">{{ stat.note }}</small>
@@ -156,7 +151,6 @@
         </div>
       </section>
 
-      <!-- RECENT RESULTS -->
       <section class="card">
         <header class="card-head">
           <div>
@@ -190,7 +184,9 @@
 
               <span class="row-main">
                 <strong>{{ record.quiz_title || 'Assessment' }}</strong>
-                <small>{{ metaLine(record) }} · {{ formatDate(record.completed_at) || '-' }}</small>
+                <small>
+                  {{ metaLine(record) }} · {{ formatDate(record.completed_at) || '-' }}
+                </small>
               </span>
 
               <span class="pill" :class="statusClass(record)">
@@ -207,124 +203,137 @@
         </div>
       </section>
 
-      <!-- ASSESSMENT RANKING -->
       <section class="card ranking-card">
         <header class="card-head">
           <div>
             <h2>Assessment ranking</h2>
-            <p>Each learner's best result for the selected assessment</p>
+            <p>Each learner’s best result for the selected assessment and period</p>
           </div>
 
-          <span v-if="userPosition" class="rank-pill">Your rank: #{{ userPosition }}</span>
+          <span v-if="userPosition" class="rank-pill">
+            Your rank: #{{ userPosition }}
+          </span>
         </header>
 
-        <div class="filters">
-          <label class="field">
-            <span>Competency</span>
-            <select v-model="selectedCocId" aria-label="Choose competency" :disabled="!hasLoaded">
-              <option v-for="coc in cocOptions" :key="coc.id" :value="String(coc.id)">
-                {{ coc.label }}
-              </option>
-            </select>
-          </label>
+        <div class="leaderboard-filters" aria-label="Leaderboard filters">
+          <div class="period-filter">
+            <span class="filter-label">Time period</span>
 
-          <label class="field">
-            <span>Assessment</span>
-            <select v-model="selectedAssessmentId" aria-label="Choose assessment"
-              :disabled="!hasLoaded || !visibleAssessments.length">
-              <option v-for="a in visibleAssessments" :key="a.id" :value="String(a.id)">
-                {{ a.title }}
-              </option>
-            </select>
-          </label>
+            <div class="period-options" role="group" aria-label="Time period">
+              <button v-for="option in PERIOD_OPTIONS" :key="option.value" type="button" class="period-chip"
+                :class="{ active: selectedPeriod === option.value }" :aria-pressed="selectedPeriod === option.value"
+                :disabled="!hasLoaded || boardLoading" @click="setPeriod(option.value)">
+                {{ option.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="select-filters">
+            <label class="filter-field">
+              <span>Competency</span>
+              <select v-model="selectedCocId" :disabled="!hasLoaded || boardLoading || !cocOptions.length">
+                <option value="" disabled>Select a competency</option>
+                <option v-for="coc in cocOptions" :key="coc.id" :value="String(coc.id)">
+                  {{ coc.label }}
+                </option>
+              </select>
+            </label>
+
+            <label class="filter-field">
+              <span>Assessment</span>
+              <select v-model="selectedAssessmentId"
+                :disabled="!hasLoaded || boardLoading || !visibleAssessments.length">
+                <option value="" disabled>
+                  {{ visibleAssessments.length ? 'Select an assessment' : 'No assessments available' }}
+                </option>
+                <option v-for="assessment in visibleAssessments" :key="assessment.id" :value="String(assessment.id)">
+                  {{ assessment.title }}
+                </option>
+              </select>
+            </label>
+          </div>
         </div>
 
-        <!-- RANKING SECTION ERROR -->
         <div v-if="leaderboardErrorText" class="alert" role="alert">
           <span>{{ leaderboardErrorText }}</span>
           <button type="button" @click="refreshLeaderboard(true)">Try again</button>
         </div>
 
-        <!-- LOADING -->
-        <div v-if="!hasLoaded" class="podium skeleton-podium" aria-hidden="true">
-          <div v-for="n in 3" :key="n" class="podium-slot">
-            <span class="sk sk-avatar"></span>
-            <span class="sk sk-line sk-w-60"></span>
-            <span class="sk podium-sk-block"></span>
-          </div>
-        </div>
+        <p class="sr-only" aria-live="polite">{{ boardStatus }}</p>
 
-        <template v-else-if="entries.length">
-          <!-- PODIUM -->
-          <div class="podium" aria-label="Top three learners">
-            <div v-for="slot in podiumSlots" :key="slot.rank" class="podium-slot"
-              :class="[`place-${slot.rank}`, { me: slot.entry && isCurrentUser(slot.entry) }]">
-              <div class="podium-person">
-                <span v-if="slot.entry" class="crown" :class="`crown-${slot.rank}`"
-                  :title="`${rankLabel(slot.rank)} place`" aria-hidden="true">
-                  <i class="fas fa-crown"></i>
-                </span>
-
-                <img v-if="slot.entry" :src="photoPath(slot.entry.profile_photo)" :alt="entryDisplayName(slot.entry)"
-                  class="avatar" draggable="false" loading="lazy" @error="handlePhotoError" />
-                <span v-else class="avatar placeholder" aria-hidden="true">
-                  <i class="fas fa-user"></i>
-                </span>
-
-                <strong class="podium-name">
-                  {{ slot.entry ? entryDisplayName(slot.entry) : 'Open' }}
-                </strong>
-
-                <span v-if="slot.entry && isCurrentUser(slot.entry)" class="you">You</span>
-
-                <span class="podium-score">
-                  {{ slot.entry ? formatPercentage(slot.entry.percentage) : '-' }}
-                </span>
-              </div>
-
-              <div class="podium-block">
-                <span class="block-rank">{{ slot.rank }}</span>
-                <span class="block-label">{{ rankLabel(slot.rank) }}</span>
-              </div>
+        <div class="board" :class="{ 'is-loading': boardLoading }" :aria-busy="boardLoading ? 'true' : 'false'">
+          <div v-if="!hasLoaded" class="podium skeleton-podium" aria-hidden="true">
+            <div v-for="n in 3" :key="n" class="podium-slot">
+              <span class="sk sk-avatar"></span>
+              <span class="sk sk-line sk-w-60"></span>
+              <span class="sk podium-sk-block"></span>
             </div>
           </div>
 
-          <!-- REST OF THE RANKING -->
-          <ol v-if="restOfRanking.length" class="ranking">
-            <li v-for="entry in restOfRanking" :key="entry.id" :class="{ me: isCurrentUser(entry) }">
-              <span class="rank">{{ entry.rank }}</span>
+          <template v-else-if="entries.length">
+            <div v-if="podiumSlots.length" class="podium" aria-label="Top three learners">
+              <div v-for="slot in podiumSlots" :key="slot.rank" class="podium-slot"
+                :class="[`place-${slot.rank}`, { me: isCurrentUser(slot.entry) }]">
+                <div class="podium-person">
+                  <span class="crown" :class="`crown-${slot.rank}`" :title="`${rankLabel(slot.rank)} place`"
+                    aria-hidden="true">
+                    <i class="fas fa-crown"></i>
+                  </span>
 
-              <img :src="photoPath(entry.profile_photo)" :alt="entryDisplayName(entry)" class="avatar small"
-                draggable="false" loading="lazy" @error="handlePhotoError" />
+                  <img :src="photoPath(slot.entry.profile_photo)" :alt="entryDisplayName(slot.entry)" class="avatar"
+                    draggable="false" loading="lazy" @error="handlePhotoError" />
 
-              <span class="rank-main">
-                <strong>
-                  {{ entryDisplayName(entry) }}
-                  <em v-if="isCurrentUser(entry)" class="you">You</em>
-                </strong>
-                <span class="mini-bar" aria-hidden="true">
-                  <span :style="{ width: safePercentage(entry.percentage) + '%' }"></span>
+                  <strong class="podium-name">
+                    {{ entryDisplayName(slot.entry) }}
+                  </strong>
+
+                  <span v-if="isCurrentUser(slot.entry)" class="you">You</span>
+
+                  <span class="podium-score">
+                    {{ formatPercentage(slot.entry.percentage) }}
+                  </span>
+                </div>
+
+                <div class="podium-block">
+                  <span class="block-rank">{{ slot.rank }}</span>
+                  <span class="block-label">{{ rankLabel(slot.rank) }}</span>
+                </div>
+              </div>
+            </div>
+
+            <ol v-if="restOfRanking.length" class="ranking">
+              <li v-for="entry in restOfRanking" :key="entry.rank" :class="{ me: isCurrentUser(entry) }">
+                <span class="rank">{{ entry.rank }}</span>
+
+                <img :src="photoPath(entry.profile_photo)" :alt="entryDisplayName(entry)" class="avatar small"
+                  draggable="false" loading="lazy" @error="handlePhotoError" />
+
+                <span class="rank-main">
+                  <strong>
+                    {{ entryDisplayName(entry) }}
+                    <em v-if="isCurrentUser(entry)" class="you">You</em>
+                  </strong>
+
+                  <span class="mini-bar" aria-hidden="true">
+                    <span :style="{ width: `${safePercentage(entry.percentage)}%` }"></span>
+                  </span>
                 </span>
-              </span>
 
-              <span class="score">{{ formatPercentage(entry.percentage) }}</span>
-            </li>
-          </ol>
+                <span class="score">{{ formatPercentage(entry.percentage) }}</span>
+              </li>
+            </ol>
 
-          <p class="footnote">{{ activeFilterLabel }}</p>
-        </template>
+            <p class="footnote">{{ activeFilterLabel }}</p>
+          </template>
 
-        <!-- EMPTY RANKING -->
-        <div v-else-if="hasLoaded && !leaderboardErrorText" class="empty-state small">
-          <i class="fas fa-trophy" aria-hidden="true"></i>
-          <strong>
-            {{ cocOptions.length ? 'No results for this assessment yet' : 'No rankings are available yet' }}
-          </strong>
-          <p>Rankings appear after learners complete an assessment.</p>
+          <div v-else-if="!leaderboardErrorText" class="empty-state small">
+            <i class="fas fa-trophy" aria-hidden="true"></i>
+            <strong>{{ emptyBoardTitle }}</strong>
+            <p>{{ emptyBoardHint }}</p>
+          </div>
         </div>
       </section>
     </template>
-
   </div>
 </template>
 
@@ -342,25 +351,40 @@ const { user, userFullName, fetchUser } = useUser()
 
 const {
   dashboard,
+  dashboardError,
   getDashboard,
   leaderboard,
   leaderboardMeta,
+  leaderboardError,
   getLeaderBoard,
 } = useUserRequests()
 
 const PASSING_FALLBACK = 75
 const DEFAULT_PHOTO = '/storage/images/profiles/default.png'
 const SLOW_AFTER_MS = 4000
+const BOARD_LIMIT = 100
 
-/* =========================================================
-   ERROR STATES
-========================================================= */
+const PERIOD_OPTIONS = [
+  { value: 'today', label: 'Today' },
+  { value: '3d', label: '3 days' },
+  { value: '7d', label: '7 days' },
+  { value: 'all', label: 'All time' },
+]
+
+const PERIOD_PHRASES = {
+  today: 'today',
+  '3d': 'in the last 3 days',
+  '7d': 'in the last 7 days',
+  all: '',
+}
+
+const DEFAULT_PERIOD = '7d'
 
 const ERROR_STATES = {
   offline: {
     icon: 'fas fa-wifi',
     title: "You're offline",
-    text: 'Check your internet connection. Your results will load automatically once you are back online.',
+    text: 'Check your internet connection. Your results will load automatically once you reconnect.',
     tone: 'danger',
     retry: true,
   },
@@ -402,55 +426,68 @@ const ERROR_STATES = {
   },
 }
 
-/* =========================================================
-   STATE
-========================================================= */
-
-const isOnline = ref(navigator.onLine)
+const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
 const refreshing = ref(false)
 const hasLoaded = ref(false)
 const slowNetwork = ref(false)
-
-// Page-level error: replaces the whole body.
 const pageError = ref('')
 
-// Section-level errors: only that section shows an alert.
-const sectionErrors = reactive({ dashboard: '', leaderboard: '' })
+const sectionErrors = reactive({
+  dashboard: '',
+  leaderboard: '',
+})
 
 const selectedCocId = ref('')
 const selectedAssessmentId = ref('')
+const selectedPeriod = ref(DEFAULT_PERIOD)
+
+const boardPending = ref(0)
+const boardLoading = computed(() => boardPending.value > 0)
 
 let requestId = 0
 let slowTimer = null
+let syncingFilters = false
+let leaderboardChain = Promise.resolve()
 
-const currentError = computed(() => ERROR_STATES[pageError.value] ?? ERROR_STATES.server)
-
-const sectionText = (label, type) =>
-  type && ERROR_STATES[type] ? `${label}: ${ERROR_STATES[type].title}.` : ''
-
-const dashboardErrorText = computed(() =>
-  sectionText('Your results could not be loaded', sectionErrors.dashboard)
+const currentError = computed(
+  () => ERROR_STATES[pageError.value] ?? ERROR_STATES.server
 )
-
-const leaderboardErrorText = computed(() =>
-  sectionText('The ranking could not be loaded', sectionErrors.leaderboard)
-)
-
-/* =========================================================
-   ERROR CLASSIFICATION AND SLOW NETWORK
-========================================================= */
 
 function classifyError(error) {
-  const code = error?.response?.status
+  const status = error?.response?.status
 
-  if (code === 401 || code === 419) return 'session'
-  if (code === 403) return 'permission'
+  if (status === 401 || status === 419) return 'session'
+  if (status === 403) return 'permission'
   if (error?.response) return 'server'
-  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') return 'timeout'
-  if (!navigator.onLine) return 'offline'
+
+  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') {
+    return 'timeout'
+  }
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return 'offline'
+  }
 
   return 'network'
 }
+
+const dashboardErrorText = computed(() => {
+  if (!sectionErrors.dashboard) return ''
+
+  const state = ERROR_STATES[sectionErrors.dashboard]
+  return state
+    ? `Your results could not be loaded: ${state.title}.`
+    : 'Your results could not be loaded.'
+})
+
+const leaderboardErrorText = computed(() => {
+  if (!sectionErrors.leaderboard) return ''
+
+  const state = ERROR_STATES[sectionErrors.leaderboard]
+  return state
+    ? `The ranking could not be loaded: ${state.title}.`
+    : 'The ranking could not be loaded.'
+})
 
 function startSlowTimer() {
   slowNetwork.value = false
@@ -466,12 +503,9 @@ function stopSlowTimer() {
   slowNetwork.value = false
 }
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
 const toNumber = (value, fallback = 0) => {
   if (value === null || value === undefined || value === '') return fallback
+
   const number = Number(value)
   return Number.isFinite(number) ? number : fallback
 }
@@ -485,27 +519,36 @@ const formatPercentage = (value) => {
 
 const formatDate = (value) => {
   if (!value) return ''
+
   const date = new Date(value)
   if (Number.isNaN(date.getTime())) return ''
-  return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })
+
+  return date.toLocaleDateString('en-US', {
+    month: 'short',
+    day: 'numeric',
+    year: 'numeric',
+  })
 }
 
 const formatLabel = (value) => {
   if (!value) return ''
+
   return String(value)
     .replace(/[_-]+/g, ' ')
-    .replace(/\b\w/g, (char) => char.toUpperCase())
+    .replace(/\b\w/g, (character) => character.toUpperCase())
 }
 
-// The server sends `passed` on every result. Text is only a fallback for older data.
 const statusClass = (record) => {
-  if (typeof record?.passed === 'boolean') return record.passed ? 'passed' : 'failed'
+  if (typeof record?.passed === 'boolean') {
+    return record.passed ? 'passed' : 'failed'
+  }
 
   const status = String(record?.status ?? '').toLowerCase()
   if (status.includes('pass')) return 'passed'
   if (status.includes('fail')) return 'failed'
 
-  return safePercentage(record?.percentage) >= toNumber(record?.passing_score, PASSING_FALLBACK)
+  return safePercentage(record?.percentage) >=
+    toNumber(record?.passing_score, PASSING_FALLBACK)
     ? 'passed'
     : 'failed'
 }
@@ -518,19 +561,25 @@ const metaLine = (record) => {
   }
 
   parts.push(record?.category || formatLabel(record?.quiz_type) || 'Assessment')
-
   return parts.join(' · ')
 }
 
 const activityIcon = (type) => {
   const value = String(type ?? '').toLowerCase()
 
-  if (value.includes('rj45') || value.includes('network')) return 'fas fa-network-wired'
-  if (value.includes('hardware') || value.includes('assemble') || value.includes('drag')) {
+  if (value.includes('rj45') || value.includes('network')) {
+    return 'fas fa-network-wired'
+  }
+
+  if (
+    value.includes('hardware') ||
+    value.includes('assemble') ||
+    value.includes('drag')
+  ) {
     return 'fas fa-screwdriver-wrench'
   }
-  if (value.includes('image')) return 'fas fa-image'
 
+  if (value.includes('image')) return 'fas fa-image'
   return 'fas fa-file-lines'
 }
 
@@ -538,32 +587,44 @@ const photoPath = (image) => {
   if (!image) return DEFAULT_PHOTO
 
   const value = String(image)
-  if (/^https?:\/\//.test(value) || value.startsWith('/storage/')) return value
+
+  if (/^https?:\/\//i.test(value) || value.startsWith('/storage/')) {
+    return value
+  }
 
   return `/storage/images/profiles/${value}`
 }
 
-const handlePhotoError = (event) => {
+function handlePhotoError(event) {
   const image = event?.target
-  if (image && !image.src.endsWith(DEFAULT_PHOTO)) image.src = DEFAULT_PHOTO
+
+  if (image && !image.src.endsWith(DEFAULT_PHOTO)) {
+    image.src = DEFAULT_PHOTO
+  }
 }
 
 const rankLabel = (rank) => {
-  if (rank === 1) return '1st'
-  if (rank === 2) return '2nd'
-  if (rank === 3) return '3rd'
-  return `${rank}th`
+  const remainder = rank % 100
+
+  if (remainder >= 11 && remainder <= 13) return `${rank}th`
+
+  switch (rank % 10) {
+    case 1:
+      return `${rank}st`
+    case 2:
+      return `${rank}nd`
+    case 3:
+      return `${rank}rd`
+    default:
+      return `${rank}th`
+  }
 }
 
-const entryDisplayName = (entry) => entry?.displayName || entry?.name || 'Learner'
+const entryDisplayName = (entry) =>
+  entry?.displayName || entry?.name || 'Learner'
 
-const isCurrentUser = (entry) => {
-  return entry?.isYou === true
-}
-
-/* =========================================================
-   RESULTS AND STATS
-========================================================= */
+const isCurrentUser = (entry) =>
+  entry?.is_you === true || entry?.isYou === true
 
 const summary = computed(() => {
   const data = dashboard.value?.summary ?? {}
@@ -577,10 +638,16 @@ const summary = computed(() => {
 })
 
 const recentResults = computed(() => {
-  const items = Array.isArray(dashboard.value?.recent_activity) ? dashboard.value.recent_activity : []
+  const items = Array.isArray(dashboard.value?.recent_activity)
+    ? dashboard.value.recent_activity
+    : []
 
   return [...items]
-    .sort((a, b) => new Date(b?.completed_at ?? 0) - new Date(a?.completed_at ?? 0))
+    .sort((a, b) => {
+      const dateA = new Date(a?.completed_at ?? 0).getTime()
+      const dateB = new Date(b?.completed_at ?? 0).getTime()
+      return dateB - dateA
+    })
     .slice(0, 5)
 })
 
@@ -592,9 +659,12 @@ const summaryText = computed(() => {
 
   const { attempts, average } = summary.value
 
-  if (!attempts) return 'Take your first assessment to start tracking your results.'
+  if (!attempts) {
+    return 'Take your first assessment to start tracking your results.'
+  }
 
-  return `You have completed ${attempts} ${attempts === 1 ? 'assessment attempt' : 'assessment attempts'} with an average score of ${formatPercentage(average)}.`
+  return `You have completed ${attempts} ${attempts === 1 ? 'assessment attempt' : 'assessment attempts'
+    } with an average score of ${formatPercentage(average)}.`
 })
 
 const passRate = computed(() => {
@@ -602,7 +672,6 @@ const passRate = computed(() => {
   return attempts ? Math.round((passed / attempts) * 100) : 0
 })
 
-// Each card has a value, an optional progress bar (null hides it), and a note.
 const stats = computed(() => [
   {
     label: 'Average score',
@@ -636,81 +705,180 @@ const stats = computed(() => [
   },
 ])
 
-/* =========================================================
-   ASSESSMENT RANKING
-   The server returns the filter options and the ranking.
-   The page only displays them.
-========================================================= */
+const entries = computed(() =>
+  Array.isArray(leaderboard.value) ? leaderboard.value : []
+)
 
-const entries = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value : []))
+const cocOptions = computed(() =>
+  Array.isArray(leaderboardMeta.value?.filter_options?.cocs)
+    ? leaderboardMeta.value.filter_options.cocs
+    : []
+)
 
-const cocOptions = computed(() => leaderboardMeta.value?.filter_options?.cocs ?? [])
-const assessmentOptions = computed(() => leaderboardMeta.value?.filter_options?.assessments ?? [])
+const assessmentOptions = computed(() =>
+  Array.isArray(leaderboardMeta.value?.filter_options?.assessments)
+    ? leaderboardMeta.value.filter_options.assessments
+    : []
+)
 
 const visibleAssessments = computed(() =>
-  assessmentOptions.value.filter((item) => String(item.coc_id) === String(selectedCocId.value))
+  assessmentOptions.value.filter(
+    (item) => String(item.coc_id) === String(selectedCocId.value)
+  )
 )
 
-const selectedAssessment = computed(() =>
-  assessmentOptions.value.find((item) => String(item.id) === String(selectedAssessmentId.value)) ?? null
+const selectedAssessment = computed(
+  () =>
+    assessmentOptions.value.find(
+      (item) => String(item.id) === String(selectedAssessmentId.value)
+    ) ?? null
 )
+
+const activePeriod = computed(
+  () =>
+    PERIOD_OPTIONS.find((option) => option.value === selectedPeriod.value) ??
+    PERIOD_OPTIONS[2]
+)
+
+const sinceText = computed(() => {
+  const since = leaderboardMeta.value?.since
+
+  if (!since || selectedPeriod.value === 'all') return ''
+  return formatDate(since)
+})
 
 const activeFilterLabel = computed(() => {
-  const coc = cocOptions.value.find((item) => String(item.id) === String(selectedCocId.value))
+  const coc = cocOptions.value.find(
+    (item) => String(item.id) === String(selectedCocId.value)
+  )
 
-  return `${coc?.label ?? 'No competency'} · ${selectedAssessment.value?.title ?? 'No assessment selected'}`
+  const parts = [
+    coc?.label ?? 'No competency selected',
+    selectedAssessment.value?.title ?? 'No assessment selected',
+    activePeriod.value.label,
+  ]
+
+  if (sinceText.value) parts.push(`since ${sinceText.value}`)
+  return parts.join(' · ')
 })
 
-const userPosition = computed(() => {
-  if (!user.value?.id) return null
-  return entries.value.find(isCurrentUser)?.rank ?? null
+const emptyBoardTitle = computed(() => {
+  if (!cocOptions.value.length) return 'No rankings are available yet'
+  if (selectedPeriod.value === 'all') return 'No results for this assessment yet'
+
+  return `No results ${PERIOD_PHRASES[selectedPeriod.value]}`
 })
 
-// Podium order: 2nd (left), 1st (centre, tallest), 3rd (right).
-// Empty places keep their block so the podium holds its shape.
-const podiumSlots = computed(() =>
-  [2, 1, 3].map((rank) => ({
-    rank,
-    entry: entries.value.find((entry) => entry.rank === rank) ?? null,
-  }))
+const emptyBoardHint = computed(() =>
+  selectedPeriod.value === 'all'
+    ? 'Rankings appear after learners complete an assessment.'
+    : 'Try a longer period to see more results.'
 )
 
-const restOfRanking = computed(() => entries.value.slice(3))
+const boardStatus = computed(() => {
+  if (!hasLoaded.value) return ''
+  if (boardLoading.value) return 'Updating leaderboard.'
 
-// Keep both dropdowns on valid values after the options arrive.
-const syncFilters = () => {
+  return `${entries.value.length} ranked ${entries.value.length === 1 ? 'learner' : 'learners'
+    } · ${activePeriod.value.label}`
+})
+
+const userPosition = computed(
+  () => entries.value.find(isCurrentUser)?.rank ?? null
+)
+
+const podiumSlots = computed(() =>
+  [2, 1, 3]
+    .map((rank) => ({
+      rank,
+      entry: entries.value.find((entry) => Number(entry.rank) === rank) ?? null,
+    }))
+    .filter((slot) => slot.entry)
+)
+
+const restOfRanking = computed(() =>
+  entries.value.filter((entry) => Number(entry.rank) > 3)
+)
+
+function syncFilters() {
+  syncingFilters = true
+
   if (!cocOptions.value.some((item) => String(item.id) === String(selectedCocId.value))) {
     selectedCocId.value = cocOptions.value[0] ? String(cocOptions.value[0].id) : ''
   }
 
-  if (!visibleAssessments.value.some((item) => String(item.id) === String(selectedAssessmentId.value))) {
-    selectedAssessmentId.value = visibleAssessments.value[0] ? String(visibleAssessments.value[0].id) : ''
+  if (
+    !visibleAssessments.value.some(
+      (item) => String(item.id) === String(selectedAssessmentId.value)
+    )
+  ) {
+    selectedAssessmentId.value = visibleAssessments.value[0]
+      ? String(visibleAssessments.value[0].id)
+      : ''
   }
+
+  syncingFilters = false
 }
 
-// Throws on failure so the caller can classify the error.
-const reloadLeaderboard = async (force = false) => {
+async function reloadLeaderboard(force = false) {
+  // First request loads filter options and the ranking if an assessment is selected.
   await getLeaderBoard({
-    limit: 100,
-    assessment_id: selectedAssessmentId.value || null,
+    limit: BOARD_LIMIT,
+    assessment_id: selectedAssessmentId.value || undefined,
+    period: selectedPeriod.value,
     force,
   })
 
   syncFilters()
+
+  // If defaults were selected after options arrived, request that ranking as well.
+  const selectedAssessmentIdNow = selectedAssessmentId.value || null
+  const requestedAssessmentId = selectedAssessmentId.value || null
+
+  if (selectedAssessmentIdNow && selectedAssessmentIdNow !== requestedAssessmentId) {
+    await getLeaderBoard({
+      limit: BOARD_LIMIT,
+      assessment_id: selectedAssessmentIdNow,
+      period: selectedPeriod.value,
+      force: true,
+    })
+  } else if (selectedAssessmentIdNow && !entries.value.length) {
+    // This fetches the selected board after the initial request only returned options.
+    await getLeaderBoard({
+      limit: BOARD_LIMIT,
+      assessment_id: selectedAssessmentIdNow,
+      period: selectedPeriod.value,
+      force: true,
+    })
+  }
 }
 
-// Used by the section's retry button and when the assessment changes.
-const refreshLeaderboard = async (force = false) => {
+function runLeaderboard(force = false) {
+  boardPending.value++
+
+  const request = leaderboardChain
+    .catch(() => { })
+    .then(() => reloadLeaderboard(force))
+
+  leaderboardChain = request
+
+  return request.finally(() => {
+    boardPending.value = Math.max(0, boardPending.value - 1)
+  })
+}
+
+async function refreshLeaderboard(force = false) {
+  sectionErrors.leaderboard = ''
+
   try {
-    await reloadLeaderboard(force)
-    sectionErrors.leaderboard = ''
+    await runLeaderboard(force)
   } catch (error) {
     console.error('Failed to load assessment ranking:', error)
     sectionErrors.leaderboard = classifyError(error)
   }
 }
 
-const refreshDashboard = async () => {
+async function refreshDashboard() {
   try {
     await getDashboard(true)
     sectionErrors.dashboard = ''
@@ -720,26 +888,47 @@ const refreshDashboard = async () => {
   }
 }
 
-// Changing the competency selects its first assessment.
+function setPeriod(value) {
+  if (value !== selectedPeriod.value) {
+    selectedPeriod.value = value
+  }
+}
+
 watch(selectedCocId, () => {
-  if (!visibleAssessments.value.some((item) => String(item.id) === String(selectedAssessmentId.value))) {
-    selectedAssessmentId.value = visibleAssessments.value[0] ? String(visibleAssessments.value[0].id) : ''
+  if (syncingFilters) return
+
+  if (
+    !visibleAssessments.value.some(
+      (item) => String(item.id) === String(selectedAssessmentId.value)
+    )
+  ) {
+    selectedAssessmentId.value = visibleAssessments.value[0]
+      ? String(visibleAssessments.value[0].id)
+      : ''
   }
 })
 
-// Changing the assessment loads its ranking.
-watch(selectedAssessmentId, (value, previous) => {
-  if (value !== previous && hasLoaded.value) refreshLeaderboard(false)
-})
+watch(
+  [selectedCocId, selectedAssessmentId, selectedPeriod],
+  ([cocId, assessmentId, period], previous) => {
+    if (!hasLoaded.value || syncingFilters || !previous) return
 
-/* =========================================================
-   LOADING
-========================================================= */
+    const [previousCocId, previousAssessmentId, previousPeriod] = previous
 
-const loadHome = async (force = false) => {
+    if (
+      cocId !== previousCocId ||
+      assessmentId !== previousAssessmentId ||
+      period !== previousPeriod
+    ) {
+      refreshLeaderboard(false)
+    }
+  }
+)
+
+async function loadHome(force = false) {
   const id = ++requestId
 
-  if (!navigator.onLine) {
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
     isOnline.value = false
     pageError.value = 'offline'
     hasLoaded.value = true
@@ -753,39 +942,43 @@ const loadHome = async (force = false) => {
   try {
     const [dashboardResult, leaderboardResult] = await Promise.allSettled([
       getDashboard(force),
-      reloadLeaderboard(force),
+      runLeaderboard(force),
     ])
 
     if (id !== requestId) return
 
-    const rejected = [dashboardResult, leaderboardResult].filter((result) => result.status === 'rejected')
+    const rejected = [dashboardResult, leaderboardResult].filter(
+      (result) => result.status === 'rejected'
+    )
+
     const failureTypes = rejected.map((result) => classifyError(result.reason))
+    const blockingError = failureTypes.find(
+      (type) => type === 'session' || type === 'permission'
+    )
 
-    // Session and permission problems block the whole page.
-    const blocking = failureTypes.find((type) => type === 'session' || type === 'permission')
-
-    if (blocking) {
-      pageError.value = blocking
+    if (blockingError) {
+      pageError.value = blockingError
       return
     }
 
-    // Every request failed the same way: show the page-level error.
     if (rejected.length === 2) {
       pageError.value = failureTypes[0]
       return
     }
 
-    sectionErrors.dashboard = dashboardResult.status === 'rejected'
-      ? classifyError(dashboardResult.reason)
-      : ''
+    sectionErrors.dashboard =
+      dashboardResult.status === 'rejected'
+        ? classifyError(dashboardResult.reason)
+        : ''
 
-    sectionErrors.leaderboard = leaderboardResult.status === 'rejected'
-      ? classifyError(leaderboardResult.reason)
-      : ''
+    sectionErrors.leaderboard =
+      leaderboardResult.status === 'rejected'
+        ? classifyError(leaderboardResult.reason)
+        : ''
   } catch (error) {
     if (id !== requestId) return
 
-    console.error('Failed to open the home page:', error)
+    console.error('Failed to load the home page:', error)
     pageError.value = classifyError(error)
   } finally {
     if (id === requestId) {
@@ -796,24 +989,17 @@ const loadHome = async (force = false) => {
   }
 }
 
-const refreshHome = () => loadHome(true)
-
-/* =========================================================
-   NAVIGATION
-========================================================= */
+function refreshHome() {
+  return loadHome(true)
+}
 
 const goToAssessments = () => router.push('/user/assessments')
 const goToRecords = () => router.push('/user/records')
-const goToLogin = () => router.push('/login')
-
-/* =========================================================
-   CONNECTION EVENTS
-========================================================= */
+const goToLogin = () => router.push('/')
 
 function handleOnline() {
   isOnline.value = true
 
-  // Reload when the page was waiting for the network or any section failed.
   const needsReload =
     ['offline', 'network', 'timeout'].includes(pageError.value) ||
     Object.values(sectionErrors).some(Boolean) ||
@@ -826,10 +1012,6 @@ function handleOffline() {
   isOnline.value = false
 }
 
-/* =========================================================
-   LIFECYCLE
-========================================================= */
-
 onMounted(async () => {
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)
@@ -837,7 +1019,6 @@ onMounted(async () => {
   try {
     if (!user.value) await fetchUser()
   } catch (error) {
-    // The data requests below report authentication problems themselves.
     console.warn('Unable to load the user profile:', error)
   }
 
@@ -852,15 +1033,9 @@ onBeforeUnmount(() => {
 </script>
 
 <style scoped>
-/* =========================================================
-   CSS PREP HOME
-   Frosted Noir: #FFFFFF #000000 #A9A9A9 #D3D3D3 #696969
-   Medal colors are used only for the crowns and avatar rings.
-========================================================= */
-
 .home {
-  --white: #ffffff;
-  --ink: #000000;
+  --white: #fff;
+  --ink: #000;
   --dim: #696969;
   --silver: #a9a9a9;
   --light: #d3d3d3;
@@ -868,7 +1043,6 @@ onBeforeUnmount(() => {
   --soft: #f6f6f6;
   --pass: #11813d;
   --fail: #c81e2e;
-
   --crown-gold: #c9a227;
   --crown-silver: #9ea7b0;
   --crown-bronze: #b07a4a;
@@ -880,6 +1054,7 @@ onBeforeUnmount(() => {
 
   width: 100%;
   max-width: 72rem;
+  min-width: 0;
   margin: 0 auto;
   padding: clamp(1rem, 2.5vw, 1.75rem) clamp(0.75rem, 2vw, 1.25rem) 3rem;
   display: flex;
@@ -888,7 +1063,6 @@ onBeforeUnmount(() => {
   color: var(--ink);
   font-size: 1rem;
   line-height: 1.5;
-  min-width: 0;
 }
 
 .home *,
@@ -942,10 +1116,6 @@ onBeforeUnmount(() => {
   white-space: nowrap;
   border: 0;
 }
-
-/* =========================================================
-   ENTRANCE ANIMATIONS
-========================================================= */
 
 @keyframes rise {
   from {
@@ -1038,15 +1208,7 @@ onBeforeUnmount(() => {
   animation-delay: 0.15s;
 }
 
-.meter span,
-.mini-bar span {
-  animation: grow 1s var(--ease-out) both;
-}
-
-/* =========================================================
-   HEADER
-========================================================= */
-
+/* Header */
 .page-head {
   display: flex;
   flex-wrap: wrap;
@@ -1092,10 +1254,7 @@ onBeforeUnmount(() => {
   gap: 0.5rem;
 }
 
-/* =========================================================
-   NOTICES AND SLOW NETWORK
-========================================================= */
-
+/* Notices */
 .notice {
   display: flex;
   flex-wrap: wrap;
@@ -1131,10 +1290,7 @@ onBeforeUnmount(() => {
   font-size: 0.8125rem;
 }
 
-/* =========================================================
-   PAGE-LEVEL STATE PANEL (session, permission, offline, server)
-========================================================= */
-
+/* Page state */
 .state-panel {
   display: flex;
   flex-direction: column;
@@ -1187,10 +1343,7 @@ onBeforeUnmount(() => {
   margin-top: 0.5rem;
 }
 
-/* =========================================================
-   BUTTONS
-========================================================= */
-
+/* Buttons */
 .btn {
   min-height: var(--btn-h);
   display: inline-flex;
@@ -1205,7 +1358,11 @@ onBeforeUnmount(() => {
   line-height: 1.2;
   text-align: center;
   white-space: nowrap;
-  transition: background 0.2s ease, border-color 0.2s ease, color 0.2s ease, transform 0.15s ease,
+  transition:
+    background 0.2s ease,
+    border-color 0.2s ease,
+    color 0.2s ease,
+    transform 0.15s ease,
     box-shadow 0.2s ease;
 }
 
@@ -1220,16 +1377,11 @@ onBeforeUnmount(() => {
 
 .btn i {
   font-size: 0.75rem;
-  transition: transform 0.2s ease;
-}
-
-.btn:hover:not(:disabled) i {
-  transform: translateX(1px);
 }
 
 .btn-solid {
   background: var(--ink);
-  color: var(--white);
+  color: var(--white) !important;
 }
 
 .btn-solid:hover:not(:disabled) {
@@ -1252,7 +1404,7 @@ onBeforeUnmount(() => {
 }
 
 .btn-light:hover:not(:disabled) {
-  background: #eeeeee;
+  background: #eee;
 }
 
 .btn-sm {
@@ -1275,10 +1427,6 @@ onBeforeUnmount(() => {
   color: var(--ink);
 }
 
-.btn-icon:hover:not(:disabled) i {
-  transform: rotate(45deg);
-}
-
 .link {
   display: inline-flex;
   align-items: center;
@@ -1289,22 +1437,17 @@ onBeforeUnmount(() => {
   color: var(--dim);
   font-size: 0.75rem;
   font-weight: 650;
-  transition: color 0.2s ease, gap 0.2s ease;
 }
 
 .link:hover {
   color: var(--ink);
-  gap: 0.6rem;
 }
 
 .spin {
   animation: spin 0.8s linear infinite;
 }
 
-/* =========================================================
-   SECTION ALERT
-========================================================= */
-
+/* Alerts */
 .alert {
   display: flex;
   align-items: center;
@@ -1327,10 +1470,7 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-/* =========================================================
-   CARDS
-========================================================= */
-
+/* Cards */
 .card {
   min-width: 0;
   padding: 1.25rem;
@@ -1365,10 +1505,7 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
 }
 
-/* =========================================================
-   OVERVIEW
-========================================================= */
-
+/* Overview */
 .overview {
   display: grid;
   grid-template-columns: minmax(0, 1.25fr) minmax(0, 1fr);
@@ -1382,25 +1519,27 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   gap: 0.9rem;
-  background: var(--ink);
   border-color: var(--ink);
+  background: var(--ink);
   color: var(--white);
 }
 
-/* A light sheen crosses the latest-result card every few seconds */
 .latest::after {
   content: "";
   position: absolute;
   inset: 0;
-  background: linear-gradient(100deg, transparent 30%, rgba(255, 255, 255, 0.12) 50%, transparent 70%);
+  background: linear-gradient(100deg,
+      transparent 30%,
+      rgba(255, 255, 255, 0.12) 50%,
+      transparent 70%);
   transform: translateX(-120%);
   animation: shine 4.5s ease-in-out 1.2s infinite;
   pointer-events: none;
 }
 
 .latest.empty {
-  background: var(--soft);
   border: 1px dashed var(--light);
+  background: var(--soft);
   color: var(--dim);
 }
 
@@ -1459,6 +1598,7 @@ onBeforeUnmount(() => {
   height: 100%;
   border-radius: inherit;
   background: var(--white);
+  animation: grow 1s var(--ease-out) both;
   transition: width 0.6s ease;
 }
 
@@ -1494,8 +1634,7 @@ onBeforeUnmount(() => {
   overflow-wrap: anywhere;
 }
 
-/* STATS */
-
+/* Stats */
 .stats {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -1508,29 +1647,6 @@ onBeforeUnmount(() => {
   gap: 0.6rem;
   min-height: 9.5rem;
   padding: 1rem;
-  transition: transform 0.25s var(--ease-out), border-color 0.25s ease, box-shadow 0.25s ease;
-}
-
-.stat:hover {
-  transform: translateY(-3px);
-  border-color: #cfcfcf;
-  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.06);
-}
-
-.stat:nth-child(1) {
-  animation-delay: 0.05s;
-}
-
-.stat:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.stat:nth-child(3) {
-  animation-delay: 0.15s;
-}
-
-.stat:nth-child(4) {
-  animation-delay: 0.2s;
 }
 
 .stat-top {
@@ -1549,11 +1665,6 @@ onBeforeUnmount(() => {
   background: var(--ink);
   color: var(--white);
   font-size: 0.75rem;
-  transition: transform 0.3s var(--ease-out);
-}
-
-.stat:hover .stat-icon {
-  transform: rotate(-8deg) scale(1.08);
 }
 
 .stat-label {
@@ -1589,13 +1700,11 @@ onBeforeUnmount(() => {
   height: 100%;
   border-radius: inherit;
   background: var(--ink);
+  animation: grow 1s var(--ease-out) both;
   transition: width 0.6s ease;
 }
 
-/* =========================================================
-   SKELETON (loading placeholders)
-========================================================= */
-
+/* Skeletons */
 .sk {
   display: block;
   border-radius: 6px;
@@ -1685,15 +1794,7 @@ onBeforeUnmount(() => {
   border-radius: 0.75rem 0.75rem 0 0;
 }
 
-.skeleton-podium .podium-slot {
-  align-items: center;
-  gap: 0.5rem;
-}
-
-/* =========================================================
-   EMPTY STATES
-========================================================= */
-
+/* Empty states */
 .empty-state {
   flex: 1;
   display: flex;
@@ -1729,14 +1830,8 @@ onBeforeUnmount(() => {
   color: var(--ink);
 }
 
-/* =========================================================
-   RECENT RESULTS
-========================================================= */
-
-.list li+li {
-  border-top: 1px solid var(--line);
-}
-
+/* Recent results */
+.list li+li,
 .skeleton-list li+li {
   border-top: 1px solid var(--line);
 }
@@ -1769,13 +1864,6 @@ onBeforeUnmount(() => {
   border-radius: 0.625rem;
   background: var(--soft);
   font-size: 0.8125rem;
-  transition: background 0.2s ease, transform 0.25s var(--ease-out);
-}
-
-.row:hover .row-icon {
-  background: var(--ink);
-  color: var(--white);
-  transform: scale(1.06);
 }
 
 .row-main {
@@ -1806,11 +1894,6 @@ onBeforeUnmount(() => {
   font-size: 0.75rem;
   font-weight: 750;
   white-space: nowrap;
-  transition: transform 0.2s var(--ease-out);
-}
-
-.row:hover .pill {
-  transform: scale(1.06);
 }
 
 .pill.passed {
@@ -1823,10 +1906,7 @@ onBeforeUnmount(() => {
   color: var(--fail);
 }
 
-/* =========================================================
-   ASSESSMENT RANKING
-========================================================= */
-
+/* Leaderboard */
 .rank-pill {
   display: inline-flex;
   align-items: center;
@@ -1849,58 +1929,107 @@ onBeforeUnmount(() => {
   animation: pulse-dot 2s ease-out infinite;
 }
 
-.filters {
+/* Redesigned filters */
+.leaderboard-filters {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.625rem;
+  gap: 1rem;
   margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--soft);
 }
 
-.field {
-  min-width: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 0.35rem;
+.period-filter {
+  display: grid;
+  gap: 0.5rem;
 }
 
-.field>span {
+.filter-label,
+.filter-field>span {
   color: var(--dim);
-  font-size: 0.625rem;
-  font-weight: 800;
-  letter-spacing: 0.1em;
+  font-size: 0.68rem;
+  font-weight: 750;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
-.field select {
+.period-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.period-chip {
+  min-height: 36px;
+  padding: 0 0.85rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--white);
+  color: var(--dim);
+  font-size: 0.78rem;
+  font-weight: 650;
+  transition: background 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.period-chip:hover:not(:disabled) {
+  border-color: var(--ink);
+  color: var(--ink);
+}
+
+.period-chip.active {
+  border-color: var(--ink);
+  background: var(--ink);
+  color: var(--white);
+}
+
+.period-chip:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.select-filters {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.75rem;
+}
+
+.filter-field {
+  min-width: 0;
+  display: grid;
+  gap: 0.4rem;
+}
+
+.filter-field select {
   width: 100%;
   min-width: 0;
-  height: var(--btn-h);
-  padding: 0 0.875rem;
+  height: 44px;
+  padding: 0 0.8rem;
   border: 1px solid var(--line);
-  border-radius: 12px;
-  background: var(--soft);
-  font-size: 0.8125rem;
-  outline: none;
-  transition: border-color 0.2s ease, background 0.2s ease, box-shadow 0.2s ease;
-}
-
-.field select:hover:not(:disabled) {
-  border-color: #cfcfcf;
-}
-
-.field select:focus {
-  border-color: var(--ink);
+  border-radius: 10px;
   background: var(--white);
-  box-shadow: 0 0 0 3px rgba(0, 0, 0, 0.06);
+  font-size: 0.85rem;
 }
 
-.field select:disabled {
+.filter-field select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
 
-/* PODIUM: 1st is tallest and centred, 2nd left, 3rd right */
+.filter-field select:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
 
+.board {
+  transition: opacity 0.25s ease, filter 0.25s ease;
+}
+
+.board.is-loading {
+  opacity: 0.55;
+}
+
+/* Podium */
 .podium {
   --block-1: 7.5rem;
   --block-2: 5.5rem;
@@ -1923,19 +2052,6 @@ onBeforeUnmount(() => {
   display: flex;
   flex-direction: column;
   align-items: center;
-  animation: rise 0.6s var(--ease-out) both;
-}
-
-.podium-slot.place-2 {
-  animation-delay: 0.15s;
-}
-
-.podium-slot.place-1 {
-  animation-delay: 0.25s;
-}
-
-.podium-slot.place-3 {
-  animation-delay: 0.35s;
 }
 
 .podium-person {
@@ -1953,29 +2069,16 @@ onBeforeUnmount(() => {
 .avatar {
   width: 2.4rem;
   height: 2.4rem;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--soft);
   border: 2px solid var(--white);
+  border-radius: 50%;
+  background: var(--soft);
+  object-fit: cover;
   box-shadow: 0 0 0 1px var(--light);
-  transition: transform 0.3s var(--ease-out), box-shadow 0.3s ease;
-}
-
-.podium-slot:hover .avatar {
-  transform: translateY(-3px);
 }
 
 .avatar.small {
   width: 2rem;
   height: 2rem;
-  box-shadow: 0 0 0 1px var(--line);
-}
-
-.avatar.placeholder {
-  display: grid;
-  place-items: center;
-  color: var(--silver);
-  font-size: 0.85rem;
 }
 
 .place-1 .avatar {
@@ -1992,13 +2095,10 @@ onBeforeUnmount(() => {
   box-shadow: 0 0 0 2px var(--crown-bronze);
 }
 
-/* CROWNS: gold, silver, bronze. They bob slowly so the podium feels alive. */
-
 .crown {
   position: absolute;
   top: -0.9rem;
   font-size: 0.9rem;
-  filter: drop-shadow(0 1px 1px rgba(0, 0, 0, 0.15));
   animation: bob 2.6s ease-in-out infinite;
 }
 
@@ -2008,12 +2108,10 @@ onBeforeUnmount(() => {
 
 .crown-2 {
   color: var(--crown-silver);
-  animation-delay: 0.4s;
 }
 
 .crown-3 {
   color: var(--crown-bronze);
-  animation-delay: 0.8s;
 }
 
 .podium-name {
@@ -2028,11 +2126,6 @@ onBeforeUnmount(() => {
 .podium-score {
   font-size: 0.8rem;
   font-weight: 800;
-  letter-spacing: -0.02em;
-}
-
-.place-1 .podium-score {
-  font-size: 0.9rem;
 }
 
 .you {
@@ -2054,11 +2147,6 @@ onBeforeUnmount(() => {
   gap: 0.15rem;
   padding-top: 0.6rem;
   border-radius: 0.75rem 0.75rem 0 0;
-  transition: filter 0.3s ease;
-}
-
-.podium-slot:hover .podium-block {
-  filter: brightness(1.08);
 }
 
 .place-1 .podium-block {
@@ -2083,7 +2171,6 @@ onBeforeUnmount(() => {
   font-size: 1.25rem;
   font-weight: 850;
   line-height: 1;
-  letter-spacing: -0.04em;
 }
 
 .block-label {
@@ -2094,8 +2181,7 @@ onBeforeUnmount(() => {
   opacity: 0.85;
 }
 
-/* REST OF THE RANKING */
-
+/* Remaining ranking */
 .ranking {
   max-height: 22rem;
   overflow-y: auto;
@@ -2110,26 +2196,9 @@ onBeforeUnmount(() => {
   grid-template-columns: 1.6rem 2rem minmax(0, 1fr) auto;
   align-items: center;
   gap: 0.65rem;
-  padding: 0.5rem 0.5rem;
+  padding: 0.5rem;
   border-radius: var(--radius-inner);
   transition: background 0.2s ease, transform 0.25s var(--ease-out);
-  animation: rise 0.45s var(--ease-out) both;
-}
-
-.ranking li:nth-child(1) {
-  animation-delay: 0.05s;
-}
-
-.ranking li:nth-child(2) {
-  animation-delay: 0.1s;
-}
-
-.ranking li:nth-child(3) {
-  animation-delay: 0.15s;
-}
-
-.ranking li:nth-child(4) {
-  animation-delay: 0.2s;
 }
 
 .ranking li+li {
@@ -2138,7 +2207,6 @@ onBeforeUnmount(() => {
 
 .ranking li:hover {
   background: var(--soft);
-  transform: translateX(4px);
 }
 
 .ranking li.me {
@@ -2170,8 +2238,8 @@ onBeforeUnmount(() => {
 }
 
 .score {
-  font-weight: 800;
   font-size: 0.85rem;
+  font-weight: 800;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -2184,21 +2252,13 @@ onBeforeUnmount(() => {
   font-size: 0.7rem;
 }
 
-/* =========================================================
-   WIDE SCREENS
-========================================================= */
-
 @media (min-width: 861px) {
   .ranking-card {
-    max-width: 52rem;
     width: 100%;
+    max-width: 52rem;
     margin: 0 auto;
   }
 }
-
-/* =========================================================
-   TABLET
-========================================================= */
 
 @media (max-width: 860px) {
   .overview {
@@ -2206,14 +2266,10 @@ onBeforeUnmount(() => {
   }
 }
 
-/* =========================================================
-   PHONE
-========================================================= */
-
 @media (max-width: 600px) {
   .home {
-    padding: 1rem 0.75rem 2rem;
     gap: 0.875rem;
+    padding: 1rem 0.75rem 2rem;
   }
 
   .card {
@@ -2238,13 +2294,10 @@ onBeforeUnmount(() => {
     gap: 0.5rem;
   }
 
-  .stat {
-    min-height: 8.25rem;
-    padding: 0.85rem;
-  }
-
+  .stat,
   .skeleton-stat {
     min-height: 8.25rem;
+    padding: 0.85rem;
   }
 
   .stat-value {
@@ -2255,9 +2308,14 @@ onBeforeUnmount(() => {
     font-size: 0.64rem;
   }
 
-  .filters {
+  .select-filters {
     grid-template-columns: minmax(0, 1fr);
-    gap: 0.5rem;
+    gap: 0.6rem;
+  }
+
+  .period-options {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .podium {
@@ -2269,51 +2327,13 @@ onBeforeUnmount(() => {
     padding: 1rem 0.5rem 0;
   }
 
-  .avatar {
-    width: 2.4rem;
-    height: 2.4rem;
-  }
-
-  .place-1 .avatar {
-    width: 2.9rem;
-    height: 2.9rem;
+  .podium-name {
+    font-size: 0.68rem;
   }
 
   .crown {
     top: -0.8rem;
     font-size: 0.8rem;
-  }
-
-  .podium-name {
-    font-size: 0.68rem;
-  }
-
-  .podium-score {
-    font-size: 0.8rem;
-  }
-
-  .place-1 .podium-score {
-    font-size: 0.9rem;
-  }
-
-  .block-rank {
-    font-size: 1.25rem;
-  }
-
-  .block-label {
-    font-size: 0.55rem;
-  }
-
-  .row,
-  .skeleton-row {
-    grid-template-columns: 2rem minmax(0, 1fr) auto;
-    gap: 0.5rem;
-  }
-
-  .row-icon,
-  .sk-icon-sm {
-    width: 2rem;
-    height: 2rem;
   }
 
   .ranking {

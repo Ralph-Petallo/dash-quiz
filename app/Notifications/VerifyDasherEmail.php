@@ -37,7 +37,7 @@ class VerifyDasherEmail extends Notification
     {
         $url = URL::temporarySignedRoute(
             'verification.verify',
-            now()->addMinutes(60),
+            now()->addMinutes(5),
             [
                 'id' => $notifiable->getKey(),
                 'hash' => sha1($notifiable->getEmailForVerification()),
@@ -49,7 +49,7 @@ class VerifyDasherEmail extends Notification
             ->greeting('Hi ' . $notifiable->first_name . ',')
             ->line('Thanks for creating your CSS Prep account. Confirm your email to start your assessments.')
             ->action('Confirm email', $url)
-            ->line('This link expires in 60 minutes. If you did not create an account, you can ignore this email.');
+            ->line('This link expires in 5 minutes. If you did not create an account, you can ignore this email.');
     }
 
     /**

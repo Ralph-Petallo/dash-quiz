@@ -315,6 +315,6 @@ class QuizApiController extends Controller
             ], 500);
         }
     }
-    
-    
+
+
 }

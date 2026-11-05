@@ -30,7 +30,7 @@ class AdminApiController extends Controller
     // ##############################################
     private function logActivity(?Dasher $admin, string $action, string $description): void
     {
-        if (! $admin) {
+        if (!$admin) {
             return;
         }
 
@@ -64,13 +64,13 @@ class AdminApiController extends Controller
         foreach ($cocs as $coc) {
             $cocRecords = $records->where('quiz_id', $coc->id);
 
-            $cocBoards['coc_'.$coc->coc_number] = [
+            $cocBoards['coc_' . $coc->coc_number] = [
                 'coc_number' => $coc->coc_number,
                 'assessment_id' => null,
                 'label' => "COC {$coc->coc_number}",
                 'users' => $this->rankUsers(
                     $cocRecords,
-                    fn (QuizRecord $r) => $r->quiz_type,
+                    fn(QuizRecord $r) => $r->quiz_type,
                     self::ADMIN_MIN_ASSESSMENTS,
                     $performance
                 ),
@@ -122,7 +122,7 @@ class AdminApiController extends Controller
                 'type' => $type,
                 'users' => $this->rankUsers(
                     $records,
-                    fn (QuizRecord $r) => $r->quiz_id,
+                    fn(QuizRecord $r) => $r->quiz_id,
                     1,
                     $performance
                 ),
@@ -141,7 +141,7 @@ class AdminApiController extends Controller
             ->map(function (Collection $rows) use ($groupKey, $performance) {
                 $bests = $rows
                     ->groupBy($groupKey)
-                    ->map(fn (Collection $group) => $group->max(fn (QuizRecord $r) => $performance->percentage($r)));
+                    ->map(fn(Collection $group) => $group->max(fn(QuizRecord $r) => $performance->percentage($r)));
 
                 return [
                     'user' => $rows->first()->user,
@@ -149,11 +149,11 @@ class AdminApiController extends Controller
                     'average' => $bests->isEmpty() ? 0 : round($bests->avg(), 2),
                 ];
             })
-            ->filter(fn (array $row) => $row['user'] && $row['completed'] >= $minCompleted)
+            ->filter(fn(array $row) => $row['user'] && $row['completed'] >= $minCompleted)
             ->sortByDesc('average')
             ->take(self::ADMIN_LEADER_LIMIT)
             ->values()
-            ->map(fn (array $row) => [
+            ->map(fn(array $row) => [
                 'id' => (int) $row['user']->id,
                 'first_name' => $row['user']->first_name,
                 'last_name' => $row['user']->last_name,
@@ -174,7 +174,7 @@ class AdminApiController extends Controller
             'password' => ['required', 'string'],
         ]);
 
-        if (! Auth::guard('dasher')->attempt($credentials)) {
+        if (!Auth::guard('dasher')->attempt($credentials)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid email or password.',
@@ -183,7 +183,7 @@ class AdminApiController extends Controller
 
         $user = Auth::guard('dasher')->user();
 
-        if (! $user) {
+        if (!$user) {
             Auth::guard('dasher')->logout();
 
             return response()->json([
@@ -192,7 +192,7 @@ class AdminApiController extends Controller
             ], 401);
         }
 
-        if (! $user->hasVerifiedEmail() && $user->role !== 'admin') {
+        if (!$user->hasVerifiedEmail() && $user->role !== 'admin') {
             Auth::guard('dasher')->logout();
 
             return response()->json([
@@ -239,14 +239,14 @@ class AdminApiController extends Controller
             ->where('role', 'dasher')
             ->first();
 
-        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
+        if (!$user || !Hash::check($credentials['password'], $user->password)) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Invalid credentials',
             ], 401);
         }
 
-        if (! $user->hasVerifiedEmail()) {
+        if (!$user->hasVerifiedEmail()) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Please verify your email before logging in.',
@@ -285,17 +285,38 @@ class AdminApiController extends Controller
     public function register(Request $request)
     {
         $valid = $request->validate([
-            'first_name' => ['required', 'string', 'max:50'],
-            'last_name' => ['required', 'string', 'max:50'],
-            'email' => ['required', 'email', 'max:255', 'unique:dasher,email'],
-            'password' => ['required', 'confirmed', Password::min(8)],
+            'first_name' => [
+                'required',
+                'string',
+                'max:50',
+                'regex:/^[\pL\pM][\pL\pM\s\'’-]*$/u',
+            ],
+            'last_name' => [
+                'required',
+                'string',
+                'max:50',
+                'regex:/^[\pL\pM][\pL\pM\s\'’-]*$/u',
+            ],
+            'email' => [
+                'required',
+                'string',
+                'email:rfc',
+                'max:254',
+                Rule::unique('dasher', 'email'),
+            ],
+            'password' => [
+                'required',
+                'string',
+                'confirmed',
+                Password::min(8),
+            ],
             'accept_terms' => ['required', 'accepted'],
         ]);
 
         $dasher = Dasher::create([
-            'first_name' => $valid['first_name'],
-            'last_name' => $valid['last_name'],
-            'email' => mb_strtolower($valid['email']),
+            'first_name' => trim($valid['first_name']),
+            'last_name' => trim($valid['last_name']),
+            'email' => mb_strtolower(trim($valid['email'])),
             'password' => Hash::make($valid['password']),
             'role' => 'dasher',
         ]);
@@ -344,7 +365,7 @@ class AdminApiController extends Controller
     {
         $user = $request->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated',
@@ -367,7 +388,7 @@ class AdminApiController extends Controller
         }
 
         // Throttle DB writes to at most one per 30 seconds.
-        if (! $user->last_activity || $user->last_activity->lt(now()->subSeconds(30))) {
+        if (!$user->last_activity || $user->last_activity->lt(now()->subSeconds(30))) {
             $user->update([
                 'last_activity' => now(),
                 'active_status' => 1,
@@ -431,10 +452,10 @@ class AdminApiController extends Controller
             $count = $records->count();
 
             $average = $count
-                ? round($records->avg(fn (QuizRecord $r) => $performance->percentage($r)), 2)
+                ? round($records->avg(fn(QuizRecord $r) => $performance->percentage($r)), 2)
                 : null;
 
-            $passed = $records->filter(fn (QuizRecord $r) => $performance->passed($r))->count();
+            $passed = $records->filter(fn(QuizRecord $r) => $performance->passed($r))->count();
 
             if ($count === 0) {
                 $status = 'not_started';
@@ -481,8 +502,8 @@ class AdminApiController extends Controller
         ]);
 
         // Changing the password requires the current one.
-        if (! empty($validated['new_password'])) {
-            if (! Hash::check($validated['password'], $user->password)) {
+        if (!empty($validated['new_password'])) {
+            if (!Hash::check($validated['password'], $user->password)) {
                 throw ValidationException::withMessages([
                     'password' => ['The current password is incorrect.'],
                 ]);
@@ -496,7 +517,7 @@ class AdminApiController extends Controller
         $user->email = $validated['email'];
         $user->save();
 
-        $this->logActivity($request->user(), 'Update', "Dasher ID #{$user->id} was updated");
+        $this->logActivity($user, 'Update', "Dasher ID #{$user->id} was updated");
 
         return response()->json([
             'message' => 'User updated successfully.',
@@ -508,7 +529,7 @@ class AdminApiController extends Controller
     {
         $user = Dasher::findOrFail($id);
 
-        $this->logActivity($request->user(), 'Delete', "User ID {$id} named {$user->first_name} was deleted");
+        $this->logActivity($user, 'Delete', "User ID {$id} named {$user->first_name} was deleted");
 
         $user->delete();
 
@@ -536,7 +557,7 @@ class AdminApiController extends Controller
             ->get();
 
         $rows = $records
-            ->map(fn (QuizRecord $record) => $this->formatRecord($record, $performance, true))
+            ->map(fn(QuizRecord $record) => $this->formatRecord($record, $performance, true))
             ->values();
 
         return response()->json([
@@ -565,7 +586,7 @@ class AdminApiController extends Controller
                 ->map(function ($attempt) {
                     $question = $attempt->question;
 
-                    if (! $question) {
+                    if (!$question) {
                         return null;
                     }
 

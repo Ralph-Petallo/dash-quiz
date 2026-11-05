@@ -10,6 +10,8 @@ use App\Models\QuizRecord;
 use App\Services\PerformanceService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Validation\Rule;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 class UserApiController extends Controller
@@ -18,7 +20,9 @@ class UserApiController extends Controller
 
     private const LEADERBOARD_SCAN_LIMIT = 2000;
 
-    public function __construct(private PerformanceService $performance) {}
+    public function __construct(private PerformanceService $performance)
+    {
+    }
     /**
      * ────────────────────────────────────────────────────
 
@@ -39,7 +43,7 @@ class UserApiController extends Controller
         // Same guard as the other API endpoints, so auth behaves the same everywhere.
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -179,7 +183,7 @@ class UserApiController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -205,7 +209,7 @@ class UserApiController extends Controller
             ->paginate($perPage, ['*'], 'page', $page);
 
         $rows = collect($paginator->items())
-            ->map(fn (QuizRecord $record) => $this->formatRecord($record, true))
+            ->map(fn(QuizRecord $record) => $this->formatRecord($record, true))
             ->values();
 
         return response()->json([
@@ -250,7 +254,7 @@ class UserApiController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -267,7 +271,7 @@ class UserApiController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (! $record) {
+        if (!$record) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Record not found.',
@@ -288,52 +292,30 @@ class UserApiController extends Controller
 
         $user = auth('sanctum')->user();
 
-        if (! $user) {
-
+        if (!$user) {
             return response()->json([
-
                 'status' => 'error',
-
                 'message' => 'Unauthenticated.',
-
             ], 401);
-
         }
 
         $limit = $request->get('limit', 5);
 
         $records = QuizRecord::with([
-
             'quiz',
-
             'attempts.question.options',
-
             'attempts.selectedOption',
-
-        ])
-
-            ->where('user_id', $user->id)
-
+        ])->where('user_id', $user->id)
             ->latest()
-
             ->limit($limit)
-
             ->get()
-
             ->map(function ($record) {
-
                 return $this->formatRecord($record);
-
             });
-
         return response()->json([
-
             'status' => 'success',
-
             'data' => $records,
-
         ]);
-
     }
 
     /**
@@ -342,29 +324,17 @@ class UserApiController extends Controller
     public function recordsByCategory(string $category): JsonResponse
     {
 
-        /** @var Dasher|null $user */
         $user = auth('sanctum')->user();
-
-        if (! $user) {
-
+        if (!$user) {
             return response()->json([
-
                 'status' => 'error',
-
                 'message' => 'Unauthenticated.',
-
             ], 401);
-
         }
-
         $records = QuizRecord::with([
-
             'quiz',
-
             'attempts.question.options',
-
             'attempts.selectedOption',
-
         ])
 
             ->where('user_id', $user->id)
@@ -405,7 +375,7 @@ class UserApiController extends Controller
 
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
 
             return response()->json([
 
@@ -474,7 +444,7 @@ class UserApiController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -539,16 +509,32 @@ class UserApiController extends Controller
     /**
      * Get top users based on quiz scores (Global Leaderboard)
      */
+    /**
+     * Get top users based on quiz scores.
+     */
     public function leaderboard(Request $request): JsonResponse
     {
         $validated = $request->validate([
             'assessment_id' => ['nullable', 'integer', 'exists:assessments,id'],
             'limit' => ['nullable', 'integer', 'min:1', 'max:200'],
+            'period' => ['nullable', Rule::in(['today', '3d', '7d', 'all'])],
         ]);
 
-        $limit = (int) ($validated['limit'] ?? 100);
+        $user = auth('sanctum')->user();
 
-        // Assessments that have at least one completed result.
+        if (!$user) {
+            return response()->json([
+                'status' => 'error',
+                'message' => 'Unauthenticated.',
+            ], 401);
+        }
+
+        $limit = (int) ($validated['limit'] ?? 100);
+        $period = $validated['period'] ?? '7d';
+        $since = $this->periodStart($period);
+
+        // Assessments with at least one completed record.
+        // This list is not filtered by period so filter options remain available.
         $assessments = Assessment::query()
             ->whereExists(function ($query) {
                 $query->selectRaw('1')
@@ -562,65 +548,118 @@ class UserApiController extends Controller
             ->get();
 
         $filterOptions = [
-            'cocs' => $assessments->pluck('coc')->filter()->unique('id')->sortBy('coc_number')->values()
-                ->map(fn (Quiz $coc) => [
+            'cocs' => $assessments
+                ->pluck('coc')
+                ->filter()
+                ->unique('id')
+                ->sortBy('coc_number')
+                ->values()
+                ->map(fn(Quiz $coc) => [
                     'id' => (int) $coc->id,
-                    'label' => $coc->coc_number !== null ? "COC {$coc->coc_number} · {$coc->title}" : $coc->title,
+                    'label' => $coc->coc_number !== null
+                        ? "COC {$coc->coc_number} · {$coc->title}"
+                        : $coc->title,
                 ]),
 
-            'assessments' => $assessments->map(fn (Assessment $a) => [
-                'id' => (int) $a->id,
-                'coc_id' => (int) $a->coc_id,
-                'type' => $a->type,
-                'title' => $a->title,
-            ]),
+            'assessments' => $assessments
+                ->map(fn(Assessment $assessment) => [
+                    'id' => (int) $assessment->id,
+                    'coc_id' => (int) $assessment->coc_id,
+                    'type' => $assessment->type,
+                    'title' => $assessment->title,
+                ])
+                ->values(),
         ];
 
-        $selected = $assessments->firstWhere('id', $validated['assessment_id'] ?? null);
+        $meta = [
+            'limit' => $limit,
+            'period' => $period,
+            'since' => $since?->toIso8601String(),
+            'filter_options' => $filterOptions,
+        ];
 
-        if (! $selected) {
+        $assessmentId = $validated['assessment_id'] ?? null;
+
+        if ($assessmentId === null) {
             return response()->json([
                 'status' => 'success',
                 'data' => [],
-                'meta' => [
+                'meta' => $meta + [
                     'returned' => 0,
-                    'limit' => $limit,
-                    'filters' => ['assessment_id' => null],
-                    'filter_options' => $filterOptions,
+                    'filters' => [
+                        'assessment_id' => null,
+                    ],
                 ],
             ]);
         }
 
-        $currentUserId = (int) $request->user()->id;
+        $selected = $assessments->firstWhere('id', (int) $assessmentId);
+
+        if (!$selected) {
+            return response()->json([
+                'status' => 'success',
+                'data' => [],
+                'meta' => $meta + [
+                    'returned' => 0,
+                    'filters' => [
+                        'assessment_id' => (int) $assessmentId,
+                    ],
+                ],
+            ]);
+        }
+
         $leaders = $this->performance
-            ->leaderboard((int) $selected->coc_id, $selected->type, $limit)
+            ->leaderboard(
+                (int) $selected->coc_id,
+                (string) $selected->type,
+                $limit,
+                $since
+            )
             ->values()
-            ->map(function (QuizRecord $record, int $index) use ($currentUserId) {
-                $user = $record->user;
-                $name = trim(($user?->first_name ?? '').' '.($user?->last_name ?? ''));
-                $passed = $this->performance->passed($record);
+            ->map(function (QuizRecord $record, int $index) use ($user) {
+                $recordUser = $record->user;
+
+                $name = trim(
+                    ($recordUser?->first_name ?? '') . ' ' .
+                    ($recordUser?->last_name ?? '')
+                );
 
                 return [
                     'rank' => $index + 1,
-                    'is_you' => (int) $record->user_id === $currentUserId,
+                    'is_you' => (int) $record->user_id === (int) $user->id,
                     'name' => $name !== '' ? $name : 'Student',
-                    'profile_photo' => $user?->profile_photo,
-                    'score' => (int) ($record->score ?? 0),
+                    'profile_photo' => $recordUser?->profile_photo,
+                    'score' => (float) ($record->score ?? 0),
                     'percentage' => $this->performance->percentage($record),
-                    'passed' => $passed,
+                    'passed' => $this->performance->passed($record),
                 ];
             });
 
         return response()->json([
             'status' => 'success',
             'data' => $leaders,
-            'meta' => [
+            'meta' => $meta + [
                 'returned' => $leaders->count(),
-                'limit' => $limit,
-                'filters' => ['assessment_id' => (int) $selected->id],
-                'filter_options' => $filterOptions,
+                'filters' => [
+                    'assessment_id' => (int) $selected->id,
+                ],
             ],
         ]);
+    }
+
+    /**
+     * Return the start of the selected calendar-aligned period.
+     */
+    private function periodStart(string $period): ?Carbon
+    {
+        $now = now();
+
+        return match ($period) {
+            'today' => $now->copy()->startOfDay(),
+            '3d' => $now->copy()->subDays(2)->startOfDay(),
+            '7d' => $now->copy()->subDays(6)->startOfDay(),
+            default => null,
+        };
     }
 
     /**
@@ -636,7 +675,7 @@ class UserApiController extends Controller
 
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',
@@ -648,7 +687,7 @@ class UserApiController extends Controller
             ->where('user_id', $user->id)
             ->first();
 
-        if (! $record) {
+        if (!$record) {
 
             return response()->json([
 
@@ -696,7 +735,7 @@ class UserApiController extends Controller
 
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
 
             return response()->json([
 
@@ -792,7 +831,7 @@ class UserApiController extends Controller
                 ->map(function ($attempt) {
                     $question = $attempt->question;
 
-                    if (! $question) {
+                    if (!$question) {
                         return null;
                     }
 
@@ -898,7 +937,7 @@ class UserApiController extends Controller
                     ->orWhere(function ($fallback) use ($category) {
                         $fallback
                             ->whereNull('category')
-                            ->whereHas('quiz', fn ($quizQuery) => $quizQuery->where('category', $category));
+                            ->whereHas('quiz', fn($quizQuery) => $quizQuery->where('category', $category));
                     });
             });
         }
@@ -912,7 +951,7 @@ class UserApiController extends Controller
                     ->orWhere(function ($fallback) use ($quizType) {
                         $fallback
                             ->whereNull('quiz_type')
-                            ->whereHas('quiz', fn ($quizQuery) => $quizQuery->where('quiz_type', $quizType));
+                            ->whereHas('quiz', fn($quizQuery) => $quizQuery->where('quiz_type', $quizType));
                     });
             });
         }
@@ -962,14 +1001,14 @@ class UserApiController extends Controller
             ]);
 
         $types = $records
-            ->map(fn (QuizRecord $record) => $record->quiz_type ?: $record->quiz?->quiz_type)
+            ->map(fn(QuizRecord $record) => $record->quiz_type ?: $record->quiz?->quiz_type)
             ->filter()
             ->unique()
             ->sort()
             ->values();
 
         $categories = $records
-            ->map(fn (QuizRecord $record) => $record->category ?: $record->quiz?->category)
+            ->map(fn(QuizRecord $record) => $record->category ?: $record->quiz?->category)
             ->filter()
             ->unique()
             ->sort()
@@ -991,7 +1030,7 @@ class UserApiController extends Controller
     {
         $user = auth('sanctum')->user();
 
-        if (! $user) {
+        if (!$user) {
             return response()->json([
                 'status' => 'error',
                 'message' => 'Unauthenticated.',

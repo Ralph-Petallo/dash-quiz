@@ -20,19 +20,35 @@ use Throwable;
 class HardwareProcedureController extends Controller
 {
     private const HARDWARE_TYPE = 'hardware_procedure';
-
+    private const QUESTION_TYPE = 'drag_drop';
+    private const QUESTION_TEXT = 'Complete the computer system unit practical assessment.';
     private const PASSING_SCORE = 75.00;
-
     private const TIME_LIMIT_MINUTES = 10;
-
     private const MISTAKE_PENALTY = 0.5;
+    private const PHASES = DragDropItem::PHASES;
 
-    private const PHASES = ['disassemble', 'assemble'];
+    // Checklist before any part is touched.
+    private const PREP_STEPS = [
+        'power_off' => 'Turn off the computer',
+        'unplug_power' => 'Unplug the power cord from the wall outlet',
+        'disconnect_peripherals' => 'Disconnect monitor, keyboard, mouse, and network cable',
+        'gather_tools' => 'Gather a Phillips screwdriver and a screw container',
+        'prepare_workspace' => 'Move the system unit to a clean, non-carpeted table',
+        'wear_wrist_strap' => 'Put on the anti-static wrist strap',
+        'ground_wrist_strap' => 'Clip the strap to a grounded metal surface',
+    ];
 
-    // Keys must match the component keys used by the Vue practical.
-    private const ADMIN_COMPONENTS = [
+    // Checklist after the chassis is closed.
+    private const FINISH_STEPS = [
+        'reconnect_peripherals' => 'Reconnect monitor, keyboard, mouse, and network cable',
+        'plug_power' => 'Plug in the power cord and switch on the power supply',
+        'power_on_test' => 'Turn on the computer and check that it starts',
+    ];
+
+    // Chassis parts. Used for disassembly and assembly.
+    private const COMPONENTS = [
         'side_panel' => 'Side panel',
-        'internal_cables' => 'Internal cables',
+        'internal_cables' => 'Internal cables and connectors',
         'system_fan' => 'System fan',
         'expansion_card' => 'Expansion card',
         'ram' => 'RAM',
@@ -42,32 +58,16 @@ class HardwareProcedureController extends Controller
         'motherboard' => 'Motherboard',
     ];
 
-    // Actions and zones in the same group count as the same thing.
-    private const ACTION_GROUPS = [
-        ['remove', 'disconnect', 'unplug', 'unscrew'],
-        ['install', 'connect', 'plug', 'screw'],
-    ];
-
-    private const ZONE_GROUPS = [
-        ['parts_tray', 'cable_tray', 'tray'],
-        ['case', 'chassis'],
-    ];
-
     /*
-    |--------------------------------------------------------------------------
-    | LEARNER: SHOW
-    |--------------------------------------------------------------------------
+    |==========================================================================
+    | USER (LEARNER) METHODS
+    |==========================================================================
     */
 
+    /** Return the learner-safe practical details. Answers and step order stay on the server. */
     public function show(Quiz $quiz): JsonResponse
     {
-        $assessment = Assessment::query()
-            ->where('coc_id', $quiz->id)
-            ->where('type', self::HARDWARE_TYPE)
-            ->first();
-
-        abort_if(! $assessment, 404, 'Hardware procedure assessment not found.');
-
+        $assessment = $this->assessmentForQuiz($quiz);
         $question = $this->questionForQuiz($quiz);
         $items = $this->procedureItems($question->id);
 
@@ -79,45 +79,17 @@ class HardwareProcedureController extends Controller
                     'title' => $quiz->title,
                     'coc_number' => $quiz->coc_number,
                 ],
-                'assessment' => [
-                    'id' => $assessment->id,
-                    'title' => $assessment->title,
-                    'type' => $assessment->type,
-                    'icon' => $assessment->icon,
-                    'description' => $assessment->description,
-                    'category' => $assessment->category,
-                    'difficulty' => $assessment->difficulty,
-                    'meta' => $assessment->meta,
-                ],
-                'question' => [
-                    'id' => $question->id,
-                    'question_text' => $question->question_text,
-                ],
-                // One card per part for display only.
-                'components' => $items
-                    ->unique('component_key')
-                    ->values()
-                    ->map(fn (DragDropItem $item) => [
-                        'component_key' => $item->component_key,
-                        'display_name' => $item->display_name,
-                        'item_type' => $item->item_type,
-                        'quantity' => $item->quantity,
-                        'image' => $item->item_image_path,
-                    ])
-                    ->values(),
-                // Every step counts, including the assembly of each part.
+                'assessment' => $this->learnerAssessment($assessment),
+                'prep_steps' => $this->stepCards($items, DragDropItem::PREPARE),
+                'finish_steps' => $this->stepCards($items, DragDropItem::FINISH),
+                'components' => $this->componentCards($items),
                 'total_actions' => $items->count(),
                 'passing_score' => self::PASSING_SCORE,
             ],
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LEARNER: START (resumes the open attempt or creates one)
-    |--------------------------------------------------------------------------
-    */
-
+    /** Resume the open attempt, or create a new timed attempt. */
     public function start(Request $request, Quiz $quiz): JsonResponse
     {
         $user = $request->user();
@@ -163,12 +135,7 @@ class HardwareProcedureController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LEARNER: ACTION (one pick-up or placement)
-    |--------------------------------------------------------------------------
-    */
-
+    /** Record the learner's next move and return the updated progress. */
     public function action(Request $request, Quiz $quiz, DragDropAttempt $attempt): JsonResponse
     {
         $this->assertOwner($attempt, $quiz, $request->user()->id);
@@ -184,11 +151,11 @@ class HardwareProcedureController extends Controller
             $locked = $this->lockOpenAttempt($attempt);
             $items = $this->procedureItems($locked->question_id);
 
-            $correctSteps = $locked->steps()->where('is_correct', true)->count();
-            $expected = $items->get($correctSteps);
+            $correct = $locked->steps()->where('is_correct', true)->count();
+            $expected = $items->get($correct);
 
             // Procedure already finished. Nothing more to record.
-            if (! $expected) {
+            if (!$expected) {
                 return [
                     'allowed' => false,
                     'progress' => $this->progress($locked, $items),
@@ -201,20 +168,20 @@ class HardwareProcedureController extends Controller
                 'Unknown hardware component.'
             );
 
-            $isCorrect =
-                $validated['component_key'] === $expected->component_key
-                && $this->actionMatches($validated['performed_action'], $expected->action)
-                && $this->zoneMatches($validated['destination_zone'], $expected->target_zone);
+            // Checklist steps only need the right key. Parts need the right action and zone too.
+            $isCorrect = $validated['component_key'] === $expected->component_key
+                && ($expected->isChecklist()
+                    || ($validated['performed_action'] === $expected->action
+                        && $validated['destination_zone'] === $expected->target_zone));
 
-            $firstTry = ! $locked->steps()
+            // Check first-try status before saving this step.
+            $firstTry = !$locked->steps()
                 ->where('expected_item_id', $expected->id)
                 ->exists();
 
-            $sequence = (int) $locked->steps()->max('sequence_number') + 1;
-
             $locked->steps()->create([
                 'expected_item_id' => $expected->id,
-                'sequence_number' => $sequence,
+                'sequence_number' => (int) $locked->steps()->max('sequence_number') + 1,
                 'expected_position' => (int) $expected->correct_position,
                 'phase' => $expected->phase,
                 'expected_action' => $expected->action,
@@ -245,12 +212,7 @@ class HardwareProcedureController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LEARNER: COMPLETE (submit the attempt)
-    |--------------------------------------------------------------------------
-    */
-
+    /** Score a fully completed attempt and save it to the learner's records. */
     public function complete(Request $request, Quiz $quiz, DragDropAttempt $attempt): JsonResponse
     {
         $user = $request->user();
@@ -268,12 +230,13 @@ class HardwareProcedureController extends Controller
             }
 
             $passed = $progress['percentage'] >= self::PASSING_SCORE;
+            $elapsed = (int) $locked->created_at->diffInSeconds(now());
 
             $record = QuizRecord::create([
                 'user_id' => $user->id,
                 'quiz_id' => $quiz->id,
                 'score' => $progress['score'],
-                'elapsed_time' => (int) $locked->created_at->diffInSeconds(now()),
+                'elapsed_time' => $elapsed,
                 'correct_answers' => $progress['completed_actions'],
                 'total_questions' => $progress['total_actions'],
                 'percentage' => $progress['percentage'],
@@ -292,7 +255,7 @@ class HardwareProcedureController extends Controller
                 'quiz_record_id' => $record->id,
                 'completed_at' => now(),
                 'passed' => $passed,
-                'elapsed_time' => (int) $locked->created_at->diffInSeconds(now()),
+                'elapsed_time' => $elapsed,
             ]);
 
             return [
@@ -329,12 +292,7 @@ class HardwareProcedureController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LEARNER: RECORD DETAILS
-    |--------------------------------------------------------------------------
-    */
-
+    /** Return a saved practical result, only to the learner who owns it. */
     public function record(Request $request, int $recordId): JsonResponse
     {
         $record = QuizRecord::query()
@@ -343,7 +301,7 @@ class HardwareProcedureController extends Controller
             ->where('user_id', $request->user()->id)
             ->first();
 
-        abort_if(! $record, 404, 'Assessment record not found.');
+        abort_if(!$record, 404, 'Assessment record not found.');
 
         return response()->json([
             'success' => true,
@@ -355,48 +313,90 @@ class HardwareProcedureController extends Controller
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | LEARNER HELPERS
-    |--------------------------------------------------------------------------
-    */
+    /** Find the hardware assessment for a COC. */
+    private function assessmentForQuiz(Quiz $quiz): Assessment
+    {
+        $assessment = Assessment::query()
+            ->where('coc_id', $quiz->id)
+            ->where('type', self::HARDWARE_TYPE)
+            ->first();
 
+        abort_if(!$assessment, 404, 'Hardware procedure assessment not found.');
+
+        return $assessment;
+    }
+
+    /** Keep only the assessment fields a learner needs. */
+    private function learnerAssessment(Assessment $assessment): array
+    {
+        return [
+            'id' => $assessment->id,
+            'title' => $assessment->title,
+            'type' => $assessment->type,
+            'icon' => $assessment->icon,
+            'description' => $assessment->description,
+            'category' => $assessment->category,
+            'difficulty' => $assessment->difficulty,
+        ];
+    }
+
+    /** Find the first configured procedure question for a COC. */
     private function questionForQuiz(Quiz $quiz): Question
     {
         $question = Question::query()
             ->where('quiz_id', $quiz->id)
-            ->whereHas('dragDropItems', fn ($query) => $query
-                ->where('active', true)
-                ->where('required', true)
-                ->whereNotNull('component_key')
-                ->whereNotNull('target_zone'))
+            ->whereHas('dragDropItems', fn($query) => $query->procedure())
             ->orderBy('id')
             ->first();
 
-        abort_if(! $question, 404, 'No configured hardware question exists for this quiz.');
+        abort_if(!$question, 404, 'No configured hardware question exists for this quiz.');
 
         return $question;
     }
 
+    /** Load the procedure in scoring order: prepare, disassemble, assemble, then finish. */
     private function procedureItems(int $questionId): Collection
     {
         return DragDropItem::query()
             ->where('question_id', $questionId)
-            ->where('active', true)
-            ->where('required', true)
-            ->whereNotNull('component_key')
-            ->whereNotNull('target_zone')
-            ->whereIn('phase', self::PHASES)
-            ->orderByRaw("CASE WHEN phase = 'disassemble' THEN 1 ELSE 2 END")
+            ->procedure()
+            ->orderByRaw("CASE phase WHEN 'prepare' THEN 1 WHEN 'disassemble' THEN 2 WHEN 'assemble' THEN 3 ELSE 4 END")
             ->orderBy('correct_position')
             ->orderBy('id')
             ->get();
     }
 
-    /*
-     * Builds everything the page needs after any change. Also saves the
-     * summary to the attempt row. Score = correct steps minus half a step
-     * per mistake, never below 0.
+    /** Checklist cards in alphabetical order, so the list never reveals the correct sequence. */
+    private function stepCards(Collection $items, string $phase): Collection
+    {
+        return $items
+            ->where('phase', $phase)
+            ->unique('component_key')
+            ->sortBy('display_name')
+            ->map(fn(DragDropItem $item) => [
+                'component_key' => $item->component_key,
+                'display_name' => $item->display_name,
+            ])
+            ->values();
+    }
+
+    /** Chassis part cards for display. */
+    private function componentCards(Collection $items): Collection
+    {
+        return $items
+            ->filter(fn(DragDropItem $item) => $item->isPart())
+            ->unique('component_key')
+            ->sortBy('display_name')
+            ->map(fn(DragDropItem $item) => [
+                'component_key' => $item->component_key,
+                'display_name' => $item->display_name,
+            ])
+            ->values();
+    }
+
+    /**
+     * Recalculate progress and save it to the attempt.
+     * Score = correct steps minus half a step per mistake, never below 0.
      */
     private function progress(DragDropAttempt $attempt, Collection $items): array
     {
@@ -416,30 +416,40 @@ class HardwareProcedureController extends Controller
         ]);
 
         $next = $items->get($correct);
+        $done = $items->take($correct);
 
         return [
             'completed_actions' => $correct,
-            'correct_actions' => $correct,
             'total_actions' => $total,
             'mistake_count' => $mistakes,
             'score' => $score,
             'percentage' => $percentage,
             'phase' => $next?->phase ?? 'complete',
             'procedure_complete' => $next === null,
+            'checklist_done' => $done
+                ->filter(fn(DragDropItem $item) => $item->isChecklist())
+                ->pluck('component_key')
+                ->values()
+                ->all(),
             'installed_components' => $this->installedComponents($items, $correct),
         ];
     }
 
-    // Every part starts in the case. Each correct disassembly step removes
-    // a part, and each correct assembly step puts it back.
+    /**
+     * Parts start in the chassis. Correct disassembly steps remove them,
+     * and correct assembly steps put them back. Checklist steps change nothing.
+     */
     private function installedComponents(Collection $items, int $correct): array
     {
-        $installed = array_fill_keys($items->pluck('component_key')->unique()->all(), true);
+        $parts = $items->filter(fn(DragDropItem $item) => $item->isPart());
+        $installed = array_fill_keys($parts->pluck('component_key')->unique()->all(), true);
 
         foreach ($items->take($correct) as $item) {
-            if ($item->phase === 'disassemble') {
+            if ($item->phase === DragDropItem::DISASSEMBLE) {
                 unset($installed[$item->component_key]);
-            } else {
+            }
+
+            if ($item->phase === DragDropItem::ASSEMBLE) {
                 $installed[$item->component_key] = true;
             }
         }
@@ -447,16 +457,17 @@ class HardwareProcedureController extends Controller
         return array_keys($installed);
     }
 
+    /** Seconds left, from the server-side expiry time. */
     private function remainingSeconds(DragDropAttempt $attempt): int
     {
-        if (! $attempt->expires_at) {
+        if (!$attempt->expires_at) {
             return self::TIME_LIMIT_MINUTES * 60;
         }
 
         return max(0, $attempt->expires_at->timestamp - now()->timestamp);
     }
 
-    // Closes timed-out attempts so they can't block a new one.
+    /** Close expired open attempts so the learner can start a new one. */
     private function closeExpiredAttempts(int $userId, int $quizId, int $questionId): void
     {
         DragDropAttempt::query()
@@ -472,6 +483,7 @@ class HardwareProcedureController extends Controller
             ->update(['completed_at' => now()]);
     }
 
+    /** Lock the attempt row and reject it if it is submitted or expired. */
     private function lockOpenAttempt(DragDropAttempt $attempt): DragDropAttempt
     {
         $locked = DragDropAttempt::query()
@@ -494,6 +506,7 @@ class HardwareProcedureController extends Controller
         return $locked;
     }
 
+    /** Make sure the attempt belongs to this learner and this COC. */
     private function assertOwner(DragDropAttempt $attempt, Quiz $quiz, int $userId): void
     {
         abort_unless(
@@ -503,48 +516,21 @@ class HardwareProcedureController extends Controller
         );
     }
 
-    private function actionMatches(string $performed, string $expected): bool
-    {
-        return $this->sameGroup($performed, $expected, self::ACTION_GROUPS);
-    }
-
-    private function zoneMatches(string $destination, string $expected): bool
-    {
-        return $this->sameGroup($destination, $expected, self::ZONE_GROUPS);
-    }
-
-    private function sameGroup(string $a, string $b, array $groups): bool
-    {
-        if ($a === $b) {
-            return true;
-        }
-
-        foreach ($groups as $group) {
-            if (in_array($a, $group, true) && in_array($b, $group, true)) {
-                return true;
-            }
-        }
-
-        return false;
-    }
-
     /*
-    |--------------------------------------------------------------------------
-    | ADMIN: CREATE
-    |--------------------------------------------------------------------------
+    |==========================================================================
+    | ADMIN METHODS
+    |==========================================================================
     */
 
+    /** Create the hardware assessment for a COC if it does not exist yet. */
     public function adminStore(Request $request, int $cocId): JsonResponse
     {
-        abort_unless($request->user()?->role === 'admin', 403, 'Unauthorized.');
+        $this->ensureAdmin($request);
 
         $quiz = Quiz::query()->findOrFail($cocId);
 
         $assessment = Assessment::query()->firstOrCreate(
-            [
-                'coc_id' => $quiz->id,
-                'type' => self::HARDWARE_TYPE,
-            ],
+            ['coc_id' => $quiz->id, 'type' => self::HARDWARE_TYPE],
             [
                 'title' => 'Assembly and Disassembly',
                 'category' => $quiz->category ?? 'Hardware',
@@ -559,15 +545,10 @@ class HardwareProcedureController extends Controller
         ], $assessment->wasRecentlyCreated ? 201 : 200);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN: EDIT (load steps)
-    |--------------------------------------------------------------------------
-    */
-
+    /** Return the assessment, its ordered steps, and the catalogs the editor offers. */
     public function edit(Request $request, int $assessmentId): JsonResponse
     {
-        abort_unless($request->user()?->role === 'admin', 403, 'Unauthorized.');
+        $this->ensureAdmin($request);
 
         $assessment = Assessment::query()
             ->where('type', self::HARDWARE_TYPE)
@@ -578,11 +559,11 @@ class HardwareProcedureController extends Controller
         $steps = $question
             ? DragDropItem::query()
                 ->where('question_id', $question->id)
-                ->orderByRaw("CASE WHEN phase = 'disassemble' THEN 1 ELSE 2 END")
+                ->orderByRaw("CASE phase WHEN 'prepare' THEN 1 WHEN 'disassemble' THEN 2 WHEN 'assemble' THEN 3 ELSE 4 END")
                 ->orderBy('correct_position')
                 ->orderBy('id')
                 ->get()
-                ->map(fn (DragDropItem $item) => [
+                ->map(fn(DragDropItem $item) => [
                     'id' => $item->id,
                     'phase' => $item->phase,
                     'component_key' => $item->component_key,
@@ -598,28 +579,26 @@ class HardwareProcedureController extends Controller
             'status' => 'success',
             'quiz' => Quiz::query()->find($assessment->coc_id),
             'assessment' => $assessment,
-            'question' => $question,
             'steps' => $steps->values(),
-            'components' => collect(self::ADMIN_COMPONENTS)
-                ->map(fn (string $label, string $key) => ['key' => $key, 'label' => $label])
-                ->values(),
+            'catalogs' => [
+                'prepare' => $this->catalogList(self::PREP_STEPS),
+                'disassemble' => $this->catalogList(self::COMPONENTS),
+                'assemble' => $this->catalogList(self::COMPONENTS),
+                'finish' => $this->catalogList(self::FINISH_STEPS),
+            ],
             'has_attempts' => $question
                 ? DragDropAttempt::query()->where('question_id', $question->id)->exists()
                 : false,
         ]);
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN: UPDATE (save steps)
-    |--------------------------------------------------------------------------
-    | Steps arrive in display order. Action and target zone are derived here,
-    | so the editor can't save a step the practical would reject.
-    */
-
+    /**
+     * Save the ordered procedure. Action and target zone are derived here,
+     * so the editor cannot save a step the practical would reject.
+     */
     public function update(Request $request, int $assessmentId): JsonResponse
     {
-        abort_unless($request->user()?->role === 'admin', 403, 'Unauthorized.');
+        $this->ensureAdmin($request);
 
         $assessment = Assessment::query()
             ->where('type', self::HARDWARE_TYPE)
@@ -629,7 +608,7 @@ class HardwareProcedureController extends Controller
             'steps' => ['required', 'array', 'min:2'],
             'steps.*.id' => ['nullable', 'integer'],
             'steps.*.phase' => ['required', Rule::in(self::PHASES)],
-            'steps.*.component_key' => ['required', Rule::in(array_keys(self::ADMIN_COMPONENTS))],
+            'steps.*.component_key' => ['required', Rule::in($this->allStepKeys())],
             'steps.*.instruction' => ['nullable', 'string', 'max:500'],
         ]);
 
@@ -644,10 +623,10 @@ class HardwareProcedureController extends Controller
             : false;
         $incoming = $this->normalizedSteps($validated['steps']);
 
-        // Once learners have attempted it, the order and parts are locked.
-        $shapeChanged = $this->shapeOf($existing->map(fn ($item) => $this->rowOf($item)))
+        // After the first attempt, the order and parts are locked. Only instructions can change.
+        $shapeChanged = $this->shapeOf($existing->map(fn($item) => $this->rowOf($item)))
             !== $this->shapeOf(collect($incoming));
-        $hasNewSteps = collect($incoming)->contains(fn (array $row) => empty($row['id']));
+        $hasNewSteps = collect($incoming)->contains(fn(array $row) => empty($row['id']));
 
         if ($hasAttempts && ($shapeChanged || $hasNewSteps)) {
             return response()->json([
@@ -657,55 +636,7 @@ class HardwareProcedureController extends Controller
         }
 
         try {
-            DB::transaction(function () use ($assessment, $question, $existing, $hasAttempts, $incoming) {
-                $target = $question ?? Question::query()->create([
-                    'quiz_id' => $assessment->coc_id,
-                    'question_type' => self::HARDWARE_TYPE,
-                    'question_text' => 'Disassemble and reassemble the system unit.',
-                ]);
-
-                $keepIds = [];
-
-                foreach ($incoming as $row) {
-                    $item = $row['id']
-                        ? $existing->firstWhere('id', (int) $row['id'])
-                        : null;
-
-                    if ($row['id'] && ! $item) {
-                        throw ValidationException::withMessages([
-                            'steps' => ['A step does not belong to this practical.'],
-                        ]);
-                    }
-
-                    $item ??= new DragDropItem;
-                    $item->question_id = $target->id;
-                    $item->fill([
-                        'component_key' => $row['component_key'],
-                        'display_name' => $row['display_name'],
-                        'item_type' => 'component',
-                        'quantity' => 1,
-                        'item_text' => $row['display_name'],
-                        'instruction' => $row['instruction'],
-                        'action' => $row['action'],
-                        'target_zone' => $row['target_zone'],
-                        'phase' => $row['phase'],
-                        'correct_position' => $row['correct_position'],
-                        'required' => true,
-                        'active' => true,
-                    ]);
-                    $item->save();
-
-                    $keepIds[] = $item->id;
-                }
-
-                // Unused steps are removed only when no learner has attempted them.
-                if (! $hasAttempts) {
-                    DragDropItem::query()
-                        ->where('question_id', $target->id)
-                        ->whereNotIn('id', $keepIds)
-                        ->delete();
-                }
-            });
+            DB::transaction(fn() => $this->saveSteps($assessment, $question, $existing, $incoming, $hasAttempts));
 
             return response()->json([
                 'status' => 'success',
@@ -723,12 +654,13 @@ class HardwareProcedureController extends Controller
         }
     }
 
-    /*
-    |--------------------------------------------------------------------------
-    | ADMIN HELPERS
-    |--------------------------------------------------------------------------
-    */
+    /** Stop non-admins before any admin work starts. */
+    private function ensureAdmin(Request $request): void
+    {
+        abort_unless($request->user()?->role === 'admin', 403, 'Unauthorized.');
+    }
 
+    /** The procedure question for this assessment's COC, if one exists. */
     private function adminQuestion(Assessment $assessment): ?Question
     {
         return Question::query()
@@ -738,38 +670,126 @@ class HardwareProcedureController extends Controller
             ->first();
     }
 
-    private function rulesForStep(string $phase, string $componentKey): array
-    {
-        if ($phase === 'disassemble') {
-            return [
-                'action' => 'remove',
-                'target_zone' => $componentKey === 'internal_cables' ? 'cable_tray' : 'parts_tray',
-            ];
+    /** Write the steps, creating the question if needed. */
+    private function saveSteps(
+        Assessment $assessment,
+        ?Question $question,
+        Collection $existing,
+        array $incoming,
+        bool $hasAttempts
+    ): void {
+        $target = $question ?? Question::query()->create([
+            'quiz_id' => $assessment->coc_id,
+            'question_type' => self::QUESTION_TYPE,
+            'question_text' => self::QUESTION_TEXT,
+        ]);
+
+        $keepIds = [];
+
+        foreach ($incoming as $row) {
+            $item = $row['id'] ? $existing->firstWhere('id', (int) $row['id']) : null;
+
+            if ($row['id'] && !$item) {
+                throw ValidationException::withMessages([
+                    'steps' => ['A step does not belong to this practical.'],
+                ]);
+            }
+
+            $item ??= new DragDropItem;
+            $item->fill([
+                'question_id' => $target->id,
+                'component_key' => $row['component_key'],
+                'display_name' => $row['display_name'],
+                'item_type' => $row['item_type'],
+                'quantity' => 1,
+                'item_text' => $row['display_name'],
+                'instruction' => $row['instruction'],
+                'action' => $row['action'],
+                'target_zone' => $row['target_zone'],
+                'phase' => $row['phase'],
+                'correct_position' => $row['correct_position'],
+                'required' => true,
+                'active' => true,
+            ]);
+            $item->save();
+
+            $keepIds[] = $item->id;
         }
 
-        return [
-            'action' => 'install',
-            'target_zone' => 'case',
-        ];
+        // Remove unused steps only when no learner has attempted them.
+        if (!$hasAttempts) {
+            DragDropItem::query()
+                ->where('question_id', $target->id)
+                ->whereNotIn('id', $keepIds)
+                ->delete();
+        }
     }
 
+    /** Catalog for a phase. Prepare and finish use checklist labels, the others use parts. */
+    private function catalogFor(string $phase): array
+    {
+        return match ($phase) {
+            DragDropItem::PREPARE => self::PREP_STEPS,
+            DragDropItem::FINISH => self::FINISH_STEPS,
+            default => self::COMPONENTS,
+        };
+    }
+
+    /** Every key the admin may use, across all phases. */
+    private function allStepKeys(): array
+    {
+        return array_values(array_unique([
+            ...array_keys(self::PREP_STEPS),
+            ...array_keys(self::COMPONENTS),
+            ...array_keys(self::FINISH_STEPS),
+        ]));
+    }
+
+    /** Turn a catalog into a list of key and label pairs for the editor. */
+    private function catalogList(array $catalog): array
+    {
+        return collect($catalog)
+            ->map(fn(string $label, string $key) => ['key' => $key, 'label' => $label])
+            ->values()
+            ->all();
+    }
+
+    /** The action and destination a step must use, derived from its phase. */
+    private function rulesForStep(string $phase, string $componentKey): array
+    {
+        return match ($phase) {
+            DragDropItem::PREPARE, DragDropItem::FINISH => ['action' => 'perform', 'target_zone' => 'none'],
+            DragDropItem::DISASSEMBLE => [
+                'action' => 'remove',
+                'target_zone' => $componentKey === 'internal_cables' ? 'cable_tray' : 'parts_tray',
+            ],
+            default => ['action' => 'install', 'target_zone' => 'case'],
+        };
+    }
+
+    /** Add labels, actions, zones, and positions to the submitted steps. */
     private function normalizedSteps(array $steps): array
     {
-        $positions = ['disassemble' => 0, 'assemble' => 0];
+        $positions = array_fill_keys(self::PHASES, 0);
         $rows = [];
 
         foreach ($steps as $step) {
             $phase = $step['phase'];
-            $component = $step['component_key'];
-            $rules = $this->rulesForStep($phase, $component);
+            $key = $step['component_key'];
+            $rules = $this->rulesForStep($phase, $key);
 
             $positions[$phase]++;
 
             $rows[] = [
                 'id' => $step['id'] ?? null,
                 'phase' => $phase,
-                'component_key' => $component,
-                'display_name' => self::ADMIN_COMPONENTS[$component],
+                'component_key' => $key,
+                'display_name' => $this->catalogFor($phase)[$key],
+                'item_type' => match ($phase) {
+                    DragDropItem::PREPARE => 'prep',
+                    DragDropItem::FINISH => 'finish',
+                    default => 'component',
+                },
                 'action' => $rules['action'],
                 'target_zone' => $rules['target_zone'],
                 'instruction' => $step['instruction'] ?? null,
@@ -780,31 +800,41 @@ class HardwareProcedureController extends Controller
         return $rows;
     }
 
+    /** Check the phase order, and that each phase has every item exactly once. */
     private function assertProcedureShape(array $steps): void
     {
         $errors = [];
-        $sawAssemble = false;
+        $rank = array_flip(self::PHASES);
+        $previous = 0;
 
         foreach ($steps as $index => $step) {
-            if ($step['phase'] === 'assemble') {
-                $sawAssemble = true;
-            } elseif ($sawAssemble) {
-                $errors["steps.$index.phase"] = ['Disassemble steps must come before assemble steps.'];
+            $current = $rank[$step['phase']];
+
+            if ($current < $previous) {
+                $errors["steps.$index.phase"] = ['Steps must follow the order: prepare, disassemble, assemble, then finish.'];
             }
+
+            $previous = max($previous, $current);
         }
 
         foreach (self::PHASES as $phase) {
-            $keys = collect($steps)->where('phase', $phase)->pluck('component_key');
+            $catalog = $this->catalogFor($phase);
+            $keys = collect($steps)->where('phase', $phase)->pluck('component_key')->values();
 
-            $missing = array_diff(array_keys(self::ADMIN_COMPONENTS), $keys->all());
+            $invalid = array_diff($keys->all(), array_keys($catalog));
+            $missing = array_diff(array_keys($catalog), $keys->all());
             $duplicates = $keys->duplicates()->unique()->values()->all();
 
+            if ($invalid) {
+                $errors['steps'][] = ucfirst($phase) . ' has steps that do not belong there: ' . $this->labels($phase, $invalid) . '.';
+            }
+
             if ($missing) {
-                $errors['steps'][] = ucfirst($phase).' is missing: '.$this->labels($missing).'.';
+                $errors['steps'][] = ucfirst($phase) . ' is missing: ' . $this->labels($phase, $missing) . '.';
             }
 
             if ($duplicates) {
-                $errors['steps'][] = ucfirst($phase).' uses a component more than once: '.$this->labels($duplicates).'.';
+                $errors['steps'][] = ucfirst($phase) . ' uses a step more than once: ' . $this->labels($phase, $duplicates) . '.';
             }
         }
 
@@ -813,11 +843,15 @@ class HardwareProcedureController extends Controller
         }
     }
 
-    private function labels(array $keys): string
+    /** Readable labels for validation messages. */
+    private function labels(string $phase, array $keys): string
     {
-        return implode(', ', array_map(fn (string $key) => self::ADMIN_COMPONENTS[$key], $keys));
+        $catalog = $this->catalogFor($phase);
+
+        return implode(', ', array_map(fn(string $key) => $catalog[$key] ?? $key, $keys));
     }
 
+    /** The fields that define a saved step's shape. */
     private function rowOf(DragDropItem $item): array
     {
         return [
@@ -829,16 +863,16 @@ class HardwareProcedureController extends Controller
         ];
     }
 
-    // A readable signature of the procedure's shape, ignoring ids and instructions.
+    /** A signature of the procedure's shape, ignoring IDs and instructions. */
     private function shapeOf(Collection $rows): string
     {
         return $rows
-            ->sortBy(fn (array $row) => sprintf(
+            ->sortBy(fn(array $row) => sprintf(
                 '%d-%03d',
                 array_search($row['phase'], self::PHASES, true),
                 $row['correct_position']
             ))
-            ->map(fn (array $row) => implode('|', [
+            ->map(fn(array $row) => implode('|', [
                 $row['phase'],
                 $row['component_key'],
                 $row['action'],

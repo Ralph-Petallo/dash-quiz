@@ -47,7 +47,8 @@
           </div>
 
           <!-- SESSION EXPIRED (from a redirect) -->
-          <div v-else-if="sessionExpired && !activeError && !success" class="notice" role="status">
+          <div v-else-if="sessionExpired && !activeError && !success && !needsVerification" class="notice"
+            role="status">
             <i class="fas fa-user-clock" aria-hidden="true"></i>
             <span>Your session has expired. Sign in again to continue.</span>
           </div>
@@ -94,6 +95,25 @@
           <div v-if="success" class="notice notice-ok" role="status">
             <i class="fas fa-circle-check" aria-hidden="true"></i>
             <span>Signed in. Taking you to your dashboard…</span>
+          </div>
+
+          <!-- EMAIL NOT VERIFIED -->
+          <div v-else-if="needsVerification" class="notice notice-warn verify" role="alert">
+            <i class="fas fa-envelope-circle-check" aria-hidden="true"></i>
+            <div>
+              <strong>Verify your email to sign in</strong>
+              <span>
+                We sent a confirmation link to
+                <b class="verify-email">{{ verifyEmail }}</b>.
+                Open it, then sign in again.
+              </span>
+
+              <button type="button" class="verify-resend" :disabled="resending" @click="resendVerification">
+                {{ resending ? 'Sending…' : 'Send a new link' }}
+              </button>
+
+              <span v-if="resendMessage" class="verify-status" role="status">{{ resendMessage }}</span>
+            </div>
           </div>
 
           <!-- ERROR -->
@@ -228,7 +248,13 @@ const {
   generalError,
   isLocked,
   showPassword,
+  needsVerification,
+  verifyEmail,
+  resending,
+  resendMessage,
   handleLogin,
+  resendVerification,
+  clearVerificationNotice,
   togglePassword,
 } = useHandleLogin()
 
@@ -240,8 +266,6 @@ const serverFieldError = (field) => {
 
 // Client-side messages come first, so the learner fixes the problem before a request is sent.
 const fieldError = (field) => localErrors[field] || serverFieldError(field)
-
-const hasServerFieldErrors = () => Object.keys(errors.value || {}).length > 0
 
 const activeError = computed(() => {
   if (requestError.value) return requestError.value
@@ -266,8 +290,15 @@ function validate() {
 }
 
 // Clear a message as soon as the learner starts fixing that field.
-watch(() => form.email, () => { localErrors.email = '' })
-watch(() => form.password, () => { localErrors.password = '' })
+watch(() => form.email, () => {
+  localErrors.email = ''
+  // The notice refers to the old address, so remove it when the address changes.
+  if (needsVerification.value) clearVerificationNotice()
+})
+
+watch(() => form.password, () => {
+  localErrors.password = ''
+})
 
 /* =========================================================
    ERRORS AND SLOW NETWORK
@@ -317,12 +348,11 @@ const submitLogin = async () => {
   startSlowTimer()
 
   try {
-    await handleLogin(form.email, form.password)
+    // true only when the learner is signed in. Unverified accounts return false
+    // and show the verification notice instead.
+    const signedIn = await handleLogin(form.email, form.password)
 
-    // The composable reports failures through errors or generalError.
-    if (!generalError.value && !hasServerFieldErrors()) {
-      success.value = true
-    }
+    if (signedIn) success.value = true
   } catch (error) {
     console.error('Login failed:', error)
     requestError.value = classifyError(error)
@@ -818,6 +848,57 @@ onBeforeUnmount(() => {
 
 .switch a:hover {
   text-decoration: underline;
+}
+
+
+
+.verify {
+  flex-wrap: wrap;
+}
+
+.verify>div {
+  flex: 1;
+  min-width: 0;
+}
+
+.verify strong {
+  display: block;
+  margin-bottom: 2px;
+}
+
+.verify-email {
+  color: var(--ink);
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.verify-resend {
+  min-height: 36px;
+  margin-top: 10px;
+  padding: 0 14px;
+  border: 1px solid var(--ink);
+  border-radius: 8px;
+  background: var(--ink);
+  color: var(--white);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.verify-resend:hover:not(:disabled) {
+  background: #262626;
+}
+
+.verify-resend:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.verify-status {
+  display: block;
+  margin-top: 8px;
+  font-size: 12.5px;
 }
 
 /* FOOTER */

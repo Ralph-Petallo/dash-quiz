@@ -560,7 +560,7 @@ async function submit() {
     })
 
     body = response.data
-    
+
   } catch (error) {
     notice.value = {
       message: error.response?.data?.message || 'Could not submit the assessment. Please try again.',

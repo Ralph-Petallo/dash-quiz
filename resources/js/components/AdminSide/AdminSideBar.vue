@@ -474,7 +474,8 @@ defineEmits([
 ===================================================== */
 
 .sidebar-spacer {
-  flex: 1;
+  width: 100%;
+  height: 90%;
 }
 
 
@@ -639,7 +640,8 @@ defineEmits([
 @media (max-width: 480px) {
 
   .admin-info {
-    display: none;
+    display: flex;
+    margin-left:10px;
   }
 
   .admin-badge {

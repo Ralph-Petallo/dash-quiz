@@ -36,4 +36,10 @@ class Assessment extends Model
     {
         return $this->belongsTo(Quiz::class, 'coc_id');
     }
+
+    public function quizRecords()
+    {
+        return $this->hasMany(QuizRecord::class, 'quiz_id', 'coc_id')
+            ->whereColumn('quiz_records.quiz_type', '=', 'assessments.type');
+    }
 }

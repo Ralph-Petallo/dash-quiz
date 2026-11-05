@@ -9,234 +9,184 @@
 
     <main class="main">
       <div class="stack">
-        <!-- PROGRESS -->
-        <ol class="steps" aria-label="Sign-up progress">
-          <li v-for="(step, index) in steps" :key="step" :class="stepState(index)">
-            <span class="dot">
-              <i v-if="stepState(index) === 'done'" class="fas fa-check" aria-hidden="true"></i>
-              <template v-else>{{ index + 1 }}</template>
-            </span>
-            <span>{{ step }}</span>
-          </li>
-        </ol>
+        <section class="panel" aria-labelledby="register-title">
+          <template v-if="!submitted">
+            <header class="head">
+              <h1 id="register-title">Create your account</h1>
+              <p>Join CSS Prep. It’s free.</p>
+            </header>
 
-        <!-- FORM -->
-        <section v-if="view === 'form'" class="panel" aria-labelledby="register-title">
-          <header class="head">
-            <h1 id="register-title">Create your account</h1>
-            <p>Join CSS Prep. It's free.</p>
-          </header>
-
-          <!-- OFFLINE -->
-          <div v-if="!isOnline" class="notice notice-warn" role="status">
-            <i class="fas fa-wifi" aria-hidden="true"></i>
-            <span>You're offline. Connect to the internet to create your account.</span>
-          </div>
-
-          <!-- SLOW NETWORK -->
-          <p v-if="loading && slowNetwork" class="slow" role="status">
-            <i class="fas fa-hourglass-half" aria-hidden="true"></i>
-            Still working. Your connection may be slow.
-          </p>
-
-          <form class="form" novalidate @submit.prevent="handleRegister">
-            <div class="row">
-              <div class="field">
-                <label for="first_name">First name</label>
-                <input id="first_name" v-model.trim="form.first_name" type="text" placeholder="Juan"
-                  autocomplete="given-name" :class="{ invalid: err('first_name') }" :disabled="loading" />
-                <small v-if="err('first_name')">{{ err('first_name') }}</small>
-              </div>
-
-              <div class="field">
-                <label for="last_name">Last name</label>
-                <input id="last_name" v-model.trim="form.last_name" type="text" placeholder="Dela Cruz"
-                  autocomplete="family-name" :class="{ invalid: err('last_name') }" :disabled="loading" />
-                <small v-if="err('last_name')">{{ err('last_name') }}</small>
-              </div>
+            <div v-if="!isOnline" class="notice notice-warn" role="status">
+              <svg class="ui-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <path d="M2 8.8a15 15 0 0 1 20 0M5 12a10 10 0 0 1 14 0m-11 3.2a5 5 0 0 1 8 0M12 19h.01"
+                  stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              <span>You’re offline. Connect to the internet to create your account.</span>
             </div>
 
-            <div class="field">
-              <label for="email">Email address</label>
-              <input id="email" v-model.trim="form.email" type="email" placeholder="you@email.com" autocomplete="email"
-                :class="{ invalid: err('email') }" :disabled="loading" />
-              <small v-if="err('email')">{{ err('email') }}</small>
-            </div>
-
-            <div class="field">
-              <label for="password">Password</label>
-              <div class="input-wrap">
-                <input id="password" v-model="form.password" :type="showPassword ? 'text' : 'password'"
-                  :placeholder="`At least ${MIN_PASSWORD} characters`" autocomplete="new-password"
-                  :class="{ invalid: err('password') }" :disabled="loading" />
-                <button type="button" class="toggle" :aria-label="showPassword ? 'Hide password' : 'Show password'"
-                  :aria-pressed="showPassword" :disabled="loading" @click="showPassword = !showPassword">
-                  <i :class="showPassword ? 'fas fa-eye-slash' : 'fas fa-eye'" aria-hidden="true"></i>
-                </button>
-              </div>
-              <small v-if="err('password')">{{ err('password') }}</small>
-            </div>
-
-            <div class="field">
-              <label for="password_confirmation">Confirm password</label>
-              <input id="password_confirmation" v-model="form.password_confirmation" type="password"
-                placeholder="Repeat your password" autocomplete="new-password"
-                :class="{ invalid: err('password_confirmation') }" :disabled="loading" />
-              <small v-if="err('password_confirmation')">{{ err('password_confirmation') }}</small>
-            </div>
-
-            <!-- TERMS AND PRIVACY (required) -->
-            <div class="field consent" :class="{ invalid: err('accept_terms') }">
-              <label class="check">
-                <input type="checkbox" v-model="form.accept_terms" :disabled="loading" />
-                <span>
-                  I have read and agree to the
-                  <router-link to="/terms" target="_blank">Terms of Use</router-link>
-                  and
-                  <router-link to="/privacy" target="_blank">Privacy Policy</router-link>.
-                </span>
-              </label>
-              <small v-if="err('accept_terms')">{{ err('accept_terms') }}</small>
-            </div>
-
-            <!-- GENERAL ERROR (server, network, timeout) -->
-            <div v-if="requestError" class="notice notice-error" role="alert">
-              <i :class="requestError.icon" aria-hidden="true"></i>
-              <div>
-                <strong>{{ requestError.title }}</strong>
-                <span>{{ requestError.text }}</span>
-              </div>
-            </div>
-
-            <button class="btn-primary" type="submit" :disabled="loading || !isOnline">
-              <span v-if="loading" class="loader" aria-hidden="true"></span>
-              {{ loading ? 'Creating account…' : 'Create account' }}
-            </button>
-          </form>
-
-          <p class="switch">
-            Already have an account?
-            <router-link to="/">Sign in</router-link>
-          </p>
-
-          <!-- COOKIE NOTICE -->
-          <div v-if="showCookieNotice" class="cookie-notice" role="note">
-            <p>
-              We use essential cookies to keep you signed in and browser storage to save your progress on this device.
-              We don't use advertising cookies.
-              <router-link to="/privacy">Privacy Policy</router-link>
+            <p v-if="loading && slowNetwork" class="slow" role="status">
+              <svg class="ui-icon spin-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                <circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="2" opacity=".25" />
+                <path d="M12 3a9 9 0 0 1 9 9" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+              </svg>
+              Still working. Your connection may be slow.
             </p>
-            <button type="button" @click="dismissCookieNotice">Got it</button>
-          </div>
-        </section>
 
-        <!-- PENDING: link sent -->
-        <section v-else-if="view === 'pending'" class="panel result" aria-live="polite">
-          <div class="icon" aria-hidden="true"><i class="fas fa-envelope-circle-check"></i></div>
-          <h1>Check your inbox</h1>
-          <p class="lede">We sent a confirmation link to</p>
-          <p class="chip">{{ registeredEmail }}</p>
-          <p class="hint">The link expires in 60 minutes. Check your spam folder if you don't see it.</p>
+            <form class="form" novalidate @submit.prevent="handleRegister">
+              <div class="row">
+                <div class="field">
+                  <label for="first_name">First name</label>
+                  <input id="first_name" v-model.trim="form.first_name" name="first_name" type="text"
+                    autocomplete="given-name" maxlength="50" required :aria-invalid="Boolean(err('first_name'))"
+                    :aria-describedby="err('first_name') ? 'first-name-error' : undefined"
+                    :class="{ invalid: err('first_name') }" :disabled="loading" />
+                  <small v-if="err('first_name')" id="first-name-error" role="alert">
+                    {{ err('first_name') }}
+                  </small>
+                </div>
 
-          <button class="btn-outline" type="button" :disabled="resending || cooldown > 0 || !isOnline"
-            @click="resend(registeredEmail)">
-            <span v-if="resending" class="loader dark" aria-hidden="true"></span>
-            {{ resendLabel }}
-          </button>
+                <div class="field">
+                  <label for="last_name">Last name</label>
+                  <input id="last_name" v-model.trim="form.last_name" name="last_name" type="text"
+                    autocomplete="family-name" maxlength="50" required :aria-invalid="Boolean(err('last_name'))"
+                    :aria-describedby="err('last_name') ? 'last-name-error' : undefined"
+                    :class="{ invalid: err('last_name') }" :disabled="loading" />
+                  <small v-if="err('last_name')" id="last-name-error" role="alert">
+                    {{ err('last_name') }}
+                  </small>
+                </div>
+              </div>
 
-          <p v-if="resendMessage" class="notice notice-ok" role="status">{{ resendMessage }}</p>
-          <p v-if="resendError" class="notice notice-error" role="alert">{{ resendError }}</p>
+              <div class="field">
+                <label for="email">Email address</label>
+                <input id="email" v-model.trim="form.email" name="email" type="email" autocomplete="email"
+                  maxlength="254" required :aria-invalid="Boolean(err('email'))"
+                  :aria-describedby="err('email') ? 'email-error' : undefined" :class="{ invalid: err('email') }"
+                  :disabled="loading" />
+                <small v-if="err('email')" id="email-error" role="alert">
+                  {{ err('email') }}
+                </small>
+              </div>
 
-          <router-link to="/" class="back">Back to sign in</router-link>
-        </section>
+              <div class="field">
+                <label for="password">Password</label>
+                <div class="input-wrap">
+                  <input id="password" v-model="form.password" name="password"
+                    :type="showPassword ? 'text' : 'password'" autocomplete="new-password" minlength="8" maxlength="128"
+                    required :aria-invalid="Boolean(err('password'))"
+                    :aria-describedby="err('password') ? 'password-error' : undefined"
+                    :class="{ invalid: err('password') }" :disabled="loading" />
+                  <button type="button" class="toggle" :aria-label="showPassword ? 'Hide password' : 'Show password'"
+                    :aria-pressed="showPassword" :disabled="loading" @click="showPassword = !showPassword">
+                    <svg v-if="showPassword" class="ui-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path
+                        d="M3 3l18 18M10.6 10.6a2 2 0 0 0 2.8 2.8M9.9 5.2A11 11 0 0 1 12 5c5 0 9 7 9 7a15 15 0 0 1-3.1 3.8M6.2 6.2C4.2 7.5 3 12 3 12s3 7 9 7a10 10 0 0 0 4-.8"
+                        stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" />
+                    </svg>
+                    <svg v-else class="ui-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                      <path d="M3 12s3-7 9-7 9 7 9 7-3 7-9 7-9-7-9-7Z" stroke="currentColor" stroke-width="1.8" />
+                      <circle cx="12" cy="12" r="3" stroke="currentColor" stroke-width="1.8" />
+                    </svg>
+                  </button>
+                </div>
+                <small v-if="err('password')" id="password-error" role="alert">
+                  {{ err('password') }}
+                </small>
+              </div>
 
-        <!-- SUCCESS: link clicked -->
-        <section v-else-if="view === 'success'" class="panel result" aria-live="polite">
-          <div class="icon ok" aria-hidden="true"><i class="fas fa-check"></i></div>
-          <h1>Email confirmed</h1>
-          <p class="lede">Your account is ready.</p>
+              <div class="field">
+                <label for="password_confirmation">Confirm password</label>
+                <input id="password_confirmation" v-model="form.password_confirmation" name="password_confirmation"
+                  type="password" autocomplete="new-password" maxlength="128" required
+                  :aria-invalid="Boolean(err('password_confirmation'))" :aria-describedby="err('password_confirmation')
+                      ? 'password-confirmation-error'
+                      : undefined
+                    " :class="{ invalid: err('password_confirmation') }" :disabled="loading" />
+                <small v-if="err('password_confirmation')" id="password-confirmation-error" role="alert">
+                  {{ err('password_confirmation') }}
+                </small>
+              </div>
 
-          <template v-if="redirectTarget">
-            <p class="hint">{{ redirectMessage }}</p>
-            <div class="bar" aria-hidden="true">
-              <span :style="{ width: redirectProgress + '%' }"></span>
-            </div>
+              <div class="field consent">
+                <label class="check">
+                  <input v-model="form.accept_terms" type="checkbox" name="accept_terms" required :disabled="loading"
+                    :aria-invalid="Boolean(err('accept_terms'))"
+                    :aria-describedby="err('accept_terms') ? 'terms-error' : undefined" />
+                  <span>
+                    I agree to the
+                    <router-link to="/terms" target="_blank" rel="noopener noreferrer">
+                      Terms of Use
+                    </router-link>
+                    and
+                    <router-link to="/privacy" target="_blank" rel="noopener noreferrer">
+                      Privacy Policy
+                    </router-link>.
+                  </span>
+                </label>
+                <small v-if="err('accept_terms')" id="terms-error" role="alert">
+                  {{ err('accept_terms') }}
+                </small>
+              </div>
+
+              <div v-if="requestError" class="notice notice-error" role="alert">
+                <svg class="ui-icon" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+                  <path d="M12 3 2.8 19h18.4L12 3Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" />
+                  <path d="M12 9v4m0 3h.01" stroke="currentColor" stroke-width="2" stroke-linecap="round" />
+                </svg>
+                <div>
+                  <strong>{{ requestError.title }}</strong>
+                  <span>{{ requestError.text }}</span>
+                </div>
+              </div>
+
+              <button class="btn-primary" type="submit" :disabled="loading || !isOnline">
+                <span v-if="loading" class="loader" aria-hidden="true"></span>
+                {{ loading ? 'Creating account…' : 'Create account' }}
+              </button>
+            </form>
+
+            <p class="switch">
+              Already have an account?
+              <router-link to="/">Sign in</router-link>
+            </p>
           </template>
 
-          <button class="btn-primary" type="button" :disabled="!redirectTarget" @click="goNow">
-            Continue
-          </button>
-        </section>
-
-        <!-- INVALID or RESEND: request a new link -->
-        <section v-else class="panel result" aria-live="polite">
-          <div class="icon warn" aria-hidden="true"><i class="fas fa-link-slash"></i></div>
-          <h1>{{ view === 'invalid' ? 'This link is no longer valid' : 'Confirm your email' }}</h1>
-          <p class="lede">
-            {{ view === 'invalid'
-              ? 'It may have expired or already been used. Enter your email to get a new link.'
-              : 'Your email is not confirmed yet. Enter it below to get a new link.' }}
-          </p>
-
-          <div class="field left">
-            <label for="resend_email">Email address</label>
-            <input id="resend_email" v-model.trim="resendEmail" type="email" placeholder="you@email.com"
-              autocomplete="email" :disabled="resending" />
+          <div v-else class="result" role="status" aria-live="polite">
+            <div class="icon" aria-hidden="true">
+              <svg class="ui-icon" viewBox="0 0 24 24" fill="none">
+                <path d="M4 6h16v12H4zM4 7l8 6 8-6M16 16l2 2 4-4" stroke="currentColor" stroke-width="1.8"
+                  stroke-linecap="round" stroke-linejoin="round" />
+              </svg>
+            </div>
+            <h1>Check your inbox</h1>
+            <p class="lede">
+              Your account has been created. Check your email for a verification link.
+            </p>
+            <p v-if="registeredEmail" class="chip">{{ registeredEmail }}</p>
+            <p class="hint">If you don’t see the message, check your spam folder.</p>
+            <router-link to="/" class="back">Back to sign in</router-link>
           </div>
-
-          <button class="btn-primary" type="button" :disabled="resending || cooldown > 0 || !resendEmail || !isOnline"
-            @click="resend(resendEmail)">
-            <span v-if="resending" class="loader" aria-hidden="true"></span>
-            {{ resendLabel }}
-          </button>
-
-          <p v-if="resendMessage" class="notice notice-ok" role="status">{{ resendMessage }}</p>
-          <p v-if="resendError" class="notice notice-error" role="alert">{{ resendError }}</p>
-
-          <router-link to="/" class="back">Back to sign in</router-link>
         </section>
       </div>
     </main>
 
-    <footer class="footer">© {{ currentYear }} CSS Prep · SNSU Capstone Project</footer>
+    <footer class="footer">
+      © {{ currentYear }} CSS Prep · SNSU Capstone Project
+    </footer>
   </div>
 </template>
 
 <script setup>
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
-import { useRoute, useRouter } from 'vue-router'
+import { onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
 import api from '@/bootstrap'
-import { useUser } from '@/composables/useUser'
 import logoUrl from '@/assets/lightning.png'
 
-/* =========================================================
-   CONSTANTS
-========================================================= */
-
 const MIN_PASSWORD = 8
-const RESEND_SECONDS = 60
-const REDIRECT_SECONDS = 3
-const SLOW_AFTER_MS = 4000
+const MAX_PASSWORD = 128
+const NAME_PATTERN = /^[\p{L}\p{M}][\p{L}\p{M}\s'’-]*$/u
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/
-const COOKIE_KEY = 'cookieNoticeDismissed'
+
 const currentYear = new Date().getFullYear()
-
-const steps = ['Create account', 'Confirm email', 'Sign in']
-
-const route = useRoute()
-const router = useRouter()
-const { fetchUser } = useUser()
-
-/* =========================================================
-   STATE
-========================================================= */
-
-// view: form | pending | resend | success | invalid
-const view = ref('form')
-const isOnline = ref(navigator.onLine)
-const slowNetwork = ref(false)
-const showPassword = ref(false)
-const showCookieNotice = ref(!localStorage.getItem(COOKIE_KEY))
 
 const form = reactive({
   first_name: '',
@@ -249,79 +199,142 @@ const form = reactive({
 
 const errors = ref({})
 const loading = ref(false)
-const requestError = ref(null)
-
+const submitted = ref(false)
 const registeredEmail = ref('')
-const resendEmail = ref('')
-const resending = ref(false)
-const resendMessage = ref('')
-const resendError = ref('')
-const cooldown = ref(0)
-
-const redirectTarget = ref(null)
-const redirectCountdown = ref(REDIRECT_SECONDS)
-
-let cooldownTimer = null
-let redirectTimer = null
-let slowTimer = null
-
-const resendLabel = computed(() =>
-  cooldown.value > 0 ? `Resend in ${cooldown.value}s` : 'Send a new link'
-)
-
-const redirectMessage = computed(() => {
-  const destination = redirectTarget.value?.name === 'login' ? 'the sign-in page' : 'your dashboard'
-  return `Taking you to ${destination} in ${redirectCountdown.value}s…`
-})
-
-const redirectProgress = computed(() => (redirectCountdown.value / REDIRECT_SECONDS) * 100)
-
-const err = (field) => errors.value?.[field]?.[0] || ''
-
-// Clear a field's message as soon as the learner edits it.
-watch(form, () => {
-  if (Object.keys(errors.value).length) errors.value = {}
-}, { deep: true })
-
-const stepState = (index) => {
-  const active = { form: 0, pending: 1, resend: 1, invalid: 1, success: 2 }[view.value]
-  if (index < active) return 'done'
-  if (index === active) return 'current'
-  return ''
-}
-
-/* =========================================================
-   COOKIE NOTICE
-========================================================= */
-
-function dismissCookieNotice() {
-  localStorage.setItem(COOKIE_KEY, '1')
-  showCookieNotice.value = false
-}
-
-/* =========================================================
-   ERRORS AND SLOW NETWORK
-========================================================= */
+const requestError = ref(null)
+const showPassword = ref(false)
+const isOnline = ref(typeof navigator === 'undefined' ? true : navigator.onLine)
+const slowNetwork = ref(false)
 
 const ERRORS = {
-  offline: { icon: 'fas fa-wifi', title: "You're offline", text: 'Check your connection, then try again.' },
-  network: { icon: 'fas fa-plug-circle-xmark', title: "Can't reach the server", text: 'Check your network and try again.' },
-  timeout: { icon: 'fas fa-hourglass-half', title: 'The request took too long', text: 'Your network may be slow. Try again in a moment.' },
-  server: { icon: 'fas fa-triangle-exclamation', title: 'Registration failed', text: 'Something went wrong on our side. Please try again shortly.' },
+  offline: {
+    title: 'You’re offline',
+    text: 'Check your connection, then try again.',
+  },
+  network: {
+    title: 'Can’t reach the server',
+    text: 'Check your connection and try again.',
+  },
+  server: {
+    title: 'Registration failed',
+    text: 'Something went wrong. Please try again shortly.',
+  },
+}
+
+let slowTimer = null
+
+function firstError(value) {
+  if (Array.isArray(value)) return value[0] || ''
+  return typeof value === 'string' ? value : ''
+}
+
+function err(field) {
+  return firstError(errors.value?.[field])
+}
+
+watch(
+  form,
+  () => {
+    if (Object.keys(errors.value).length) {
+      errors.value = {}
+    }
+    requestError.value = null
+  },
+  { deep: true }
+)
+
+function validateForm() {
+  const next = {}
+  const firstName = form.first_name.trim()
+  const lastName = form.last_name.trim()
+  const email = form.email.trim()
+
+  if (!firstName) {
+    next.first_name = ['Enter your first name.']
+  } else if (firstName.length > 50 || !NAME_PATTERN.test(firstName)) {
+    next.first_name = ['Use a valid name of up to 50 characters.']
+  }
+
+  if (!lastName) {
+    next.last_name = ['Enter your last name.']
+  } else if (lastName.length > 50 || !NAME_PATTERN.test(lastName)) {
+    next.last_name = ['Use a valid name of up to 50 characters.']
+  }
+
+  if (!email) {
+    next.email = ['Enter your email address.']
+  } else if (email.length > 254 || !EMAIL_PATTERN.test(email)) {
+    next.email = ['Enter a valid email address.']
+  }
+
+  if (!form.password) {
+    next.password = ['Create a password.']
+  } else if (form.password.length < MIN_PASSWORD) {
+    next.password = [`Use at least ${MIN_PASSWORD} characters.`]
+  } else if (form.password.length > MAX_PASSWORD) {
+    next.password = [`Use no more than ${MAX_PASSWORD} characters.`]
+  }
+
+  if (!form.password_confirmation) {
+    next.password_confirmation = ['Confirm your password.']
+  } else if (form.password !== form.password_confirmation) {
+    next.password_confirmation = ['Passwords do not match.']
+  }
+
+  if (!form.accept_terms) {
+    next.accept_terms = [
+      'Accept the Terms of Use and Privacy Policy to continue.',
+    ]
+  }
+
+  errors.value = next
+  return Object.keys(next).length === 0
 }
 
 function classifyError(error) {
-  const code = error?.response?.status
-  if (code >= 500 || error?.response) return ERRORS.server
-  if (error?.code === 'ECONNABORTED' || error?.code === 'ETIMEDOUT') return ERRORS.timeout
-  if (!navigator.onLine) return ERRORS.offline
+  const status = error?.response?.status
+
+  if (typeof navigator !== 'undefined' && !navigator.onLine) {
+    return ERRORS.offline
+  }
+
+  if (status === 429) {
+    return {
+      title: 'Too many attempts',
+      text: 'Please wait a little while, then try again.',
+    }
+  }
+
+  if (status === 419) {
+    return {
+      title: 'Session expired',
+      text: 'Refresh the page, then try again.',
+    }
+  }
+
+  if (status >= 500) {
+    return ERRORS.server
+  }
+
+  if (error?.response) {
+    return {
+      title: 'Registration could not be completed',
+      text:
+        error.response.data?.message ||
+        'Check your information and try again.',
+    }
+  }
+
   return ERRORS.network
 }
 
 function startSlowTimer() {
   slowNetwork.value = false
   clearTimeout(slowTimer)
-  slowTimer = setTimeout(() => { slowNetwork.value = true }, SLOW_AFTER_MS)
+
+  slowTimer = setTimeout(() => {
+    slowNetwork.value = true
+  }, 4000)
 }
 
 function stopSlowTimer() {
@@ -329,40 +342,10 @@ function stopSlowTimer() {
   slowNetwork.value = false
 }
 
-/* =========================================================
-   VALIDATION
-========================================================= */
-
-function validateForm() {
-  const next = {}
-
-  if (!form.first_name) next.first_name = ['Enter your first name.']
-  if (!form.last_name) next.last_name = ['Enter your last name.']
-
-  if (!form.email) next.email = ['Enter your email address.']
-  else if (!EMAIL_PATTERN.test(form.email)) next.email = ['Enter a valid email, like name@email.com.']
-
-  if (!form.password) next.password = ['Create a password.']
-  else if (form.password.length < MIN_PASSWORD) next.password = [`Use at least ${MIN_PASSWORD} characters.`]
-
-  if (!form.password_confirmation) next.password_confirmation = ['Confirm your password.']
-  else if (form.password !== form.password_confirmation) next.password_confirmation = ['Passwords do not match.']
-
-  if (!form.accept_terms) {
-    next.accept_terms = ['Please accept the Terms of Use and Privacy Policy to continue.']
-  }
-
-  errors.value = next
-  return Object.keys(next).length === 0
-}
-
-/* =========================================================
-   REGISTER
-========================================================= */
-
 async function handleRegister() {
   if (loading.value) return
 
+  errors.value = {}
   requestError.value = null
 
   if (!isOnline.value) {
@@ -376,24 +359,29 @@ async function handleRegister() {
   startSlowTimer()
 
   try {
+    // Keep this if your API uses Laravel Sanctum's cookie-based CSRF protection.
     await api.get('/sanctum/csrf-cookie')
-    await api.post('/api/register', {
-      first_name: form.first_name,
-      last_name: form.last_name,
-      email: form.email,
+
+    const { data } = await api.post('/api/register', {
+      first_name: form.first_name.trim(),
+      last_name: form.last_name.trim(),
+      email: form.email.trim().toLowerCase(),
       password: form.password,
       password_confirmation: form.password_confirmation,
       accept_terms: form.accept_terms,
     })
 
-    registeredEmail.value = form.email
-    resendEmail.value = form.email
-    view.value = 'pending'
-    startCooldown()
+    registeredEmail.value = data?.email || form.email.trim().toLowerCase()
+    submitted.value = true
+
+    // Clear credentials from component state after successful submission.
+    form.password = ''
+    form.password_confirmation = ''
   } catch (error) {
-    if (error.response?.status === 422 && error.response.data?.errors) {
-      // Server validation errors appear under the matching fields.
-      errors.value = error.response.data.errors
+    const serverErrors = error?.response?.data?.errors
+
+    if (serverErrors && typeof serverErrors === 'object') {
+      errors.value = serverErrors
     } else {
       requestError.value = classifyError(error)
     }
@@ -403,98 +391,9 @@ async function handleRegister() {
   }
 }
 
-/* =========================================================
-   RESEND
-========================================================= */
-
-async function resend(address) {
-  if (!address || resending.value || cooldown.value > 0) return
-
-  resending.value = true
-  resendMessage.value = ''
-  resendError.value = ''
-
-  if (!isOnline.value) {
-    resendError.value = ERRORS.offline.text
-    resending.value = false
-    return
-  }
-
-  try {
-    await api.get('/sanctum/csrf-cookie')
-    const { data } = await api.post('/api/email/resend', { email: address })
-
-    resendMessage.value = data?.message || 'A new link has been sent.'
-    startCooldown()
-  } catch (error) {
-    resendError.value =
-      error.response?.data?.errors?.email?.[0] ||
-      error.response?.data?.message ||
-      classifyError(error).text
-  } finally {
-    resending.value = false
-  }
-}
-
-function startCooldown(seconds = RESEND_SECONDS) {
-  cooldown.value = seconds
-  clearInterval(cooldownTimer)
-
-  cooldownTimer = setInterval(() => {
-    cooldown.value -= 1
-
-    if (cooldown.value <= 0) {
-      cooldown.value = 0
-      clearInterval(cooldownTimer)
-    }
-  }, 1000)
-}
-
-/* =========================================================
-   AFTER CONFIRMATION
-   A session already in this browser goes to its dashboard.
-   Otherwise the learner goes to sign-in.
-========================================================= */
-
-async function prepareRedirect() {
-  let user = null
-
-  try {
-    user = await fetchUser(true)
-  } catch {
-    user = null
-  }
-
-  if (!user) redirectTarget.value = { name: 'login' }
-  else if (user.role === 'admin') redirectTarget.value = { name: 'admin-dashboard' }
-  else redirectTarget.value = { name: 'user-home' }
-
-  redirectCountdown.value = REDIRECT_SECONDS
-
-  clearInterval(redirectTimer)
-  redirectTimer = setInterval(() => {
-    redirectCountdown.value -= 1
-
-    if (redirectCountdown.value <= 0) {
-      clearInterval(redirectTimer)
-      goNow()
-    }
-  }, 1000)
-}
-
-function goNow() {
-  clearInterval(redirectTimer)
-  if (redirectTarget.value) router.push(redirectTarget.value)
-}
-
-/* =========================================================
-   CONNECTION EVENTS AND ENTRY POINTS
-   /email-verified?status=success|invalid   (from the email link)
-   /register?step=resend&email=...          (from an unverified sign-in)
-========================================================= */
-
 function handleOnline() {
   isOnline.value = true
+  requestError.value = null
 }
 
 function handleOffline() {
@@ -504,25 +403,11 @@ function handleOffline() {
 onMounted(() => {
   window.addEventListener('online', handleOnline)
   window.addEventListener('offline', handleOffline)
-
-  if (route.name === 'email-verified') {
-    if (route.query.status === 'success') {
-      view.value = 'success'
-      prepareRedirect()
-    } else {
-      view.value = 'invalid'
-    }
-  } else if (route.query.step === 'resend') {
-    view.value = 'resend'
-    resendEmail.value = String(route.query.email ?? '')
-  }
 })
 
 onBeforeUnmount(() => {
   window.removeEventListener('online', handleOnline)
   window.removeEventListener('offline', handleOffline)
-  clearInterval(cooldownTimer)
-  clearInterval(redirectTimer)
   clearTimeout(slowTimer)
 })
 </script>
@@ -537,8 +422,6 @@ onBeforeUnmount(() => {
   --white: #ffffff;
   --error: #b42318;
   --error-bg: #fdf2f1;
-  --ok: #11813d;
-  --ok-bg: #eef8f1;
   --warn: #7a5200;
   --warn-bg: #fff8e6;
   --warn-line: #e0b451;
@@ -578,7 +461,7 @@ onBeforeUnmount(() => {
   outline-offset: 2px;
 }
 
-/* TOP BAR */
+/* Header */
 
 .top {
   padding: 18px clamp(16px, 4vw, 40px);
@@ -600,7 +483,7 @@ onBeforeUnmount(() => {
   object-fit: contain;
 }
 
-/* LAYOUT */
+/* Layout */
 
 .main {
   flex: 1;
@@ -618,75 +501,16 @@ onBeforeUnmount(() => {
   gap: 14px;
 }
 
-/* PROGRESS */
-
-.steps {
-  display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
-  padding: 0;
-  list-style: none;
-}
-
-.steps li {
-  min-width: 0;
-  display: flex;
-  align-items: center;
-  gap: 7px;
-  color: var(--faint);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.steps li.current {
-  color: var(--ink);
-}
-
-.steps li.done {
-  color: var(--mute);
-}
-
-.steps li span:last-child {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.dot {
-  width: 22px;
-  height: 22px;
-  flex: 0 0 22px;
-  display: grid;
-  place-items: center;
-  border: 1px solid var(--line);
-  border-radius: 50%;
-  background: var(--white);
-  font-size: 11px;
-}
-
-.steps li.current .dot {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--white);
-}
-
-.steps li.done .dot {
-  border-color: var(--mute);
-  background: var(--mute);
-  color: var(--white);
-}
-
-/* PANEL */
+/* Panel */
 
 .panel {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
   padding: clamp(24px, 4vw, 34px);
   border: 1px solid var(--line);
   border-radius: 14px;
   background: var(--white);
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
 }
 
 .head {
@@ -719,17 +543,13 @@ onBeforeUnmount(() => {
   gap: 12px;
 }
 
-/* FIELDS */
+/* Fields */
 
 .field {
   min-width: 0;
   display: flex;
   flex-direction: column;
   gap: 6px;
-}
-
-.field.left {
-  width: 100%;
 }
 
 .field label {
@@ -746,12 +566,7 @@ onBeforeUnmount(() => {
   background: var(--white);
   color: var(--ink);
   font-size: 16px;
-  /* 16px stops iOS zooming on focus */
   transition: border-color 0.15s ease, box-shadow 0.15s ease;
-}
-
-.field input::placeholder {
-  color: var(--faint);
 }
 
 .field input:hover:not(:disabled) {
@@ -761,7 +576,7 @@ onBeforeUnmount(() => {
 .field input:focus {
   outline: none;
   border-color: var(--ink);
-  box-shadow: 0 0 0 3px rgba(10, 10, 10, 0.08);
+  box-shadow: 0 0 0 3px rgb(10 10 10 / 8%);
 }
 
 .field input:disabled {
@@ -791,12 +606,12 @@ onBeforeUnmount(() => {
   position: absolute;
   top: 50%;
   right: 6px;
-  transform: translateY(-50%);
   width: 36px;
   height: 36px;
   display: grid;
   place-items: center;
   padding: 0;
+  transform: translateY(-50%);
   border: 0;
   border-radius: 8px;
   background: transparent;
@@ -814,7 +629,20 @@ onBeforeUnmount(() => {
   cursor: not-allowed;
 }
 
-/* CONSENT */
+/* Icons */
+
+.ui-icon {
+  width: 20px;
+  height: 20px;
+  flex: 0 0 auto;
+  display: block;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+/* Consent */
 
 .consent .check {
   display: flex;
@@ -830,8 +658,8 @@ onBeforeUnmount(() => {
   width: 18px;
   height: 18px;
   min-height: 0;
-  margin-top: 2px;
   flex-shrink: 0;
+  margin-top: 2px;
   accent-color: var(--ink);
 }
 
@@ -840,12 +668,7 @@ onBeforeUnmount(() => {
   font-weight: 700;
 }
 
-.consent.invalid small {
-  color: var(--error);
-  font-size: 12.5px;
-}
-
-/* NOTICES */
+/* Notices */
 
 .notice {
   display: flex;
@@ -858,8 +681,8 @@ onBeforeUnmount(() => {
   line-height: 1.45;
 }
 
-.notice i {
-  margin-top: 2px;
+.notice>.ui-icon {
+  margin-top: 1px;
 }
 
 .notice div {
@@ -884,12 +707,6 @@ onBeforeUnmount(() => {
   color: var(--error);
 }
 
-.notice-ok {
-  border-color: #bfe2cc;
-  background: var(--ok-bg);
-  color: var(--ok);
-}
-
 .slow {
   display: flex;
   align-items: center;
@@ -898,47 +715,30 @@ onBeforeUnmount(() => {
   font-size: 13px;
 }
 
-/* BUTTONS */
+/* Buttons */
 
-.btn-primary,
-.btn-outline {
+.btn-primary {
   width: 100%;
   min-height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 8px;
-  border-radius: 9px;
-  font-size: 15px;
-  font-weight: 700;
-  text-decoration: none;
-  cursor: pointer;
-  transition: background 0.15s ease, border-color 0.15s ease;
-}
-
-.btn-primary {
   border: 1px solid var(--ink);
+  border-radius: 9px;
   background: var(--ink);
   color: var(--white);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
 }
 
 .btn-primary:hover:not(:disabled) {
   background: #262626;
 }
 
-.btn-outline {
-  border: 1px solid var(--line);
-  background: var(--white);
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.btn-outline:hover:not(:disabled) {
-  border-color: var(--ink);
-}
-
-.btn-primary:disabled,
-.btn-outline:disabled {
+.btn-primary:disabled {
   opacity: 0.5;
   cursor: not-allowed;
 }
@@ -946,21 +746,16 @@ onBeforeUnmount(() => {
 .loader {
   width: 18px;
   height: 18px;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  border: 2px solid rgb(255 255 255 / 30%);
   border-top-color: var(--white);
   border-radius: 50%;
   animation: spin 0.75s linear infinite;
 }
 
-.loader.dark {
-  border-color: var(--line);
-  border-top-color: var(--ink);
-}
-
 .switch {
-  text-align: center;
   color: var(--mute);
   font-size: 14px;
+  text-align: center;
 }
 
 .switch a,
@@ -975,55 +770,14 @@ onBeforeUnmount(() => {
   text-decoration: underline;
 }
 
-/* COOKIE NOTICE */
-
-.cookie-notice {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  padding-top: 14px;
-  border-top: 1px solid var(--line);
-  color: var(--mute);
-  font-size: 12.5px;
-  line-height: 1.5;
-}
-
-.cookie-notice p {
-  margin: 0;
-}
-
-.cookie-notice a {
-  color: var(--ink);
-  font-weight: 600;
-}
-
-.cookie-notice button {
-  flex-shrink: 0;
-  min-height: 34px;
-  padding: 0 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--white);
-  color: var(--ink);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-.cookie-notice button:hover {
-  border-color: var(--ink);
-}
-
-/* RESULT STATES */
+/* Success state */
 
 .result {
+  display: flex;
+  flex-direction: column;
   align-items: center;
+  gap: 12px;
   text-align: center;
-}
-
-.result .field.left {
-  text-align: left;
 }
 
 .result h1 {
@@ -1040,19 +794,11 @@ onBeforeUnmount(() => {
   border: 1px solid var(--line);
   border-radius: 50%;
   background: var(--paper);
-  font-size: 20px;
 }
 
-.icon.ok {
-  border-color: var(--ink);
-  background: var(--ink);
-  color: var(--white);
-}
-
-.icon.warn {
-  border-color: #efc2be;
-  background: var(--error-bg);
-  color: var(--error);
+.icon .ui-icon {
+  width: 26px;
+  height: 26px;
 }
 
 .chip {
@@ -1072,22 +818,7 @@ onBeforeUnmount(() => {
   line-height: 1.6;
 }
 
-.bar {
-  width: 100%;
-  height: 4px;
-  overflow: hidden;
-  border-radius: 999px;
-  background: var(--line);
-}
-
-.bar span {
-  display: block;
-  height: 100%;
-  background: var(--ink);
-  transition: width 1s linear;
-}
-
-/* FOOTER */
+/* Footer */
 
 .footer {
   padding: 18px 16px;
@@ -1097,7 +828,7 @@ onBeforeUnmount(() => {
   text-align: center;
 }
 
-/* ANIMATION */
+/* Animation */
 
 @keyframes spin {
   to {
@@ -1105,7 +836,7 @@ onBeforeUnmount(() => {
   }
 }
 
-/* PHONE */
+/* Mobile */
 
 @media (max-width: 480px) {
   .row {
@@ -1116,18 +847,10 @@ onBeforeUnmount(() => {
     padding: 22px 18px;
     border-radius: 12px;
   }
-
-  .steps li span:last-child {
-    display: none;
-  }
-
-  .cookie-notice {
-    flex-direction: column;
-    align-items: stretch;
-  }
 }
 
 @media (prefers-reduced-motion: reduce) {
+
   .page *,
   .page *::before,
   .page *::after {

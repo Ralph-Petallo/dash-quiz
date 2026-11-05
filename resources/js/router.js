@@ -27,11 +27,12 @@ import InputOutputAssessment from './views/AssessmentPages/InputOutputAssessment
 // ==========================================================
 // PUBLIC
 // ==========================================================
-import LoginPage from './views/LoginPage.vue'
+
 import RegisterPage from './views/RegisterPage.vue'
 import ForgotPage from './views/ForgotPage.vue'
 import ResetPage from './views/ResetPage.vue'
 import FAQ from './views/FAQ.vue'
+import LoginPage from './views/LoginPage.vue'
 import PrivacyPolicy from './views/PrivacyPolicy.vue'
 import TermsOfUse from './views/TermsOfUse.vue'
 
@@ -46,9 +47,7 @@ import ManageQuestions from './views/AdminPages/ManageQuiz.vue'
 import AdminLayout from './views/AdminPages/AdminLayout.vue'
 import AdminAssessmentPage from './views/AdminPages/AdminAssessmentPages.vue'
 
-
 import RJ45AssessmentEdit from './views/AdminPages/RJ-45AssessmentEdit.vue'
-
 
 // ==========================================================
 // EDIT/ADD PAGES
@@ -81,38 +80,52 @@ const routes = [
         name: 'register',
         component: RegisterPage,
     },
+
+    {
+        // Email the learner requests a new verification link from.
+        path: '/verify',
+        name: 'verify-email',
+        component: () => import('./views/VerifyEmail.vue'),
+    },
+
     {
         path: '/forgot',
         name: 'forgot',
         component: ForgotPage,
     },
+
     {
         path: '/faq',
         name: 'frequently-ask-question',
         component: FAQ,
     },
-    {
-        path: '/faq',
-        name: 'frequently-ask-question',
-        component: FAQ,
-    },
+
     {
         path: '/privacy',
         name: 'privacy-policy',
         component: PrivacyPolicy,
     },
+
     {
         path: '/terms',
         name: 'terms-of-use',
         component: TermsOfUse,
     },
+
     {
         path: '/reset/:token',
         name: 'reset',
         component: ResetPage,
     },
-    { path: '/email-verified', name: 'email-verified', component: RegisterPage },
 
+    {
+        // Old verification links that point here go to the login page with the result.
+        path: '/email-verified',
+        redirect: (to) => ({
+            path: '/',
+            query: { verified: to.query.status === 'success' ? '1' : '0' },
+        }),
+    },
 
     // ======================================================
     // USER
@@ -172,13 +185,8 @@ const routes = [
                     navSection: 'profile',
                 },
             },
-
-
         ],
     },
-
-
-
 
     {
         path: '/taking',
@@ -206,8 +214,6 @@ const routes = [
                     assessmentTitle: 'Multiple Choice',
                     assessmentType: 'Knowledge Assessment',
                 },
-
-
             },
 
             // ==================================================
@@ -215,7 +221,7 @@ const routes = [
             // ==================================================
 
             {
-                path: 'assemble/:id',
+                path: 'hardware-procedure/:id',
                 name: 'assemble',
                 component: HardwareProcedure,
 
@@ -235,8 +241,6 @@ const routes = [
                     assessmentType: 'Drag and Drop Input/Output Devices',
                 },
             },
-
-
 
             // ==================================================
             // IMAGE IDENTIFICATION
@@ -325,13 +329,11 @@ const routes = [
                 name: 'admin-users',
                 component: UsersTable,
             },
-
             {
                 path: 'records',
                 name: 'admin-records',
                 component: StudentRecords,
             },
-
             {
                 path: 'assessment/create',
                 name: 'admin-quiz-create',
@@ -349,7 +351,6 @@ const routes = [
             },
 
             /*
-            *
             *
             * BELOW ARE THE EDIT ASSESSMENTS PATHS
             *
@@ -374,7 +375,6 @@ const routes = [
                 name: 'admin-input-output-edit',
                 component: InputOutputEdit,
             },
-
             {
                 path: 'assessment/:id/rj45_hands_on/edit',
                 name: 'admin-rj45-edit',
@@ -385,13 +385,11 @@ const routes = [
                 name: 'admin-hardware-procedure-edit',
                 component: HardwareProcedureEdit,
             },
-
         ],
     },
 
-
     // ======================================================
-    // 404
+    // 404 (keep last)
     // ======================================================
 
     {
@@ -400,7 +398,6 @@ const routes = [
         component: () => import('./views/404.vue'),
     },
 ]
-
 
 // ==========================================================
 // ROUTER
@@ -418,7 +415,6 @@ const router = createRouter({
     },
 })
 
-
 // ==========================================================
 // AUTH GUARD
 // ==========================================================
@@ -428,24 +424,19 @@ let authPromise = null
 router.beforeEach(async (to) => {
     const { user, fetchUser } = useUser()
 
-    // ✅ Only check auth once, but wait for it to complete
+    // Only check auth once, but wait for it to complete.
     if (!authChecked) {
         authChecked = true
 
-        // Create a promise and wait for it
         authPromise = (async () => {
             try {
-
-                console.log('🔐 Checking auth...')
                 await fetchUser()
-                console.log('✅ Auth check complete:', user.value)
             } catch (error) {
-                console.error('❌ Auth check failed:', error)
+                console.error('Auth check failed:', error)
             }
         })()
     }
 
-    // Always wait for auth promise to complete
     if (authPromise) {
         await authPromise
     }
@@ -454,15 +445,16 @@ router.beforeEach(async (to) => {
 
     // PUBLIC ROUTES
     if (!to.meta.requiresAuth) {
-        if (to.path === '/' && currentUser) {
+        // Logged-in users go to their home page, except when a verification
+        // result is in the URL. Redirecting then would hide the notice.
+        if (to.path === '/' && currentUser && !to.query.verified) {
             return currentUser.role === 'admin' ? '/admin' : '/user'
         }
         return true
     }
 
-    // PROTECTED ROUTES - NOT LOGGED IN
+    // PROTECTED ROUTES: NOT LOGGED IN
     if (!currentUser) {
-        console.warn('❌ NOT AUTHENTICATED - Redirecting to login')
         return {
             name: 'login',
             query: { redirect: to.fullPath },
